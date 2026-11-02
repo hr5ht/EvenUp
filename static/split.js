@@ -12,7 +12,9 @@ const nameOf = (id) => (member(id) || {}).name || "?";
 const label = (id) => (id === identity.me ? "You" : nameOf(id));
 const isAdmin = () => !!identity.adminToken && identity.me === data.admin_id;
 const splitType = () => document.querySelector("input[name=split]:checked").value;
-const liveExpenses = () => data.expenses.filter((e) => !e.deleted);
+// Expenses and settle-up payments share one table; payments don't count as spending.
+const liveExpenses = () => data.expenses.filter((e) => !e.deleted && e.kind === "expense");
+const payMethod = (e) => e.description.split(" · ").pop(); // payments are stored as "A paid B · Cash"
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const UPI_HINT = "That doesn't look like a UPI ID (name@bank).";
 const paymentsOf = (id) => data.settlement.filter((p) => p.from === id || p.to === id);
@@ -278,34 +280,91 @@ function showQr(p) {
   $("qr-dialog").showModal();
 }
 
-function openPaySheet(p) {
+// ---------- settle up one payment: cash or UPI, then record it ----------
+
+let paying = null; // the settlement row being paid
+
+function payStep(step) {
+  $("pay-choose").hidden = step !== "choose";
+  $("pay-cash-step").hidden = step !== "Cash";
+  $("pay-upi-step").hidden = step !== "UPI";
+  $("pay-foot").hidden = step === "choose";
+  $("pay-done").textContent = step === "Cash" ? "Mark as paid" : "I've paid";
+  $("pay-done").dataset.method = step;
+  $("pay-error").textContent = "";
+}
+
+function openSettle(p) {
+  paying = p;
   const to = member(p.to);
   $("pay-title").textContent = `Pay ${rupees(p.amount_paise)} to ${to.name}`;
-  $("pay-apps").replaceChildren(...IOS_APPS.map(([name, scheme]) =>
-    el("a", { href: upiLink(to, p.amount_paise, scheme), textContent: name })));
-  $("pay-upi").textContent = to.upi_id;
-  $("pay-copy").onclick = (ev) => copyText(to.upi_id, ev.currentTarget);
+  $("pay-upi").disabled = !to.upi_id;
+  $("pay-no-upi").hidden = !!to.upi_id;
+  $("pay-no-upi").textContent = `${to.name} hasn't added a UPI ID yet, so it's cash for now.`;
+  payStep("choose");
   openSheet("pay-sheet");
 }
+
+$("pay-cash").onclick = () => {
+  $("pay-cash-text").textContent = `Did you pay ${nameOf(paying.to)} ${rupees(paying.amount_paise)} in cash?`;
+  payStep("Cash");
+};
+
+$("pay-upi").onclick = () => {
+  const to = member(paying.to);
+  const amount = paying.amount_paise;
+  $("pay-qr").src = `${base}/qr?to=${to.id}&amount=${amount}`;
+  // Same phone can't scan its own screen, so phones also get links into the UPI apps.
+  const apps = IS_ANDROID ? [["Open UPI app", "upi://pay"]] : IS_IOS ? IOS_APPS : [];
+  $("pay-apps").replaceChildren(...apps.map(([name, scheme]) => el("a", { href: upiLink(to, amount, scheme), textContent: name })));
+  $("pay-apps").hidden = !apps.length;
+  $("pay-upi-id").textContent = to.upi_id;
+  $("pay-copy").onclick = (ev) => copyText(to.upi_id, ev.currentTarget);
+  payStep("UPI");
+};
+
+$("pay-back").onclick = () => payStep("choose");
+
+$("pay-done").onclick = async (ev) => {
+  const p = paying;
+  ev.currentTarget.disabled = true;
+  try {
+    const { id } = await api("POST", `${base}/expenses`, {
+      kind: "payment",
+      paid_by: p.from,
+      amount_paise: p.amount_paise,
+      split: "exact",
+      shares: { [p.to]: p.amount_paise },
+      // Real names so the activity log reads right; the list swaps in "You".
+      description: `${nameOf(p.from)} paid ${nameOf(p.to)} · ${ev.currentTarget.dataset.method}`,
+    });
+    $("pay-sheet").close();
+    await load();
+    toast(`Paid ${nameOf(p.to)} ${rupees(p.amount_paise)}`, "Undo", () => act(() => {
+      const a = data.activity.find((x) => x.expense_id === id);
+      return api("POST", `${base}/activity/${a.id}/undo`);
+    }));
+  } catch (err) {
+    $("pay-error").textContent = err.message;
+  } finally {
+    $("pay-done").disabled = false;
+  }
+};
 
 function paymentRow(p) {
   const to = member(p.to);
   const actions = el("div", { className: "row" });
-  if (!to.upi_id) {
-    actions.append(el("span", { className: "muted", textContent: p.to === identity.me ? "Add your UPI ID to get paid" : `${to.name} hasn't added a UPI ID` }));
-  } else if (p.to === identity.me) {
+  if (p.from === identity.me) {
+    const settle = el("button", { type: "button", className: "small primary", textContent: "Settle up" });
+    settle.onclick = () => openSettle(p);
+    actions.append(settle);
+  } else if (p.to === identity.me && to.upi_id) {
     // You're being paid: hand them your phone and they scan it.
     const qr = el("button", { type: "button", className: "small", textContent: "Show QR" });
     qr.onclick = () => showQr(p);
     actions.append(qr);
-  } else if (IS_ANDROID) {
-    // Android shows its own UPI app chooser for upi:// links.
-    actions.append(el("a", { href: upiLink(to, p.amount_paise), className: "button small primary", textContent: "Pay" }));
-  } else {
-    // iPhone: pick an app. Laptop: scan the QR with your phone.
-    const pay = el("button", { type: "button", className: "small primary", textContent: "Pay" });
-    pay.onclick = () => (IS_IOS ? openPaySheet(p) : showQr(p));
-    actions.append(pay);
+  } else if (p.to === identity.me) {
+    actions.append(el("span", { className: "muted", textContent: "Add your UPI ID to get paid" }));
   }
   return el("li", { className: "pay-row" },
     el("div", { className: "pay-main" },
@@ -349,17 +408,20 @@ function renderBalances() {
 // ---------- expenses ----------
 
 function renderExpenses() {
-  const live = liveExpenses();
+  const live = data.expenses.filter((e) => !e.deleted);
   if (!live.length) {
     $("expenses").replaceChildren(el("li", { className: "muted empty", textContent: "No expenses yet. Tap + Add expense." }));
     return;
   }
   $("expenses").replaceChildren(...live.map((e) => {
     const mine = e.shares[identity.me];
+    const payment = e.kind === "payment";
     const row = el("button", { type: "button", className: "exp-row" },
       el("span", { className: "grow" },
-        el("span", { className: "title", textContent: e.description }),
-        el("span", { className: "muted", textContent: `${label(e.paid_by)} paid${mine ? ` · your share ${rupees(mine)}` : ""}` }),
+        el("span", { className: "title", textContent: payment ? `${label(e.paid_by)} paid ${label(Number(Object.keys(e.shares)[0]))}` : e.description }),
+        el("span", { className: "muted", textContent: payment
+          ? `Settled up · ${payMethod(e)}`
+          : `${label(e.paid_by)} paid${mine ? ` · your share ${rupees(mine)}` : ""}` }),
       ),
       el("strong", { className: "amount", textContent: rupees(e.amount_paise) }),
     );
@@ -369,16 +431,25 @@ function renderExpenses() {
 }
 
 function openExpense(e) {
-  $("exp-title").textContent = e.description;
+  const payment = e.kind === "payment";
+  const when = new Date(e.created_at * 1000).toLocaleString();
+  $("exp-title").textContent = payment ? "Settle-up" : e.description;
   $("exp-detail").replaceChildren(
     el("p", { className: "hero-amount", textContent: rupees(e.amount_paise) }),
-    el("p", { className: "muted", textContent: `Paid by ${label(e.paid_by)} · ${new Date(e.created_at * 1000).toLocaleString()}` }),
-    el("h3", { textContent: "Split between" }),
-    el("ul", { className: "list" }, ...Object.entries(e.shares).map(([id, s]) => el("li", {},
-      el("span", { className: "grow", textContent: label(Number(id)) }),
-      el("span", { className: "amount", textContent: rupees(s) }),
-    ))),
+    ...(payment ? [
+      el("p", { className: "muted", textContent: `${label(e.paid_by)} paid ${label(Number(Object.keys(e.shares)[0]))} · ${payMethod(e)} · ${when}` }),
+    ] : [
+      el("p", { className: "muted", textContent: `Paid by ${label(e.paid_by)} · ${when}` }),
+      el("h3", { textContent: "Split between" }),
+      el("ul", { className: "list" }, ...Object.entries(e.shares).map(([id, s]) => el("li", {},
+        el("span", { className: "grow", textContent: label(Number(id)) }),
+        el("span", { className: "amount", textContent: rupees(s) }),
+      ))),
+    ]),
   );
+  // A payment is undone by deleting it, not edited.
+  $("exp-edit").hidden = payment;
+  $("exp-edit").parentElement.classList.toggle("two", !payment);
   $("exp-edit").onclick = () => {
     $("expense-sheet").close();
     startEdit(e);
@@ -386,7 +457,7 @@ function openExpense(e) {
   $("exp-delete").onclick = async () => {
     $("expense-sheet").close();
     await act(() => api("DELETE", `${base}/expenses/${e.id}`));
-    toast(`Deleted ${e.description}`, "Undo", () => act(() => {
+    toast(`Deleted ${payment ? "payment" : e.description}`, "Undo", () => act(() => {
       const a = data.activity.find((x) => x.expense_id === e.id);
       return api("POST", `${base}/activity/${a.id}/undo`);
     }));
@@ -455,7 +526,7 @@ $("expense-form").onsubmit = async (ev) => {
   }
   const body = {
     // Left empty: "Expense #N" (counting deleted ones, so numbers don't repeat), or the old name when editing.
-    description: $("desc").value.trim() || (editing ? editing.description : `Expense #${data.expenses.length + 1}`),
+    description: $("desc").value.trim() || (editing ? editing.description : `Expense #${data.expenses.filter((x) => x.kind === "expense").length + 1}`),
     amount_paise: amount,
     // New expenses are paid by you; editing keeps whoever paid.
     paid_by: editing ? editing.paidBy : identity.me,

@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS expenses (
     paid_by INTEGER NOT NULL REFERENCES members(id),
     amount_paise INTEGER NOT NULL CHECK (amount_paise > 0),
     description TEXT NOT NULL,
+    -- payment = a settle-up: paid_by hands money to the one member in shares
+    kind TEXT NOT NULL DEFAULT 'expense' CHECK (kind IN ('expense', 'payment')),
     version INTEGER NOT NULL DEFAULT 1,
     deleted INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL,

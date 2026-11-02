@@ -168,18 +168,38 @@
 <dialog class="sheet" id="pay-sheet">
   <div class="sheet-head"><h2 id="pay-title"></h2><button type="button" class="icon-btn" data-close aria-label="Close">✕</button></div>
   <div class="sheet-body">
-    <p class="muted">Opens the app with the amount filled in.</p>
-    <div class="menu" id="pay-apps"></div>
-    <div class="pay-manual">
-      <span class="muted">Or pay by hand to this UPI ID</span>
-      <div class="row"><span class="link-box" id="pay-upi"></span><button type="button" id="pay-copy" class="small">Copy</button></div>
+    <div id="pay-choose">
+      <p class="muted">How are you paying?</p>
+      <div class="menu">
+        <button type="button" id="pay-cash">Cash</button>
+        <button type="button" id="pay-upi">UPI</button>
+      </div>
+      <p class="muted pay-note" id="pay-no-upi" hidden></p>
     </div>
+    <div id="pay-cash-step" hidden>
+      <p class="pay-question" id="pay-cash-text"></p>
+      <p class="muted">Marking it paid updates balances for everyone.</p>
+    </div>
+    <div id="pay-upi-step" hidden>
+      <img id="pay-qr" class="qr" alt="UPI QR code" width="220" height="220">
+      <p class="muted center">Scan with any UPI app, then tap I've paid.</p>
+      <div class="menu pay-apps" id="pay-apps"></div>
+      <div class="pay-manual">
+        <span class="muted">Or pay by hand to this UPI ID</span>
+        <div class="row"><span class="link-box" id="pay-upi-id"></span><button type="button" id="pay-copy" class="small">Copy</button></div>
+      </div>
+    </div>
+    <p class="error" id="pay-error"></p>
+  </div>
+  <div class="sheet-foot two" id="pay-foot" hidden>
+    <button type="button" id="pay-back">Back</button>
+    <button type="button" id="pay-done" class="primary">Mark as paid</button>
   </div>
 </dialog>
 
 <dialog id="qr-dialog">
   <div class="qr-body">
-    <img id="qr-img" alt="UPI QR code" width="240" height="240">
+    <img id="qr-img" class="qr" alt="UPI QR code" width="240" height="240">
     <p id="qr-caption"></p>
     <p class="muted" id="qr-hint"></p>
     <div class="actions center">

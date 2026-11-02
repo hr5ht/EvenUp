@@ -136,6 +136,22 @@ def test_cross_split_access_and_guards():
         assert "Content-Security-Policy" in c.get("/").headers
 
 
+def test_settle_up_payment():
+    with TestClient(app, client=("10.0.0.2", 1)) as c:
+        slug = c.post("/api/splits", json={"name": "P", "admin_password": "pass1", "members": [{"name": "A"}, {"name": "B"}]}).json()["slug"]
+        a, b = [m["id"] for m in c.get(f"/api/splits/{slug}").json()["members"]]
+        c.post(f"/api/splits/{slug}/expenses", json={
+            "paid_by": a, "amount_paise": 1000, "description": "Food", "split": "equal", "participants": [a, b]})
+        assert c.get(f"/api/splits/{slug}").json()["settlement"] == [{"from": b, "to": a, "amount_paise": 500}]
+        pay = {"kind": "payment", "paid_by": b, "amount_paise": 500, "description": "B paid A · cash", "split": "exact"}
+        assert c.post(f"/api/splits/{slug}/expenses", json={**pay, "shares": {str(b): 500}}).status_code == 400  # to self
+        assert c.post(f"/api/splits/{slug}/expenses", json={**pay, "split": "equal", "participants": [a, b]}).status_code == 400
+        assert c.post(f"/api/splits/{slug}/expenses", json={**pay, "shares": {str(a): 500}}).status_code == 200
+        g = c.get(f"/api/splits/{slug}").json()
+        assert g["settlement"] == [] and g["balances"] == {str(a): 0, str(b): 0}
+        assert [e["kind"] for e in g["expenses"]] == ["payment", "expense"]
+
+
 def test_rate_limit():
     with TestClient(app, client=("10.0.0.1", 1)) as c:
         codes = [c.post("/api/splits", json={"name": "x", "admin_password": "pass1", "members": [{"name": "A"}]}).status_code for _ in range(11)]

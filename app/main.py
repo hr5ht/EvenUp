@@ -152,6 +152,7 @@ class ExpenseIn(BaseModel):
     participants: List[int] = []  # equal
     shares: Dict[int, int] = {}  # exact: member_id -> paise
     version: Optional[int] = None  # required on edit
+    kind: Literal["expense", "payment"] = "expense"  # set on create only
 
 
 # ---------- helpers ----------
@@ -309,7 +310,7 @@ def read(slug: str, con=Depends(db.get_db)):
     expenses = []
     for e in con.execute("SELECT * FROM expenses WHERE split_id = ? ORDER BY created_at DESC, id DESC", (s["id"],)):
         shares = {r["member_id"]: r["share_paise"] for r in con.execute("SELECT * FROM shares WHERE expense_id = ?", (e["id"],))}
-        expenses.append({**{k: e[k] for k in ("id", "paid_by", "amount_paise", "description", "version", "created_at")},
+        expenses.append({**{k: e[k] for k in ("id", "paid_by", "amount_paise", "description", "kind", "version", "created_at")},
                          "deleted": bool(e["deleted"]), "shares": shares})
     live = [(e["paid_by"], e["amount_paise"], e["shares"]) for e in expenses if not e["deleted"]]
     bal = money.balances([m["id"] for m in members], live)
@@ -352,9 +353,11 @@ def qr(slug: str, to: int, amount: int, con=Depends(db.get_db)):
 def add_expense(slug: str, body: ExpenseIn, con=Depends(db.get_db)):
     s = load_split(con, slug)
     shares = compute_shares(member_ids(con, s["id"]), body)
+    if body.kind == "payment" and (len(shares) != 1 or body.paid_by in shares):
+        raise HTTPException(400, "A payment goes from one member to one other member")
     cur = con.execute(
-        "INSERT INTO expenses (split_id, paid_by, amount_paise, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-        (s["id"], body.paid_by, body.amount_paise, body.description, now(), now()),
+        "INSERT INTO expenses (split_id, paid_by, amount_paise, description, kind, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (s["id"], body.paid_by, body.amount_paise, body.description, body.kind, now(), now()),
     )
     write_shares(con, cur.lastrowid, shares)
     log(con, s["id"], "added", cur.lastrowid, {"description": body.description, "amount_paise": body.amount_paise})
