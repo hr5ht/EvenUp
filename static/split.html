@@ -62,14 +62,17 @@
 <dialog class="sheet" id="settle-sheet">
   <div class="sheet-head"><h2>Settle up</h2><button type="button" class="icon-btn" data-close aria-label="Close">✕</button></div>
   <div class="sheet-body">
-    <p class="muted">The fewest payments that make everyone even.</p>
+    <p class="muted" id="settle-note"></p>
     <ul class="list" id="settlement"></ul>
   </div>
 </dialog>
 
 <dialog class="sheet" id="balances-sheet">
   <div class="sheet-head"><h2>Balances</h2><button type="button" class="icon-btn" data-close aria-label="Close">✕</button></div>
-  <div class="sheet-body"><ul class="list" id="balances"></ul></div>
+  <div class="sheet-body">
+    <p class="muted">Debts are simplified, so each line is one real payment.</p>
+    <ul class="list" id="balances"></ul>
+  </div>
 </dialog>
 
 <dialog class="sheet" id="share-sheet">

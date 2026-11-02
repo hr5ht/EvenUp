@@ -16,6 +16,9 @@ const splitType = () => document.querySelector("input[name=split]:checked").valu
 const liveExpenses = () => data.expenses.filter((e) => !e.deleted);
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const UPI_HINT = "That doesn't look like a UPI ID (name@bank).";
+const paymentsOf = (id) => data.settlement.filter((p) => p.from === id || p.to === id);
+// Settle up shows only your payments; everyone's until you pick a name.
+const visiblePayments = () => (member(identity.me) ? paymentsOf(identity.me) : data.settlement);
 
 // Roll the big number to its new value. Polling re-renders with the same value, which skips the animation.
 function countUp(node, paise) {
@@ -90,7 +93,8 @@ function render() {
 
   renderYou();
   renderHero();
-  $("tile-settle").textContent = data.settlement.length ? plural(data.settlement.length, "payment") : "All square 🎉";
+  const pays = visiblePayments();
+  $("tile-settle").textContent = pays.length ? plural(pays.length, "payment") : "All settled 🎉";
   $("tile-balances").textContent = plural(data.members.length, "person").replace("persons", "people");
   renderSettlement();
   renderBalances();
@@ -122,9 +126,7 @@ function renderHero() {
     $("hero-label").textContent = b > 0 ? "You get back" : b < 0 ? "You owe" : "You're all settled";
     countUp($("hero-amount"), Math.abs(b));
     $("hero-amount").className = `hero-amount ${b > 0 ? "owed" : b < 0 ? "owe" : ""}`;
-    $("my-payments").replaceChildren(...data.settlement
-      .filter((p) => p.from === me.id || p.to === me.id)
-      .map(paymentRow));
+    $("my-payments").replaceChildren(...paymentsOf(me.id).map(paymentRow));
   } else {
     $("hero-label").textContent = "Total spent";
     countUp($("hero-amount"), total);
@@ -285,18 +287,30 @@ function paymentRow(p) {
 }
 
 function renderSettlement() {
-  $("settlement").replaceChildren(...(data.settlement.length
-    ? data.settlement.map(paymentRow)
-    : [el("li", {}, el("span", { className: "grow", textContent: "All square 🎉" }))]));
+  const mine = !!member(identity.me);
+  const pays = visiblePayments();
+  $("settle-note").textContent = mine
+    ? "Only your payments. Balances shows the whole group."
+    : "The fewest payments that make everyone even.";
+  $("settlement").replaceChildren(...(pays.length
+    ? pays.map(paymentRow)
+    : [el("li", {}, el("span", { className: "grow", textContent: mine ? "You're all settled 🎉" : "All square 🎉" }))]));
 }
 
 function renderBalances() {
   $("balances").replaceChildren(...data.members.map((m) => {
     const b = data.balances[m.id] || 0;
     const text = b > 0 ? `gets back ${rupees(b)}` : b < 0 ? `owes ${rupees(-b)}` : "settled";
-    return el("li", {},
-      el("span", { className: "grow", textContent: label(m.id) }),
-      el("span", { className: `amount ${b > 0 ? "owed" : b < 0 ? "owe" : ""}`, textContent: text }),
+    const pays = paymentsOf(m.id);
+    return el("li", { className: "bal-row" },
+      el("div", { className: "bal-main" },
+        el("span", { className: "grow", textContent: label(m.id) }),
+        el("span", { className: `amount ${b > 0 ? "owed" : b < 0 ? "owe" : ""}`, textContent: text }),
+      ),
+      pays.length ? el("ul", { className: "bal-detail" }, ...pays.map((p) => el("li", {},
+        el("span", { className: "grow", textContent: `${label(p.from)} → ${label(p.to)}` }),
+        el("span", { className: "amount", textContent: rupees(p.amount_paise) }),
+      ))) : null,
     );
   }));
 }

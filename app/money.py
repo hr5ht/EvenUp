@@ -18,10 +18,20 @@ def balances(members, expenses):
 
 
 def settle(bal):
-    """Greedy: largest debtor pays largest creditor. At most n-1 payments."""
-    creditors = sorted([(b, n) for n, b in bal.items() if b > 0], reverse=True)
-    debtors = sorted([(-b, n) for n, b in bal.items() if b < 0], reverse=True)
-    payments, i, j = [], 0, 0
+    """Simplify debts: exact matches first (one payment clears two people), then the
+    largest debtor pays the largest creditor. At most n-1 payments.
+    ponytail: the true minimum is NP-hard (subset sums); this is the standard heuristic."""
+    owed = {n: b for n, b in bal.items() if b > 0}
+    owing = {n: -b for n, b in bal.items() if b < 0}
+    payments = []
+    for d, amt in list(owing.items()):
+        c = next((c for c, due in owed.items() if due == amt), None)
+        if c is not None:
+            payments.append((d, c, amt))
+            del owing[d], owed[c]
+    creditors = sorted([(b, n) for n, b in owed.items()], reverse=True)
+    debtors = sorted([(b, n) for n, b in owing.items()], reverse=True)
+    i, j = 0, 0
     while i < len(debtors) and j < len(creditors):
         owe, d = debtors[i]
         due, c = creditors[j]

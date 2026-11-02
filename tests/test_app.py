@@ -27,6 +27,14 @@ def test_settle():
         bal[d] += amt
         bal[c] -= amt
     assert all(v == 0 for v in bal.values())
+    # exact match d->b first: 3 payments, where plain greedy needs 4
+    bal = {"a": 700, "b": 300, "c": -500, "d": -300, "e": -200}
+    pays = money.settle(bal)
+    assert len(pays) == 3
+    for d, c, amt in pays:
+        bal[d] += amt
+        bal[c] -= amt
+    assert all(v == 0 for v in bal.values())
 
 
 def test_flow():
