@@ -269,10 +269,9 @@ function paymentRow(p) {
   const to = member(p.to);
   const actions = el("div", { className: "row" });
   if (to.upi_id) {
-    actions.append(el("a", { href: upiLink(to, p.amount_paise), className: "button small primary", textContent: "Pay" }));
     const qr = el("button", { type: "button", className: "small", textContent: "QR" });
     qr.onclick = () => showQr(p);
-    actions.append(qr);
+    actions.append(qr, el("a", { href: upiLink(to, p.amount_paise), className: "button small primary", textContent: "Pay" }));
   } else {
     actions.append(el("span", { className: "muted", textContent: `${to.name} hasn't added a UPI ID` }));
   }

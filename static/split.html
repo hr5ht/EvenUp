@@ -12,17 +12,18 @@
 </head>
 <body class="split-page">
 <header class="topbar">
-  <a href="/" class="topbar-logo">EvenUp</a>
+  <a href="/" class="logo">EvenUp</a>
   <button type="button" id="switch" class="you-chip"><span id="you-text">…</span></button>
 </header>
 
 <main class="app">
-  <h1 id="title">Loading…</h1>
-  <p class="error" id="load-error"></p>
+  <header class="page-head">
+    <h1 id="title">Loading…</h1>
+    <p class="muted" id="expiry" hidden></p>
+    <p class="error" id="load-error"></p>
+  </header>
 
   <div id="content" class="stagger" hidden>
-    <div class="banner" id="expiry" hidden></div>
-
     <form class="card" id="upi-form" hidden>
       <label for="my-upi">Add your UPI ID so people can pay you</label>
       <div class="row">
@@ -32,27 +33,27 @@
       <p class="error" id="upi-error"></p>
     </form>
 
-    <section class="hero">
+    <section class="card hero">
       <p class="hero-label" id="hero-label"></p>
       <p class="hero-amount" id="hero-amount"></p>
       <p class="muted" id="hero-sub"></p>
       <ul class="list" id="my-payments"></ul>
     </section>
 
-    <nav class="tiles stagger">
-      <button type="button" class="tile" data-open="settle-sheet"><strong>Settle up</strong><span id="tile-settle"></span></button>
-      <button type="button" class="tile" data-open="balances-sheet"><strong>Balances</strong><span id="tile-balances"></span></button>
-      <button type="button" class="tile" data-open="share-sheet"><strong>Share</strong><span>Link, text, image, PDF</span></button>
-      <button type="button" class="tile" data-open="activity-sheet"><strong>Activity</strong><span>History and undo</span></button>
-      <button type="button" class="tile tile-admin" data-open="admin-sheet" id="admin-tile" hidden><strong>Admin</strong><span>Members, UPI IDs, delete</span></button>
+    <nav class="tiles">
+      <button type="button" class="tile" data-open="settle-sheet"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg></span><span class="tile-text"><strong>Settle up</strong><span id="tile-settle"></span></span></button>
+      <button type="button" class="tile" data-open="balances-sheet"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M8 17v-4M13 17V9M18 17V5"/></svg></span><span class="tile-text"><strong>Balances</strong><span id="tile-balances"></span></span></button>
+      <button type="button" class="tile" data-open="share-sheet"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v13"/></svg></span><span class="tile-text"><strong>Share</strong><span>Link, image, PDF</span></span></button>
+      <button type="button" class="tile" data-open="activity-sheet"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="tile-text"><strong>Activity</strong><span>History, undo</span></span></button>
+      <button type="button" class="tile tile-wide" data-open="admin-sheet" id="admin-tile" hidden><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span><span class="tile-text"><strong>Admin</strong><span>Members, UPI IDs, delete split</span></span></button>
     </nav>
 
     <h2 class="section-title">Expenses</h2>
-    <ul class="list card-list" id="expenses"></ul>
+    <ul class="list group card-list" id="expenses"></ul>
   </div>
 </main>
 
-<button type="button" class="fab" id="fab" hidden>+ Add expense</button>
+<button type="button" class="fab primary" id="fab" hidden>+ Add expense</button>
 <div class="toast" id="toast" role="status" hidden></div>
 <pre id="print-area"></pre>
 
@@ -73,11 +74,13 @@
 
 <dialog class="sheet" id="share-sheet">
   <div class="sheet-head"><h2>Share</h2><button type="button" class="icon-btn" data-close aria-label="Close">✕</button></div>
-  <div class="sheet-body sheet-actions">
-    <button type="button" id="copy-link">Copy link to this split</button>
-    <button type="button" id="copy-summary">Copy summary as text</button>
-    <button type="button" id="download-png">Save summary image</button>
-    <button type="button" id="print-pdf">Save as PDF</button>
+  <div class="sheet-body">
+    <div class="menu">
+      <button type="button" id="copy-link">Copy link to this split</button>
+      <button type="button" id="copy-summary">Copy summary as text</button>
+      <button type="button" id="download-png">Save summary image</button>
+      <button type="button" id="print-pdf">Save as PDF</button>
+    </div>
   </div>
 </dialog>
 
@@ -93,9 +96,9 @@
     <label for="new-member">Add someone</label>
     <input type="text" id="new-member" maxlength="40" placeholder="Name">
     <input type="text" id="new-member-upi" maxlength="100" placeholder="UPI ID (optional)" class="stack">
-    <div class="actions"><button type="button" id="add-member" class="primary">Add</button></div>
+    <div class="actions"><button type="button" id="add-member" class="primary block">Add person</button></div>
     <p class="error" id="admin-error"></p>
-    <div class="actions danger-zone"><button type="button" id="delete-split" class="danger">Delete this split now</button></div>
+    <div class="danger-zone"><button type="button" id="delete-split" class="danger block">Delete this split now</button></div>
   </div>
 </dialog>
 
@@ -137,7 +140,7 @@
 <dialog class="sheet" id="who-dialog">
   <div class="sheet-head"><h2 id="who-title">Who are you?</h2><button type="button" class="icon-btn" data-close aria-label="Close">✕</button></div>
   <div class="sheet-body">
-    <div id="who-list" class="who-list"></div>
+    <div id="who-list" class="menu who-list"></div>
     <button type="button" id="join-open" class="link join-open">I'm not on the list</button>
     <form id="join-form" hidden>
       <label for="join-name">Your name</label>

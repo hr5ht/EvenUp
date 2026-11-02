@@ -9,77 +9,85 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<header class="nav">
-  <div class="nav-inner">
-    <a href="/" class="logo">EvenUp</a>
-    <!-- Accounts arrive with trips and groups (v2). These buttons do nothing yet. -->
-    <nav class="row">
-      <button type="button" class="small" title="Coming soon">Log in</button>
-      <button type="button" class="small primary" title="Coming soon">Sign up</button>
-    </nav>
-  </div>
+<header class="topbar">
+  <a href="/" class="logo">EvenUp</a>
+  <!-- Accounts arrive with trips and groups (v2). These buttons do nothing yet. -->
+  <nav class="row">
+    <button type="button" class="small" title="Coming soon">Log in</button>
+    <button type="button" class="small primary" title="Coming soon">Sign up</button>
+  </nav>
 </header>
 
-<main class="wide">
-  <section class="intro stagger">
-    <span class="eyebrow">Quick split · no sign-up</span>
-    <h1>Split the bill.<br><em>Settle with UPI.</em></h1>
-    <p class="lead">Add who paid what, and EvenUp works out the fewest payments to settle up. Everyone pays with one tap in GPay, PhonePe or Paytm.</p>
-    <div class="actions">
-      <a class="button primary big" href="/new">Start a quick split</a>
-      <a class="button big" href="/demo">See a demo</a>
+<main class="stagger">
+  <section class="intro">
+    <h1 class="display">Split the bill.<br><span class="accent">Settle with UPI.</span></h1>
+    <p class="lead">Add who paid what. EvenUp works out the fewest payments, and everyone pays in one tap with GPay, PhonePe or Paytm.</p>
+    <div class="cta">
+      <a class="button primary block" href="/new">Start a quick split</a>
+      <a class="button block" href="/demo">See a demo</a>
     </div>
-    <p class="muted">Quick splits delete themselves after 48 hours of inactivity.</p>
+    <p class="muted center">No sign-up. Quick splits delete themselves after 48 hours of inactivity.</p>
   </section>
 
-  <section class="bento stagger">
-    <div class="cell w4">
-      <span class="cell-num">Preview</span>
-      <div class="mock">
-        <div class="mock-head"><span>Goa dinner</span><span class="muted">3 people</span></div>
-        <p class="hero-label">You get back</p>
-        <p class="mock-amount owed">₹1,000.00</p>
-        <ul class="list">
-          <li><span class="grow">Kabir → You</span><strong class="amount">₹800.00</strong><span class="pill">Pay</span></li>
-          <li><span class="grow">Riya → You</span><strong class="amount">₹200.00</strong><span class="pill">Pay</span></li>
-        </ul>
+  <section class="section">
+    <p class="overline">What your friends see</p>
+    <div class="card hero">
+      <p class="hero-label">You get back</p>
+      <p class="hero-amount owed">₹1,000.00</p>
+      <p class="muted">Goa dinner · ₹3,800.00 spent · 3 expenses</p>
+      <ul class="list" id="my-payments">
+        <li class="pay-row">
+          <div class="pay-main"><span class="grow">Kabir → You</span><strong class="amount">₹800.00</strong></div>
+          <div class="row"><span class="button small">QR</span><span class="button small primary">Pay</span></div>
+        </li>
+        <li class="pay-row">
+          <div class="pay-main"><span class="grow">Riya → You</span><strong class="amount">₹200.00</strong></div>
+          <div class="row"><span class="button small">QR</span><span class="button small primary">Pay</span></div>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="section">
+    <p class="overline">Why EvenUp</p>
+    <div class="tiles">
+      <div class="tile">
+        <span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>
+        <span class="tile-text"><strong>No sign-up</strong><span>Share one link on WhatsApp.</span></span>
+      </div>
+      <div class="tile">
+        <span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg></span>
+        <span class="tile-text"><strong>UPI-native</strong><span>Pay button and QR, amount filled in.</span></span>
+      </div>
+      <div class="tile">
+        <span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg></span>
+        <span class="tile-text"><strong>Fewest payments</strong><span>n people, at most n − 1 payments.</span></span>
+      </div>
+      <div class="tile">
+        <span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
+        <span class="tile-text"><strong>Private</strong><span>Encrypted UPI IDs. Data deletes itself.</span></span>
       </div>
     </div>
-    <div class="cell half w2">
-      <span class="cell-num">01</span>
-      <h2>No sign-up</h2>
-      <p class="muted">Share the link on WhatsApp. Anyone with it can add expenses.</p>
-    </div>
-    <div class="cell half w2">
-      <span class="cell-num">02</span>
-      <h2>UPI-native</h2>
-      <p class="muted">Every payment gets a Pay button and a QR, amount prefilled.</p>
-    </div>
-    <div class="cell w3">
-      <span class="cell-num">03 · Fewest payments</span>
-      <span class="stat">n − 1</span>
-      <p class="muted">Debts are simplified, so a group of n people needs at most n − 1 payments.</p>
-    </div>
-    <div class="cell w3">
-      <span class="cell-num">04 · Private by default</span>
-      <h2>Unguessable links. Encrypted UPI IDs. Data that deletes itself.</h2>
-    </div>
-    <div class="cell w6">
-      <span class="cell-num">How it works</span>
-      <ol class="steps">
-        <li><strong>Create</strong> a split with everyone's names.</li>
-        <li><strong>Share</strong> the link. Everyone adds what they paid and their UPI ID.</li>
-        <li><strong>Settle</strong>: tap Pay or scan the QR, then share a summary in the group chat.</li>
-      </ol>
-    </div>
-    <div class="cell w6 soon">
-      <span class="cell-num">Coming soon</span>
+  </section>
+
+  <section class="section">
+    <p class="overline">How it works</p>
+    <ol class="list group steps">
+      <li><span class="num">1</span><div><strong>Create a split</strong><p class="muted">Add your name and everyone in the group.</p></div></li>
+      <li><span class="num">2</span><div><strong>Share the link</strong><p class="muted">Everyone adds what they paid and their UPI ID.</p></div></li>
+      <li><span class="num">3</span><div><strong>Settle up</strong><p class="muted">Tap Pay or scan the QR, then share a summary.</p></div></li>
+    </ol>
+  </section>
+
+  <section class="section">
+    <div class="card soon">
+      <p class="overline">Coming soon</p>
       <h2>Trips and groups</h2>
-      <p class="muted">Sign in to keep longer trips and flatmate groups, with monthly settle-ups and a dashboard across devices.</p>
+      <p class="muted">Sign in to keep longer trips and flatmate groups, with monthly settle-ups across devices.</p>
     </div>
   </section>
 </main>
 
-<footer class="muted footer">EvenUp · Money never passes through this app, it only does the maths.</footer>
+<footer class="muted footer">Money never passes through EvenUp. It only does the maths.</footer>
 </body>
 </html>
