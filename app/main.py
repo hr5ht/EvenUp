@@ -327,6 +327,23 @@ def add_member(slug: str, body: MemberIn, x_admin_token: Optional[str] = Header(
     return {"ok": True}
 
 
+@app.delete("/api/splits/{slug}/members/{member_id}")
+def remove_member(slug: str, member_id: int, x_admin_token: Optional[str] = Header(None), con=Depends(db.get_db)):
+    s = load_split(con, slug)
+    require_admin(s, x_admin_token)
+    m = con.execute("SELECT * FROM members WHERE id = ? AND split_id = ?", (member_id, s["id"])).fetchone()
+    if not m:
+        raise HTTPException(404, "Member not found")
+    used = "SELECT id FROM expenses WHERE (paid_by = :m OR id IN (SELECT expense_id FROM shares WHERE member_id = :m))"
+    if con.execute(used + " AND deleted = 0", {"m": member_id}).fetchone():
+        raise HTTPException(400, f"{m['name']} is in some expenses. Edit or delete those first.")
+    con.execute(f"DELETE FROM expenses WHERE id IN ({used} AND deleted = 1)", {"m": member_id})
+    con.execute("DELETE FROM members WHERE id = ?", (member_id,))
+    log(con, s["id"], "member_removed", None, {"name": m["name"]})
+    con.commit()
+    return {"ok": True}
+
+
 @app.delete("/api/splits/{slug}")
 def delete_split(slug: str, x_admin_token: Optional[str] = Header(None), con=Depends(db.get_db)):
     s = load_split(con, slug)

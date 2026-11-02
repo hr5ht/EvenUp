@@ -38,6 +38,7 @@ function render() {
   renderBalances();
   renderExpenses();
   renderActivity();
+  if (adminToken) renderAdminMembers();
 
   // Only rebuild member inputs when members change, so polling doesn't wipe a half-filled form.
   const key = data.members.map((m) => m.id).join(",");
@@ -124,7 +125,29 @@ const ACTIONS = {
   deleted: "Deleted",
   restored: "Restored",
   member_added: "Member added:",
+  member_removed: "Member removed:",
 };
+
+function renderAdminMembers() {
+  $("admin-members").replaceChildren(...data.members.map((m) => {
+    const remove = el("button", { type: "button", className: "small", textContent: "Remove" });
+    remove.onclick = async () => {
+      if (!confirm(`Remove ${m.name}?`)) return;
+      $("admin-error").textContent = "";
+      try {
+        await api("DELETE", `${base}/members/${m.id}`, null, { "X-Admin-Token": adminToken });
+        await load();
+      } catch (err) {
+        $("admin-error").textContent = err.message;
+      }
+    };
+    return el("li", {},
+      el("span", { className: "grow", textContent: m.name }),
+      el("span", { className: "muted", textContent: m.upi_id || "no UPI ID" }),
+      remove,
+    );
+  }));
+}
 
 function renderActivity() {
   const list = $("activity");
