@@ -2,27 +2,20 @@ const membersBox = document.getElementById("members");
 
 function addMemberRow() {
   const first = !membersBox.children.length;
-  const row = el("div", { className: "row" },
-    el("input", { type: "text", placeholder: first ? "Your name" : "Name", maxLength: 40, required: first, className: "m-name" }),
-    el("input", { type: "text", placeholder: "UPI ID (name@bank)", maxLength: 100, className: "m-upi" }),
-  );
-  membersBox.append(row);
+  const input = el("input", { type: "text", placeholder: first ? "Your name" : "Friend's name", maxLength: 40, required: first, className: "m-name" });
+  membersBox.append(el("div", { className: "row" }, input, first ? el("span", { className: "badge", textContent: "Admin" }) : null));
+  return input;
 }
 
 addMemberRow();
-addMemberRow();
-addMemberRow();
-document.getElementById("add-member").onclick = () => addMemberRow();
+document.getElementById("add-member").onclick = () => addMemberRow().focus();
 
 document.getElementById("create").onsubmit = async (e) => {
   e.preventDefault();
   const error = document.getElementById("error");
   error.textContent = "";
   const members = [...membersBox.children]
-    .map((row) => ({
-      name: row.querySelector(".m-name").value.trim(),
-      upi_id: row.querySelector(".m-upi").value.trim() || null,
-    }))
+    .map((row) => ({ name: row.querySelector(".m-name").value.trim() }))
     .filter((m) => m.name);
   if (!members.length) {
     error.textContent = "Add at least one member.";

@@ -72,7 +72,19 @@ function renderYou() {
     ? `You're ${me.name}${identity.adminToken ? " · admin" : ""}`
     : "You haven't picked your name.";
   $("switch").textContent = me ? "Switch" : "Pick your name";
+  $("upi-form").hidden = !me || !!me.upi_id;
 }
+
+$("upi-form").onsubmit = async (ev) => {
+  ev.preventDefault();
+  $("upi-error").textContent = "";
+  try {
+    await api("PUT", `${base}/members/${identity.me}/upi`, { upi_id: $("my-upi").value.trim() });
+    await load();
+  } catch (err) {
+    $("upi-error").textContent = err.status === 422 ? "That doesn't look like a UPI ID (name@bank)." : err.message;
+  }
+};
 
 function openPicker() {
   $("who-list").replaceChildren(...data.members.map((m) => {
@@ -81,6 +93,8 @@ function openPicker() {
     return b;
   }));
   $("who-list").hidden = false;
+  $("join-open").hidden = false;
+  $("join-form").hidden = true;
   $("pw-form").hidden = true;
   $("who-title").textContent = "Who are you?";
   $("demo-hint").hidden = slug !== "demo";
@@ -96,6 +110,7 @@ function choose(m) {
   }
   $("who-title").textContent = `Hi ${m.name}`;
   $("who-list").hidden = true;
+  $("join-open").hidden = true;
   $("pw-form").hidden = false;
   $("pw-error").textContent = "";
   $("admin-pw").value = "";
@@ -117,6 +132,35 @@ function choose(m) {
 }
 $("switch").onclick = openPicker;
 $("pw-back").onclick = openPicker;
+$("join-back").onclick = openPicker;
+
+$("join-open").onclick = () => {
+  $("who-title").textContent = "Join this split";
+  $("who-list").hidden = true;
+  $("join-open").hidden = true;
+  $("join-form").hidden = false;
+  $("join-error").textContent = "";
+  $("join-name").focus();
+};
+
+$("join-form").onsubmit = async (ev) => {
+  ev.preventDefault();
+  $("join-error").textContent = "";
+  try {
+    const { id } = await api("POST", `${base}/members`, {
+      name: $("join-name").value.trim(),
+      upi_id: $("join-upi").value.trim() || null,
+    });
+    $("join-form").reset();
+    identity = { me: id, adminToken: null };
+    saveIdentity(slug, identity);
+    $("who-dialog").close();
+    await load();
+    $("paid-by").value = id;
+  } catch (err) {
+    $("join-error").textContent = err.status === 422 ? "That doesn't look like a UPI ID (name@bank)." : err.message;
+  }
+};
 
 async function adminApi(method, url, body) {
   try {
@@ -216,6 +260,7 @@ const ACTIONS = {
   restored: "Restored",
   member_added: "Member added:",
   member_removed: "Member removed:",
+  upi_set: "UPI ID updated for",
 };
 
 function renderAdminMembers() {
@@ -231,10 +276,23 @@ function renderAdminMembers() {
         $("admin-error").textContent = err.message;
       }
     };
+    const editUpi = el("button", { type: "button", className: "small", textContent: "UPI" });
+    editUpi.onclick = async () => {
+      const value = prompt(`UPI ID for ${m.name} (leave empty to clear)`, m.upi_id || "");
+      if (value === null) return;
+      $("admin-error").textContent = "";
+      try {
+        await adminApi("PUT", `${base}/members/${m.id}/upi`, { upi_id: value.trim() || null });
+        await load();
+      } catch (err) {
+        $("admin-error").textContent = err.status === 422 ? "That doesn't look like a UPI ID (name@bank)." : err.message;
+      }
+    };
     return el("li", {},
-      el("span", { className: "grow", textContent: m.name }),
-      el("span", { className: "muted", textContent: m.upi_id || "no UPI ID" }),
-      remove,
+      el("span", { className: "grow" }, el("div", { textContent: m.name }),
+        el("div", { className: "muted", textContent: m.upi_id || "no UPI ID" })),
+      editUpi,
+      m.id === data.admin_member_id ? null : remove,
     );
   }));
 }

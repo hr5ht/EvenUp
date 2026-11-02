@@ -17,6 +17,15 @@
   <p class="muted no-print you-bar"><span id="you-text"></span> <button type="button" id="switch" class="link">Switch</button></p>
   <div class="banner no-print" id="expiry" hidden></div>
 
+  <form class="card no-print" id="upi-form" hidden>
+    <label for="my-upi">Add your UPI ID so people can pay you</label>
+    <div class="row">
+      <input type="text" id="my-upi" maxlength="100" placeholder="name@bank" required>
+      <button class="primary" type="submit">Save</button>
+    </div>
+    <p class="error" id="upi-error"></p>
+  </form>
+
   <div id="content" hidden>
     <section class="card">
       <h2>Settle up</h2>
@@ -72,7 +81,7 @@
     <section class="card no-print" id="admin" hidden>
       <h2>Admin</h2>
       <ul class="list" id="admin-members"></ul>
-      <label for="new-member">Add member</label>
+      <label for="new-member">Add someone</label>
       <div class="row">
         <input type="text" id="new-member" maxlength="40" placeholder="Name">
         <input type="text" id="new-member-upi" maxlength="100" placeholder="UPI ID (optional)">
@@ -86,6 +95,18 @@
   <dialog id="who-dialog">
     <h2 id="who-title">Who are you?</h2>
     <div id="who-list" class="who-list"></div>
+    <button type="button" id="join-open" class="link join-open">I'm not on the list</button>
+    <form id="join-form" hidden>
+      <label for="join-name">Your name</label>
+      <input type="text" id="join-name" maxlength="40" required>
+      <label for="join-upi">UPI ID <span class="muted">(optional, so people can pay you)</span></label>
+      <input type="text" id="join-upi" maxlength="100" placeholder="name@bank">
+      <p class="error" id="join-error"></p>
+      <div class="actions">
+        <button class="primary" type="submit">Join</button>
+        <button type="button" id="join-back" class="link">Back</button>
+      </div>
+    </form>
     <form id="pw-form" hidden>
       <label for="admin-pw">You're the admin. Enter the admin password to manage this split.</label>
       <input type="password" id="admin-pw" maxlength="100" autocomplete="current-password" required>

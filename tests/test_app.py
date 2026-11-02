@@ -83,9 +83,18 @@ def test_flow():
         assert c.post(f"/api/splits/{slug}/admin-login", json={"password": "pass1"}).json()["admin_token"] == token
         assert g["admin_member_id"] == a
 
+        # anyone can join; names stay unique
+        assert c.post(f"/api/splits/{slug}/members", json={"name": "D"}).status_code == 200
+        assert c.post(f"/api/splits/{slug}/members", json={"name": "d"}).status_code == 400
+
+        # UPI ID: set once by anyone, changing it needs the admin
+        upi = lambda m, v, h=None: c.put(f"/api/splits/{slug}/members/{m}/upi", json={"upi_id": v}, headers=h or {})  # noqa: E731
+        assert upi(b, "b@ybl").status_code == 200
+        assert upi(b, "thief@ybl").status_code == 403
+        assert upi(b, "b2@ybl", {"X-Admin-Token": token}).status_code == 200
+        assert [m["upi_id"] for m in c.get(f"/api/splits/{slug}").json()["members"] if m["id"] == b] == ["b2@ybl"]
+
         # admin actions need the token
-        assert c.post(f"/api/splits/{slug}/members", json={"name": "D"}).status_code == 403
-        assert c.post(f"/api/splits/{slug}/members", json={"name": "D"}, headers={"X-Admin-Token": token}).status_code == 200
 
         # remove member: blocked while in a live expense, allowed otherwise
         adm = {"X-Admin-Token": token}

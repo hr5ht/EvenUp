@@ -429,14 +429,37 @@ def undo(slug: str, activity_id: int, con=Depends(db.get_db)):
 
 
 @app.post("/api/splits/{slug}/members")
-def add_member(slug: str, body: MemberIn, x_admin_token: Optional[str] = Header(None), con=Depends(db.get_db)):
+def add_member(slug: str, body: MemberIn, con=Depends(db.get_db)):
+    """Anyone with the link can add themselves (or a friend), like anyone can add an expense."""
     s = load_split(con, slug)
-    require_admin(s, x_admin_token)
     existing = [r["name"].strip().lower() for r in con.execute("SELECT name FROM members WHERE split_id = ?", (s["id"],))]
     if body.name.strip().lower() in existing:
-        raise HTTPException(400, "Member names must be unique")
-    con.execute("INSERT INTO members (split_id, name, upi_id) VALUES (?, ?, ?)", (s["id"], body.name, enc(body.upi_id)))
+        raise HTTPException(400, "That name is already in this split. Pick it from the list instead.")
+    if len(existing) >= 50:
+        raise HTTPException(400, "This split is full (50 members)")
+    mid = con.execute("INSERT INTO members (split_id, name, upi_id) VALUES (?, ?, ?)",
+                      (s["id"], body.name, enc(body.upi_id))).lastrowid
     log(con, s["id"], "member_added", None, {"name": body.name})
+    con.commit()
+    return {"id": mid}
+
+
+class UpiIn(BaseModel):
+    upi_id: Optional[str] = Field(default=None, pattern=UPI_RE)
+
+
+@app.put("/api/splits/{slug}/members/{member_id}/upi")
+def set_upi(slug: str, member_id: int, body: UpiIn, x_admin_token: Optional[str] = Header(None), con=Depends(db.get_db)):
+    """Members fill in their own UPI ID once. Changing an existing one needs the admin,
+    otherwise anyone with the link could swap in their own ID and collect someone else's payments."""
+    s = load_split(con, slug)
+    m = con.execute("SELECT * FROM members WHERE id = ? AND split_id = ?", (member_id, s["id"])).fetchone()
+    if not m:
+        raise HTTPException(404, "Member not found")
+    if m["upi_id"]:
+        require_admin(s, x_admin_token)
+    con.execute("UPDATE members SET upi_id = ? WHERE id = ?", (enc(body.upi_id), member_id))
+    log(con, s["id"], "upi_set", None, {"name": m["name"]})
     con.commit()
     return {"ok": True}
 
