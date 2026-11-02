@@ -468,10 +468,11 @@ dialog.sheet {
 dialog.sheet[open] { display: flex; flex-direction: column; animation: sheet-up 0.4s var(--spring); }
 dialog.sheet::before { content: ""; align-self: center; flex-shrink: 0; width: 36px; height: 4px; margin-top: var(--s2); border-radius: 999px; background: var(--line-2); }
 
-.sheet-form { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+/* flex: 1 1 auto, not flex: 1 — Safari collapses a 0-basis scrolling child of a column flexbox to nothing (WebKit bug 281973). */
+.sheet-form { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
 .sheet-head { display: flex; justify-content: space-between; align-items: center; gap: var(--s3); padding: var(--s3) var(--s4) var(--s2); }
 .sheet-head h2 { font-size: 20px; font-weight: 700; overflow-wrap: anywhere; }
-.sheet-body { flex: 1; min-height: 0; overflow-y: auto; padding: var(--s2) var(--s4) calc(var(--s5) + env(safe-area-inset-bottom)); }
+.sheet-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: var(--s2) var(--s4) calc(var(--s5) + env(safe-area-inset-bottom)); }
 .sheet-body:has(+ .sheet-foot) { padding-bottom: var(--s4); }
 .sheet-body > .muted:first-child { margin-bottom: var(--s2); }
 .sheet-body h3 { margin: var(--s5) 0 var(--s1); }
