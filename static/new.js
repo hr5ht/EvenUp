@@ -1,12 +1,12 @@
 const membersBox = document.getElementById("members");
 
 function addMemberRow() {
-  const first = !membersBox.children.length;
-  const input = el("input", { type: "text", placeholder: first ? "Your name" : "Friend's name", maxLength: 40, required: first, className: "m-name" });
-  membersBox.append(el("div", { className: "row" }, input, first ? el("span", { className: "badge", textContent: "Admin" }) : null));
+  const input = el("input", { type: "text", placeholder: "Name", maxLength: 40, className: "m-name" });
+  membersBox.append(el("div", { className: "row" }, input));
   return input;
 }
 
+addMemberRow();
 addMemberRow();
 document.getElementById("add-member").onclick = () => addMemberRow().focus();
 
@@ -24,14 +24,14 @@ document.getElementById("create").onsubmit = async (e) => {
   const button = e.submitter;
   button.disabled = true;
   try {
-    const { slug, admin_token, admin_member_id } = await api("POST", "/api/splits", {
+    const { slug, admin_token } = await api("POST", "/api/splits", {
       name: document.getElementById("name").value.trim(),
       members,
       admin_password: document.getElementById("admin-password").value,
       website: document.getElementById("website").value,
     });
-    // This device is already "you, the admin" when the split opens.
-    saveIdentity(slug, { me: admin_member_id, adminToken: admin_token });
+    // This device is already the admin when the split opens; it still picks a name there.
+    saveIdentity(slug, { adminToken: admin_token });
     const share = `${location.origin}/g/${slug}`;
     document.getElementById("share-link").textContent = share;
     document.getElementById("copy-share").onclick = (ev) => copyText(share, ev.target);

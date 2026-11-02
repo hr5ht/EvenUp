@@ -95,7 +95,10 @@
   <dialog id="who-dialog">
     <h2 id="who-title">Who are you?</h2>
     <div id="who-list" class="who-list"></div>
-    <button type="button" id="join-open" class="link join-open">I'm not on the list</button>
+    <div class="actions">
+      <button type="button" id="join-open" class="link">I'm not on the list</button>
+      <button type="button" id="admin-open" class="link">I'm the admin</button>
+    </div>
     <form id="join-form" hidden>
       <label for="join-name">Your name</label>
       <input type="text" id="join-name" maxlength="40" required>
@@ -108,13 +111,12 @@
       </div>
     </form>
     <form id="pw-form" hidden>
-      <label for="admin-pw">You're the admin. Enter the admin password to manage this split.</label>
+      <label for="admin-pw">Enter the admin password to manage this split.</label>
       <input type="password" id="admin-pw" maxlength="100" autocomplete="current-password" required>
       <p class="error" id="pw-error"></p>
       <div class="actions">
         <button class="primary" type="submit">Unlock</button>
-        <button type="button" id="pw-skip">Continue without admin</button>
-        <button type="button" id="pw-back" class="link">Not me</button>
+        <button type="button" id="pw-back" class="link">Back</button>
       </div>
     </form>
     <p class="muted" id="demo-hint" hidden>Demo admin password: <strong>demo</strong></p>

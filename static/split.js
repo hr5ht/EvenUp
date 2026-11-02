@@ -68,9 +68,8 @@ function setIdentity(next) {
 
 function renderYou() {
   const me = data.members.find((m) => m.id === identity.me);
-  $("you-text").textContent = me
-    ? `You're ${me.name}${identity.adminToken ? " · admin" : ""}`
-    : "You haven't picked your name.";
+  $("you-text").textContent = (me ? `You're ${me.name}` : "You haven't picked your name.")
+    + (identity.adminToken ? " · admin" : "");
   $("switch").textContent = me ? "Switch" : "Pick your name";
   $("upi-form").hidden = !me || !!me.upi_id;
 }
@@ -88,12 +87,17 @@ $("upi-form").onsubmit = async (ev) => {
 
 function openPicker() {
   $("who-list").replaceChildren(...data.members.map((m) => {
-    const b = el("button", { type: "button", textContent: m.name + (m.id === data.admin_member_id ? " (admin)" : "") });
-    b.onclick = () => choose(m);
+    const b = el("button", { type: "button", textContent: m.name });
+    b.onclick = () => {
+      // Admin is unlocked per device, independent of which name you pick.
+      setIdentity({ me: m.id, adminToken: identity.adminToken });
+      $("who-dialog").close();
+    };
     return b;
   }));
   $("who-list").hidden = false;
-  $("join-open").hidden = false;
+  $("join-open").parentElement.hidden = false;
+  $("admin-open").hidden = !!identity.adminToken;
   $("join-form").hidden = true;
   $("pw-form").hidden = true;
   $("who-title").textContent = "Who are you?";
@@ -101,35 +105,30 @@ function openPicker() {
   $("who-dialog").showModal();
 }
 
-function choose(m) {
-  const isAdmin = m.id === data.admin_member_id;
-  if (!isAdmin || (identity.me === m.id && identity.adminToken)) {
-    setIdentity({ me: m.id, adminToken: isAdmin ? identity.adminToken : null });
-    $("who-dialog").close();
-    return;
-  }
-  $("who-title").textContent = `Hi ${m.name}`;
+$("admin-open").onclick = () => {
+  $("who-title").textContent = "Admin";
   $("who-list").hidden = true;
-  $("join-open").hidden = true;
+  $("join-open").parentElement.hidden = true;
   $("pw-form").hidden = false;
   $("pw-error").textContent = "";
   $("admin-pw").value = "";
   $("admin-pw").focus();
-  $("pw-form").onsubmit = async (ev) => {
-    ev.preventDefault();
-    try {
-      const { admin_token } = await api("POST", `${base}/admin-login`, { password: $("admin-pw").value });
-      setIdentity({ me: m.id, adminToken: admin_token });
-      $("who-dialog").close();
-    } catch (err) {
-      $("pw-error").textContent = err.message;
-    }
-  };
-  $("pw-skip").onclick = () => {
-    setIdentity({ me: m.id, adminToken: null });
-    $("who-dialog").close();
-  };
-}
+};
+
+$("pw-form").onsubmit = async (ev) => {
+  ev.preventDefault();
+  try {
+    const { admin_token } = await api("POST", `${base}/admin-login`, { password: $("admin-pw").value });
+    identity = { me: identity.me, adminToken: admin_token };
+    saveIdentity(slug, identity);
+    render();
+    // Still need a name to be "you" in the split.
+    if (data.members.some((m) => m.id === identity.me)) $("who-dialog").close();
+    else openPicker();
+  } catch (err) {
+    $("pw-error").textContent = err.message;
+  }
+};
 $("switch").onclick = openPicker;
 $("pw-back").onclick = openPicker;
 $("join-back").onclick = openPicker;
@@ -137,7 +136,7 @@ $("join-back").onclick = openPicker;
 $("join-open").onclick = () => {
   $("who-title").textContent = "Join this split";
   $("who-list").hidden = true;
-  $("join-open").hidden = true;
+  $("join-open").parentElement.hidden = true;
   $("join-form").hidden = false;
   $("join-error").textContent = "";
   $("join-name").focus();
@@ -152,7 +151,7 @@ $("join-form").onsubmit = async (ev) => {
       upi_id: $("join-upi").value.trim() || null,
     });
     $("join-form").reset();
-    identity = { me: id, adminToken: null };
+    identity = { me: id, adminToken: identity.adminToken };
     saveIdentity(slug, identity);
     $("who-dialog").close();
     await load();
@@ -292,7 +291,7 @@ function renderAdminMembers() {
       el("span", { className: "grow" }, el("div", { textContent: m.name }),
         el("div", { className: "muted", textContent: m.upi_id || "no UPI ID" })),
       editUpi,
-      m.id === data.admin_member_id ? null : remove,
+      remove,
     );
   }));
 }

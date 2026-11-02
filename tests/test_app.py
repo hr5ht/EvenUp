@@ -81,7 +81,6 @@ def test_flow():
         # admin login: wrong password, right password gives the same token create returned
         assert c.post(f"/api/splits/{slug}/admin-login", json={"password": "nope"}).status_code == 401
         assert c.post(f"/api/splits/{slug}/admin-login", json={"password": "pass1"}).json()["admin_token"] == token
-        assert g["admin_member_id"] == a
 
         # anyone can join; names stay unique
         assert c.post(f"/api/splits/{slug}/members", json={"name": "D"}).status_code == 200
@@ -102,7 +101,6 @@ def test_flow():
         assert c.delete(f"/api/splits/{slug}/members/{cc}").status_code == 403
         assert c.delete(f"/api/splits/{slug}/members/{cc}", headers=adm).status_code == 200
         assert len(c.get(f"/api/splits/{slug}").json()["members"]) == 3
-        assert c.delete(f"/api/splits/{slug}/members/{a}", headers=adm).status_code == 400  # admin stays
         assert c.delete(f"/api/splits/{slug}", headers={"X-Admin-Token": "wrong"}).status_code == 403
         assert c.delete(f"/api/splits/{slug}", headers={"X-Admin-Token": token}).status_code == 200
         assert c.get(f"/api/splits/{slug}").status_code == 404
