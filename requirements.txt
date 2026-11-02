@@ -1,6 +1,7 @@
 fastapi
 uvicorn
 cryptography
+qrcode
 # dev
 pytest
 httpx

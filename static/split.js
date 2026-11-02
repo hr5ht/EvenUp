@@ -48,16 +48,21 @@ function render() {
   }
 }
 
+// Same format as upi_link() in main.py. %20 not +, and @ left as is, for picky UPI apps.
 function upiLink(to, paise) {
-  const params = new URLSearchParams({
-    pa: to.upi_id,
-    pn: to.name,
-    am: plainAmount(paise),
-    cu: "INR",
-    tn: data.name.slice(0, 50),
-  });
-  return `upi://pay?${params}`;
+  const params = { pa: to.upi_id, pn: to.name, am: plainAmount(paise), cu: "INR", tn: data.name.slice(0, 50) };
+  const query = Object.entries(params)
+    .map(([k, v]) => `${k}=${encodeURIComponent(v).replace(/%40/g, "@")}`)
+    .join("&");
+  return `upi://pay?${query}`;
 }
+
+function showQr(from, to, paise) {
+  $("qr-img").src = `${base}/qr?to=${to.id}&amount=${paise}`;
+  $("qr-caption").textContent = `${nameOf(from)} pays ${to.name} ${rupees(paise)} · ${to.upi_id}`;
+  $("qr-dialog").showModal();
+}
+$("qr-close").onclick = () => $("qr-dialog").close();
 
 function renderSettlement() {
   const list = $("settlement");
@@ -71,6 +76,9 @@ function renderSettlement() {
     const actions = el("span", { className: "row" });
     if (to.upi_id) {
       actions.append(el("a", { href: upiLink(to, p.amount_paise) }, el("button", { type: "button", className: "small primary", textContent: "Pay" })));
+      const qr = el("button", { type: "button", className: "small", textContent: "QR" });
+      qr.onclick = () => showQr(p.from, to, p.amount_paise);
+      actions.append(qr);
       const copy = el("button", { type: "button", className: "small", textContent: "Copy UPI" });
       copy.onclick = () => copyText(`${to.upi_id} ${plainAmount(p.amount_paise)}`, copy);
       actions.append(copy);

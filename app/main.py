@@ -7,11 +7,14 @@ import time
 from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from pathlib import Path
+from urllib.parse import quote, urlencode
 from typing import Dict, List, Literal, Optional
 
+import qrcode
+import qrcode.image.svg
 from cryptography.fernet import Fernet
 from fastapi import Depends, FastAPI, Header, HTTPException
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -276,6 +279,27 @@ def read(slug: str, con=Depends(db.get_db)):
         "settlement": [{"from": d, "to": c, "amount_paise": a} for d, c, a in money.settle(bal)],
         "activity": activity,
     }
+
+
+def upi_link(upi_id, name, amount_paise, note):
+    # Same format as upiLink() in split.js. %20 not +, some UPI apps don't decode +.
+    return "upi://pay?" + urlencode({
+        "pa": upi_id, "pn": name, "am": f"{amount_paise // 100}.{amount_paise % 100:02d}", "cu": "INR", "tn": note[:50],
+    }, safe="@", quote_via=quote)
+
+
+@app.get("/api/splits/{slug}/qr")
+def qr(slug: str, to: int, amount: int, con=Depends(db.get_db)):
+    """UPI QR for paying a member of this split. Only encodes this split's own UPI IDs."""
+    s = load_split(con, slug)
+    con.commit()
+    m = con.execute("SELECT * FROM members WHERE id = ? AND split_id = ?", (to, s["id"])).fetchone()
+    if not m or not m["upi_id"] or not 0 < amount <= 10**10:
+        raise HTTPException(404, "No UPI ID for this member")
+    img = qrcode.make(upi_link(dec(m["upi_id"]), m["name"], amount, s["name"]),
+                      image_factory=qrcode.image.svg.SvgPathImage, border=2)
+    return Response(img.to_string(encoding="unicode"), media_type="image/svg+xml",
+                    headers={"Cache-Control": "private, max-age=300"})
 
 
 @app.post("/api/splits/{slug}/expenses")

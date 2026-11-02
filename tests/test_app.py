@@ -128,3 +128,14 @@ def test_upi_encrypted_at_rest():
         stored = con.execute("SELECT upi_id FROM members WHERE name = 'A' ORDER BY id DESC").fetchone()[0]
         con.close()
         assert "secret" not in stored
+
+
+def test_qr():
+    from app.main import upi_link
+    assert upi_link("a@ybl", "Aman K", 12345, "Goa trip") == "upi://pay?pa=a@ybl&pn=Aman%20K&am=123.45&cu=INR&tn=Goa%20trip"
+    with TestClient(app) as c:
+        g = c.get("/api/splits/demo").json()
+        aman, _, kabir = [m["id"] for m in g["members"]]
+        r = c.get(f"/api/splits/demo/qr?to={aman}&amount=80000")
+        assert r.status_code == 200 and r.headers["content-type"].startswith("image/svg+xml")
+        assert c.get(f"/api/splits/demo/qr?to={kabir}&amount=100").status_code == 404  # no UPI ID

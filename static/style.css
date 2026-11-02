@@ -138,6 +138,18 @@ button:disabled { opacity: 0.6; cursor: default; }
   font-size: 0.85rem;
 }
 
+dialog {
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  max-width: calc(100vw - 32px);
+  text-align: center;
+}
+dialog::backdrop { background: rgb(0 0 0 / 0.5); }
+/* QR stays black on white in dark mode so scanners can read it */
+#qr-img { background: #fff; padding: 8px; border-radius: 8px; display: block; margin: 0 auto; }
+
 .error { color: var(--owe); font-size: 0.9rem; min-height: 1.2em; margin: 8px 0 0; }
 .hp { position: absolute; left: -9999px; }
 [hidden] { display: none !important; }
