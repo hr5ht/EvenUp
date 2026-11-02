@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Dict, List, Literal, Optional
 
+from cryptography.fernet import Fernet
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -23,6 +24,19 @@ UPI_RE = r"^[a-zA-Z0-9._-]{1,256}@[a-zA-Z]{2,64}$"
 # (limit, window seconds) per client IP
 CREATE_LIMIT = (10, 3600)
 WRITE_LIMIT = (60, 60)
+
+# UPI IDs are encrypted at rest. Set UPI_KEY in production (Fernet.generate_key()).
+if not os.environ.get("UPI_KEY"):
+    print("WARNING: UPI_KEY not set, using an insecure dev key")
+FERNET = Fernet(os.environ.get("UPI_KEY", "ZGV2LWtleS1kby1ub3QtdXNlLWluLXByb2R1Y3Rpb24="))
+
+
+def enc(v):
+    return FERNET.encrypt(v.encode()).decode() if v else None
+
+
+def dec(v):
+    return FERNET.decrypt(v.encode()).decode() if v else None
 
 
 
@@ -199,7 +213,7 @@ def create_split(con, body, slug=None):
         (slug, body.name, hash_token(token), t, t + TTL, t),
     )
     for m in body.members:
-        con.execute("INSERT INTO members (split_id, name, upi_id) VALUES (?, ?, ?)", (cur.lastrowid, m.name, m.upi_id))
+        con.execute("INSERT INTO members (split_id, name, upi_id) VALUES (?, ?, ?)", (cur.lastrowid, m.name, enc(m.upi_id)))
     log(con, cur.lastrowid, "created", None, {"name": body.name})
     return slug, token, cur.lastrowid
 
@@ -242,7 +256,8 @@ def create(body: SplitIn, con=Depends(db.get_db)):
 def read(slug: str, con=Depends(db.get_db)):
     s = load_split(con, slug)
     con.commit()
-    members = [dict(r) for r in con.execute("SELECT id, name, upi_id FROM members WHERE split_id = ? ORDER BY id", (s["id"],))]
+    members = [{**dict(r), "upi_id": dec(r["upi_id"])} for r in con.execute(
+        "SELECT id, name, upi_id FROM members WHERE split_id = ? ORDER BY id", (s["id"],))]
     expenses = []
     for e in con.execute("SELECT * FROM expenses WHERE split_id = ? ORDER BY created_at DESC, id DESC", (s["id"],)):
         shares = {r["member_id"]: r["share_paise"] for r in con.execute("SELECT * FROM shares WHERE expense_id = ?", (e["id"],))}
@@ -350,7 +365,7 @@ def add_member(slug: str, body: MemberIn, x_admin_token: Optional[str] = Header(
     existing = [r["name"].strip().lower() for r in con.execute("SELECT name FROM members WHERE split_id = ?", (s["id"],))]
     if body.name.strip().lower() in existing:
         raise HTTPException(400, "Member names must be unique")
-    con.execute("INSERT INTO members (split_id, name, upi_id) VALUES (?, ?, ?)", (s["id"], body.name, body.upi_id))
+    con.execute("INSERT INTO members (split_id, name, upi_id) VALUES (?, ?, ?)", (s["id"], body.name, enc(body.upi_id)))
     log(con, s["id"], "member_added", None, {"name": body.name})
     con.commit()
     return {"ok": True}

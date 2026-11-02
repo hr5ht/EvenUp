@@ -117,3 +117,14 @@ def test_rate_limit():
     with TestClient(app, client=("10.0.0.1", 1)) as c:
         codes = [c.post("/api/splits", json={"name": "x", "members": [{"name": "A"}]}).status_code for _ in range(11)]
         assert codes[:10] == [200] * 10 and codes[10] == 429
+
+
+def test_upi_encrypted_at_rest():
+    from app import db
+    with TestClient(app) as c:
+        slug = c.post("/api/splits", json={"name": "x", "members": [{"name": "A", "upi_id": "secret@ybl"}]}).json()["slug"]
+        assert c.get(f"/api/splits/{slug}").json()["members"][0]["upi_id"] == "secret@ybl"
+        con = db.connect()
+        stored = con.execute("SELECT upi_id FROM members WHERE name = 'A' ORDER BY id DESC").fetchone()[0]
+        con.close()
+        assert "secret" not in stored
