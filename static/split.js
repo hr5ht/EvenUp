@@ -271,6 +271,8 @@ async function adminApi(method, url, body) {
 const IS_ANDROID = /Android/i.test(navigator.userAgent);
 // iPadOS reports itself as a Mac; touch points give it away.
 const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+// Phones and tablets, even in "desktop site" mode (which hides Android/iPhone from the user agent): a touch screen.
+const IS_PHONE = IS_ANDROID || IS_IOS || matchMedia("(pointer: coarse)").matches;
 // iOS has no "pick a UPI app" chooser like Android, so each app gets its own link.
 // ponytail: schemes from payment-gateway docs, not tried on a device; "Other UPI app" is the generic fallback.
 const IOS_APPS = [["Google Pay", "gpay://upi/pay"], ["PhonePe", "phonepe://pay"], ["Paytm", "paytmmp://pay"], ["Other UPI app", "upi://pay"]];
@@ -295,7 +297,7 @@ function payStep(step) {
   $("pay-done").textContent = step === "Cash" ? "Mark as paid" : "I've paid";
   $("pay-done").dataset.method = step;
   // Phones get Pay now (straight into the UPI app); then I've paid is the secondary step.
-  const payNow = step === "UPI" && (IS_ANDROID || IS_IOS);
+  const payNow = step === "UPI" && IS_PHONE;
   $("pay-now").hidden = !payNow;
   $("pay-done").classList.toggle("primary", !payNow);
   $("pay-error").textContent = "";
@@ -322,7 +324,7 @@ $("pay-upi").onclick = () => {
   const amount = paying.amount_paise;
   $("pay-qr").src = `${base}/qr?to=${to.id}&amount=${amount}`;
   $("pay-now").href = upiLink(to, amount);
-  $("pay-upi-hint").textContent = IS_ANDROID || IS_IOS
+  $("pay-upi-hint").textContent = IS_PHONE
     ? "Tap Pay now to open your UPI app, then come back and tap I've paid."
     : "Scan with the UPI app on your phone, then tap I've paid.";
   // iOS has no UPI app chooser, so plain upi:// may not open the app you use; offer each one too.
@@ -773,7 +775,7 @@ $("download-png").onclick = async (ev) => {
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
     const file = new File([blob], `${data.name.replace(/[^\w -]/g, "").trim() || "split"}.png`, { type: "image/png" });
     // Phones get the share sheet (straight to WhatsApp). Laptops download, even where they could share (macOS).
-    if ((IS_ANDROID || IS_IOS) && navigator.canShare && navigator.canShare({ files: [file] })) {
+    if (IS_PHONE && navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({ files: [file], title: data.name }).catch(() => {});
     } else {
       const a = el("a", { href: URL.createObjectURL(file), download: file.name });
