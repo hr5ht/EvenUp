@@ -11,16 +11,20 @@
 </head>
 <body>
 <main>
-  <p class="muted"><a href="/">EvenUp</a></p>
+  <p class="muted no-print"><a href="/">EvenUp</a></p>
   <h1 id="title">Loading…</h1>
   <p class="error" id="load-error"></p>
-  <div class="banner" id="expiry" hidden></div>
+  <div class="banner no-print" id="expiry" hidden></div>
 
   <div id="content" hidden>
     <section class="card">
       <h2>Settle up</h2>
       <ul class="list" id="settlement"></ul>
-      <div class="actions"><button type="button" id="copy-summary" class="small">Copy as text</button></div>
+      <div class="actions">
+        <button type="button" id="copy-summary" class="small">Copy as text</button>
+        <button type="button" id="download-png" class="small">Image</button>
+        <button type="button" id="print-pdf" class="small">PDF</button>
+      </div>
     </section>
 
     <section class="card">
@@ -28,7 +32,7 @@
       <ul class="list" id="balances"></ul>
     </section>
 
-    <form class="card" id="expense-form">
+    <form class="card no-print" id="expense-form">
       <h2 id="form-title">Add expense</h2>
       <label for="desc">Description</label>
       <input type="text" id="desc" maxlength="100" placeholder="Dinner" required>
@@ -59,12 +63,12 @@
       <ul class="list" id="expenses"></ul>
     </section>
 
-    <section class="card">
+    <section class="card no-print">
       <h2>Activity</h2>
       <ul class="list" id="activity"></ul>
     </section>
 
-    <section class="card" id="admin" hidden>
+    <section class="card no-print" id="admin" hidden>
       <h2>Admin</h2>
       <ul class="list" id="admin-members"></ul>
       <label for="new-member">Add member</label>

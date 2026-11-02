@@ -153,3 +153,9 @@ dialog::backdrop { background: rgb(0 0 0 / 0.5); }
 .error { color: var(--owe); font-size: 0.9rem; min-height: 1.2em; margin: 8px 0 0; }
 .hp { position: absolute; left: -9999px; }
 [hidden] { display: none !important; }
+
+@media print {
+  :root { --bg: #fff; --card: #fff; --text: #000; --muted: #444; --border: #ccc; }
+  .no-print, button, dialog { display: none !important; }
+  .card { break-inside: avoid; }
+}

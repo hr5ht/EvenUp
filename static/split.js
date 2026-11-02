@@ -300,6 +300,111 @@ $("copy-summary").onclick = (ev) => {
   copyText(lines.join("\n"), ev.target);
 };
 
+$("print-pdf").onclick = () => window.print(); // browser's "Save as PDF"
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+// Shorten text with … until it fits in maxWidth.
+function fit(ctx, text, maxWidth) {
+  if (ctx.measureText(text).width <= maxWidth) return text;
+  while (text && ctx.measureText(text + "…").width > maxWidth) text = text.slice(0, -1);
+  return text + "…";
+}
+
+$("download-png").onclick = async (ev) => {
+  const button = ev.target;
+  button.disabled = true;
+  try {
+    const W = 800, PAD = 40, ROW = 44, QR = 160;
+    const expenses = data.expenses.filter((e) => !e.deleted);
+    const pays = await Promise.all(data.settlement.map(async (p) => {
+      const to = data.members.find((m) => m.id === p.to);
+      const qr = to.upi_id ? await loadImage(`${base}/qr?to=${to.id}&amount=${p.amount_paise}`) : null;
+      return { ...p, to, qr };
+    }));
+    const H = 120 + 60 + Math.max(1, expenses.length) * ROW + 60
+      + Math.max(1, pays.length) * ROW + pays.filter((p) => p.qr).length * (QR + 16) + 70;
+
+    const canvas = el("canvas", { width: W, height: H });
+    const ctx = canvas.getContext("2d");
+    const font = (size, weight = 400) => (ctx.font = `${weight} ${size}px system-ui, -apple-system, sans-serif`);
+    const right = (text, y) => { ctx.textAlign = "right"; ctx.fillText(text, W - PAD, y); ctx.textAlign = "left"; };
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, W, H);
+
+    let y = PAD + 32;
+    ctx.fillStyle = "#1a1d21";
+    font(32, 700);
+    ctx.fillText(fit(ctx, data.name, W - 2 * PAD), PAD, y);
+    y += 32;
+    ctx.fillStyle = "#6b7280";
+    font(16);
+    const total = expenses.reduce((a, e) => a + e.amount_paise, 0);
+    ctx.fillText(`${new Date().toLocaleDateString("en-IN")} · Total ${rupees(total)}`, PAD, y);
+
+    const section = (title) => {
+      y += 56;
+      ctx.fillStyle = "#0f766e";
+      font(20, 700);
+      ctx.fillText(title, PAD, y);
+      y += 8;
+    };
+
+    section("Expenses");
+    if (!expenses.length) { y += ROW; ctx.fillStyle = "#6b7280"; font(18); ctx.fillText("No expenses", PAD, y); }
+    for (const e of expenses) {
+      y += ROW;
+      ctx.fillStyle = "#1a1d21";
+      font(18);
+      ctx.fillText(fit(ctx, `${e.description} · paid by ${nameOf(e.paid_by)}`, W - 2 * PAD - 160), PAD, y);
+      right(rupees(e.amount_paise), y);
+    }
+
+    section("Settle up");
+    if (!pays.length) { y += ROW; ctx.fillStyle = "#1a1d21"; font(18); ctx.fillText("All square 🎉", PAD, y); }
+    for (const p of pays) {
+      y += ROW;
+      ctx.fillStyle = "#1a1d21";
+      font(18, 600);
+      ctx.fillText(fit(ctx, `${nameOf(p.from)} pays ${p.to.name}`, W - 2 * PAD - 160), PAD, y);
+      right(rupees(p.amount_paise), y);
+      if (p.qr) {
+        ctx.drawImage(p.qr, PAD, y + 12, QR, QR);
+        ctx.fillStyle = "#6b7280";
+        font(16);
+        ctx.fillText(`Scan to pay ${p.to.upi_id}`, PAD + QR + 16, y + 12 + QR / 2);
+        y += QR + 16;
+      }
+    }
+
+    ctx.fillStyle = "#9aa0a6";
+    font(14);
+    ctx.fillText("Split with EvenUp", PAD, H - PAD + 10);
+
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    const file = new File([blob], `${data.name.replace(/[^\w -]/g, "").trim() || "split"}.png`, { type: "image/png" });
+    // Phones get the share sheet (straight to WhatsApp); desktops get a download.
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: data.name }).catch(() => {});
+    } else {
+      const a = el("a", { href: URL.createObjectURL(file), download: file.name });
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }
+  } catch (err) {
+    alert(`Couldn't make the image: ${err.message || err}`);
+  } finally {
+    button.disabled = false;
+  }
+};
+
 $("add-member").onclick = async () => {
   $("admin-error").textContent = "";
   try {
