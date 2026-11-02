@@ -240,7 +240,7 @@ button.link { display: inline; min-height: 0; padding: 0; border: 0; background:
   border: 1px solid var(--line);
   border-radius: var(--r);
 }
-.menu button {
+.menu button, .menu a {
   justify-content: flex-start;
   width: 100%;
   min-height: 52px;
@@ -251,9 +251,13 @@ button.link { display: inline; min-height: 0; padding: 0; border: 0; background:
   font-weight: 500;
   text-align: left;
 }
-.menu button:first-child { border-top: 0; }
+.menu > :first-child { border-top: 0; }
 .menu button:active:not(:disabled) { transform: none; background: var(--surface-3); }
-.menu button::after { content: "›"; margin-left: auto; color: var(--dim); font-size: 20px; line-height: 1; }
+.menu a { display: flex; align-items: center; padding: 0 var(--s4); color: var(--text); text-decoration: none; }
+.menu a:active { background: var(--surface-3); }
+.pay-manual { display: grid; gap: var(--s2); margin-top: var(--s5); }
+.pay-manual .link-box { flex: 1; min-width: 0; }
+.menu button::after, .menu a::after { content: "›"; margin-left: auto; color: var(--dim); font-size: 20px; line-height: 1; }
 
 /* ---------- tiles: icon, title, value ---------- */
 .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); }

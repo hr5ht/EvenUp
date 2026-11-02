@@ -165,11 +165,23 @@
   </div>
 </dialog>
 
+<dialog class="sheet" id="pay-sheet">
+  <div class="sheet-head"><h2 id="pay-title"></h2><button type="button" class="icon-btn" data-close aria-label="Close">✕</button></div>
+  <div class="sheet-body">
+    <p class="muted">Opens the app with the amount filled in.</p>
+    <div class="menu" id="pay-apps"></div>
+    <div class="pay-manual">
+      <span class="muted">Or pay by hand to this UPI ID</span>
+      <div class="row"><span class="link-box" id="pay-upi"></span><button type="button" id="pay-copy" class="small">Copy</button></div>
+    </div>
+  </div>
+</dialog>
+
 <dialog id="qr-dialog">
   <div class="qr-body">
     <img id="qr-img" alt="UPI QR code" width="240" height="240">
     <p id="qr-caption"></p>
-    <p class="muted">Scan with any UPI app.</p>
+    <p class="muted" id="qr-hint"></p>
     <div class="actions center">
       <button type="button" id="qr-copy">Copy UPI ID</button>
       <button type="button" data-close>Close</button>

@@ -252,31 +252,60 @@ async function adminApi(method, url, body) {
 // ---------- settle up ----------
 
 // Same format as upi_link() in main.py. %20 not +, and @ left as is, for picky UPI apps.
-function upiLink(to, paise) {
+const IS_ANDROID = /Android/i.test(navigator.userAgent);
+// iPadOS reports itself as a Mac; touch points give it away.
+const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+// iOS has no "pick a UPI app" chooser like Android, so each app gets its own link.
+// ponytail: schemes from payment-gateway docs, not tried on a device; "Other UPI app" is the generic fallback.
+const IOS_APPS = [["Google Pay", "gpay://upi/pay"], ["PhonePe", "phonepe://pay"], ["Paytm", "paytmmp://pay"], ["Other UPI app", "upi://pay"]];
+
+function upiLink(to, paise, scheme = "upi://pay") {
   const params = { pa: to.upi_id, pn: to.name, am: plainAmount(paise), cu: "INR", tn: data.name.slice(0, 50) };
   const query = Object.entries(params)
     .map(([k, v]) => `${k}=${encodeURIComponent(v).replace(/%40/g, "@")}`)
     .join("&");
-  return `upi://pay?${query}`;
+  return `${scheme}?${query}`;
 }
 
 function showQr(p) {
   const to = member(p.to);
   $("qr-img").src = `${base}/qr?to=${to.id}&amount=${p.amount_paise}`;
   $("qr-caption").textContent = `${nameOf(p.from)} pays ${to.name} ${rupees(p.amount_paise)} · ${to.upi_id}`;
-  $("qr-copy").onclick = (ev) => copyText(`${to.upi_id} ${plainAmount(p.amount_paise)}`, ev.currentTarget);
+  $("qr-hint").textContent = p.to === identity.me
+    ? `Let ${nameOf(p.from)} scan this with any UPI app.`
+    : "Scan this with the UPI app on your phone.";
+  $("qr-copy").onclick = (ev) => copyText(to.upi_id, ev.currentTarget);
   $("qr-dialog").showModal();
+}
+
+function openPaySheet(p) {
+  const to = member(p.to);
+  $("pay-title").textContent = `Pay ${rupees(p.amount_paise)} to ${to.name}`;
+  $("pay-apps").replaceChildren(...IOS_APPS.map(([name, scheme]) =>
+    el("a", { href: upiLink(to, p.amount_paise, scheme), textContent: name })));
+  $("pay-upi").textContent = to.upi_id;
+  $("pay-copy").onclick = (ev) => copyText(to.upi_id, ev.currentTarget);
+  openSheet("pay-sheet");
 }
 
 function paymentRow(p) {
   const to = member(p.to);
   const actions = el("div", { className: "row" });
-  if (to.upi_id) {
-    const qr = el("button", { type: "button", className: "small", textContent: "QR" });
+  if (!to.upi_id) {
+    actions.append(el("span", { className: "muted", textContent: p.to === identity.me ? "Add your UPI ID to get paid" : `${to.name} hasn't added a UPI ID` }));
+  } else if (p.to === identity.me) {
+    // You're being paid: hand them your phone and they scan it.
+    const qr = el("button", { type: "button", className: "small", textContent: "Show QR" });
     qr.onclick = () => showQr(p);
-    actions.append(qr, el("a", { href: upiLink(to, p.amount_paise), className: "button small primary", textContent: "Pay" }));
+    actions.append(qr);
+  } else if (IS_ANDROID) {
+    // Android shows its own UPI app chooser for upi:// links.
+    actions.append(el("a", { href: upiLink(to, p.amount_paise), className: "button small primary", textContent: "Pay" }));
   } else {
-    actions.append(el("span", { className: "muted", textContent: `${to.name} hasn't added a UPI ID` }));
+    // iPhone: pick an app. Laptop: scan the QR with your phone.
+    const pay = el("button", { type: "button", className: "small primary", textContent: "Pay" });
+    pay.onclick = () => (IS_IOS ? openPaySheet(p) : showQr(p));
+    actions.append(pay);
   }
   return el("li", { className: "pay-row" },
     el("div", { className: "pay-main" },
