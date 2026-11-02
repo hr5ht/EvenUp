@@ -5,7 +5,7 @@ const $ = (id) => document.getElementById(id);
 let identity = loadIdentity(slug); // {me: member_id, adminToken: only when me is the admin}
 let data = null;
 let membersKey = "";
-let editing = null; // {id, version, paidBy} while editing an expense
+let editing = null; // {id, version, paidBy, description} while editing an expense
 
 const member = (id) => data.members.find((m) => m.id === id);
 const nameOf = (id) => (member(id) || {}).name || "?";
@@ -15,8 +15,6 @@ const splitType = () => document.querySelector("input[name=split]:checked").valu
 const liveExpenses = () => data.expenses.filter((e) => !e.deleted);
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const UPI_HINT = "That doesn't look like a UPI ID (name@bank).";
-// Used when the description is left empty.
-const FILLERS = ["Snacks run", "Chai break", "Quick bite", "Odds and ends", "Little treat", "Random stuff", "Bits and bobs", "Mystery spend"];
 const paymentsOf = (id) => data.settlement.filter((p) => p.from === id || p.to === id);
 // Settle up shows only your payments; everyone's until you pick a name.
 const visiblePayments = () => (member(identity.me) ? paymentsOf(identity.me) : data.settlement);
@@ -383,7 +381,7 @@ function showSplitType() {
 document.querySelectorAll("input[name=split]").forEach((r) => (r.onchange = showSplitType));
 
 function startEdit(e) {
-  editing = { id: e.id, version: e.version, paidBy: e.paid_by };
+  editing = { id: e.id, version: e.version, paidBy: e.paid_by, description: e.description };
   $("form-payer").textContent = `Paid by ${e.paid_by === identity.me ? "you" : nameOf(e.paid_by)}`;
   $("desc").value = e.description;
   $("amount").value = plainAmount(e.amount_paise);
@@ -427,7 +425,8 @@ $("expense-form").onsubmit = async (ev) => {
     return;
   }
   const body = {
-    description: $("desc").value.trim() || FILLERS[Math.floor(Math.random() * FILLERS.length)],
+    // Left empty: "Expense #N" (counting deleted ones, so numbers don't repeat), or the old name when editing.
+    description: $("desc").value.trim() || (editing ? editing.description : `Expense #${data.expenses.length + 1}`),
     amount_paise: amount,
     // New expenses are paid by you; editing keeps whoever paid.
     paid_by: editing ? editing.paidBy : identity.me,
