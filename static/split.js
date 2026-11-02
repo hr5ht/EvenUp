@@ -87,7 +87,7 @@ function render() {
 
   if (data.expires_at) {
     const hours = Math.max(0, Math.round((data.expires_at * 1000 - Date.now()) / 3600000));
-    $("expiry").textContent = `Deleted after 48h of inactivity (${hours}h left). Share the summary to keep it.`;
+    $("expiry").textContent = `Deleted after 48h of inactivity (${hours}h left). Save the summary image to keep it.`;
     $("expiry").hidden = false;
   }
 
@@ -573,29 +573,7 @@ $("delete-split").onclick = async () => {
 
 // ---------- share ----------
 
-function summaryText() {
-  const live = liveExpenses();
-  const total = live.reduce((a, e) => a + e.amount_paise, 0);
-  const lines = [data.name, `${new Date().toLocaleDateString("en-IN")} · Total ${rupees(total)}`, ""];
-  for (const e of live) lines.push(`• ${e.description}: ${rupees(e.amount_paise)} (paid by ${nameOf(e.paid_by)})`);
-  lines.push("", "Settle up:");
-  if (!data.settlement.length) lines.push("All square 🎉");
-  for (const p of data.settlement) {
-    const to = member(p.to);
-    lines.push(`${nameOf(p.from)} → ${to.name}: ${rupees(p.amount_paise)}${to.upi_id ? ` (UPI: ${to.upi_id})` : ""}`);
-  }
-  lines.push("", location.origin + location.pathname);
-  return lines.join("\n");
-}
-
 $("copy-link").onclick = (ev) => copyText(location.origin + location.pathname, ev.currentTarget);
-$("copy-summary").onclick = (ev) => copyText(summaryText(), ev.currentTarget);
-
-$("print-pdf").onclick = () => {
-  $("share-sheet").close();
-  $("print-area").textContent = summaryText();
-  window.print(); // browser's "Save as PDF"
-};
 
 function loadImage(src) {
   return new Promise((resolve, reject) => {

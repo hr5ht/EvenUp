@@ -502,11 +502,3 @@ dialog.sheet::before { content: ""; align-self: center; flex-shrink: 0; width: 3
 /* QR stays black on white so scanners can read it */
 #qr-img { display: block; max-width: 100%; height: auto; margin: 0 auto var(--s4); padding: var(--s2); border-radius: var(--r); background: #fff; }
 #qr-caption { margin-bottom: var(--s1); font-weight: 600; }
-
-/* print: only the plain-text summary */
-#print-area { display: none; }
-@media print {
-  html, body { background: #fff; border: 0; max-width: none; }
-  .split-page > :not(#print-area) { display: none !important; }
-  #print-area { display: block; white-space: pre-wrap; font: 12pt/1.6 system-ui, sans-serif; color: #000; }
-}
