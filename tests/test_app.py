@@ -1,0 +1,96 @@
+import os
+import tempfile
+
+os.environ["EVENUP_DB"] = os.path.join(tempfile.mkdtemp(), "test.db")
+os.environ["CRON_SECRET"] = "s3cret"
+
+from fastapi.testclient import TestClient  # noqa: E402
+
+from app import money  # noqa: E402
+from app.main import app  # noqa: E402
+
+
+def test_split_equal_rounding():
+    assert money.split_equal(10000, [1, 2, 3]) == {1: 3334, 2: 3333, 3: 3333}
+    assert sum(money.split_equal(1, [1, 2, 3]).values()) == 1
+
+
+def test_settle():
+    assert money.settle({"a": 0, "b": 0}) == []
+    assert money.settle({"a": 0}) == []
+    pays = money.settle({"a": 300, "b": -100, "c": -200})
+    assert sorted(pays) == [("b", "a", 100), ("c", "a", 200)]
+    bal = {"a": 500, "b": 250, "c": -400, "d": -350}
+    pays = money.settle(bal)
+    assert len(pays) <= len(bal) - 1
+    for d, c, amt in pays:
+        bal[d] += amt
+        bal[c] -= amt
+    assert all(v == 0 for v in bal.values())
+
+
+def test_flow():
+    with TestClient(app) as c:
+        r = c.post("/api/splits", json={"name": "Dinner", "members": [
+            {"name": "A", "upi_id": "a@ybl"}, {"name": "B"}, {"name": "C"}]})
+        assert r.status_code == 200
+        slug, token = r.json()["slug"], r.json()["admin_token"]
+        assert len(slug) >= 22
+        g = c.get(f"/api/splits/{slug}").json()
+        a, b, cc = [m["id"] for m in g["members"]]
+
+        # equal split, uneven paise
+        r = c.post(f"/api/splits/{slug}/expenses", json={
+            "paid_by": a, "amount_paise": 10000, "description": "Food", "split": "equal", "participants": [a, b, cc]})
+        eid = r.json()["id"]
+        g = c.get(f"/api/splits/{slug}").json()
+        assert sum(g["balances"].values()) == 0
+        assert g["balances"][str(a)] == 10000 - 3334
+
+        # exact shares must add up
+        r = c.post(f"/api/splits/{slug}/expenses", json={
+            "paid_by": b, "amount_paise": 500, "description": "x", "split": "exact", "shares": {str(a): 100}})
+        assert r.status_code == 400
+
+        # optimistic lock
+        body = {"paid_by": a, "amount_paise": 9000, "description": "Food", "split": "equal", "participants": [a, b], "version": 1}
+        assert c.put(f"/api/splits/{slug}/expenses/{eid}", json=body).status_code == 200
+        assert c.put(f"/api/splits/{slug}/expenses/{eid}", json=body).status_code == 409
+
+        # delete + undo
+        c.delete(f"/api/splits/{slug}/expenses/{eid}")
+        assert c.get(f"/api/splits/{slug}").json()["settlement"] == []
+        c.post(f"/api/splits/{slug}/expenses/{eid}/restore")
+        assert c.get(f"/api/splits/{slug}").json()["settlement"] == [{"from": b, "to": a, "amount_paise": 4500}]
+
+        # payer must belong to this split
+        r = c.post(f"/api/splits/{slug}/expenses", json={
+            "paid_by": 999999, "amount_paise": 100, "description": "x", "split": "equal", "participants": [a]})
+        assert r.status_code == 400
+
+        # admin actions need the token
+        assert c.post(f"/api/splits/{slug}/members", json={"name": "D"}).status_code == 403
+        assert c.post(f"/api/splits/{slug}/members", json={"name": "D"}, headers={"X-Admin-Token": token}).status_code == 200
+        assert c.delete(f"/api/splits/{slug}", headers={"X-Admin-Token": "wrong"}).status_code == 403
+        assert c.delete(f"/api/splits/{slug}", headers={"X-Admin-Token": token}).status_code == 200
+        assert c.get(f"/api/splits/{slug}").status_code == 404
+
+
+def test_cross_split_access_and_guards():
+    with TestClient(app) as c:
+        s1 = c.post("/api/splits", json={"name": "One", "members": [{"name": "A"}]}).json()["slug"]
+        s2 = c.post("/api/splits", json={"name": "Two", "members": [{"name": "B"}]}).json()["slug"]
+        a = c.get(f"/api/splits/{s1}").json()["members"][0]["id"]
+        eid = c.post(f"/api/splits/{s1}/expenses", json={
+            "paid_by": a, "amount_paise": 100, "description": "x", "split": "equal", "participants": [a]}).json()["id"]
+        # expense of split 1 can't be touched through split 2
+        assert c.delete(f"/api/splits/{s2}/expenses/{eid}").status_code == 404
+        # honeypot, duplicate names, bad UPI
+        assert c.post("/api/splits", json={"name": "x", "members": [{"name": "A"}], "website": "spam"}).status_code == 400
+        assert c.post("/api/splits", json={"name": "x", "members": [{"name": "A"}, {"name": "a"}]}).status_code == 400
+        assert c.post("/api/splits", json={"name": "x", "members": [{"name": "A", "upi_id": "nope"}]}).status_code == 422
+        # cron needs the secret; demo survives cleanup
+        assert c.post("/cron/cleanup").status_code == 403
+        assert c.post("/cron/cleanup", headers={"X-Cron-Secret": "s3cret"}).status_code == 200
+        assert c.get("/api/splits/demo").status_code == 200
+        assert "Content-Security-Policy" in c.get("/").headers
