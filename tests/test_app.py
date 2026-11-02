@@ -31,7 +31,7 @@ def test_settle():
 
 def test_flow():
     with TestClient(app) as c:
-        r = c.post("/api/splits", json={"name": "Dinner", "members": [
+        r = c.post("/api/splits", json={"name": "Dinner", "admin_password": "pass1", "members": [
             {"name": "A", "upi_id": "a@ybl"}, {"name": "B"}, {"name": "C"}]})
         assert r.status_code == 200
         slug, token = r.json()["slug"], r.json()["admin_token"]
@@ -78,6 +78,11 @@ def test_flow():
             "paid_by": 999999, "amount_paise": 100, "description": "x", "split": "equal", "participants": [a]})
         assert r.status_code == 400
 
+        # admin login: wrong password, right password gives the same token create returned
+        assert c.post(f"/api/splits/{slug}/admin-login", json={"password": "nope"}).status_code == 401
+        assert c.post(f"/api/splits/{slug}/admin-login", json={"password": "pass1"}).json()["admin_token"] == token
+        assert g["admin_member_id"] == a
+
         # admin actions need the token
         assert c.post(f"/api/splits/{slug}/members", json={"name": "D"}).status_code == 403
         assert c.post(f"/api/splits/{slug}/members", json={"name": "D"}, headers={"X-Admin-Token": token}).status_code == 200
@@ -88,6 +93,7 @@ def test_flow():
         assert c.delete(f"/api/splits/{slug}/members/{cc}").status_code == 403
         assert c.delete(f"/api/splits/{slug}/members/{cc}", headers=adm).status_code == 200
         assert len(c.get(f"/api/splits/{slug}").json()["members"]) == 3
+        assert c.delete(f"/api/splits/{slug}/members/{a}", headers=adm).status_code == 400  # admin stays
         assert c.delete(f"/api/splits/{slug}", headers={"X-Admin-Token": "wrong"}).status_code == 403
         assert c.delete(f"/api/splits/{slug}", headers={"X-Admin-Token": token}).status_code == 200
         assert c.get(f"/api/splits/{slug}").status_code == 404
@@ -95,17 +101,17 @@ def test_flow():
 
 def test_cross_split_access_and_guards():
     with TestClient(app) as c:
-        s1 = c.post("/api/splits", json={"name": "One", "members": [{"name": "A"}]}).json()["slug"]
-        s2 = c.post("/api/splits", json={"name": "Two", "members": [{"name": "B"}]}).json()["slug"]
+        s1 = c.post("/api/splits", json={"name": "One", "admin_password": "pass1", "members": [{"name": "A"}]}).json()["slug"]
+        s2 = c.post("/api/splits", json={"name": "Two", "admin_password": "pass1", "members": [{"name": "B"}]}).json()["slug"]
         a = c.get(f"/api/splits/{s1}").json()["members"][0]["id"]
         eid = c.post(f"/api/splits/{s1}/expenses", json={
             "paid_by": a, "amount_paise": 100, "description": "x", "split": "equal", "participants": [a]}).json()["id"]
         # expense of split 1 can't be touched through split 2
         assert c.delete(f"/api/splits/{s2}/expenses/{eid}").status_code == 404
         # honeypot, duplicate names, bad UPI
-        assert c.post("/api/splits", json={"name": "x", "members": [{"name": "A"}], "website": "spam"}).status_code == 400
-        assert c.post("/api/splits", json={"name": "x", "members": [{"name": "A"}, {"name": "a"}]}).status_code == 400
-        assert c.post("/api/splits", json={"name": "x", "members": [{"name": "A", "upi_id": "nope"}]}).status_code == 422
+        assert c.post("/api/splits", json={"name": "x", "admin_password": "pass1", "members": [{"name": "A"}], "website": "spam"}).status_code == 400
+        assert c.post("/api/splits", json={"name": "x", "admin_password": "pass1", "members": [{"name": "A"}, {"name": "a"}]}).status_code == 400
+        assert c.post("/api/splits", json={"name": "x", "admin_password": "pass1", "members": [{"name": "A", "upi_id": "nope"}]}).status_code == 422
         # cron needs the secret; demo survives cleanup
         assert c.post("/cron/cleanup").status_code == 403
         assert c.post("/cron/cleanup", headers={"X-Cron-Secret": "s3cret"}).status_code == 200
@@ -115,14 +121,14 @@ def test_cross_split_access_and_guards():
 
 def test_rate_limit():
     with TestClient(app, client=("10.0.0.1", 1)) as c:
-        codes = [c.post("/api/splits", json={"name": "x", "members": [{"name": "A"}]}).status_code for _ in range(11)]
+        codes = [c.post("/api/splits", json={"name": "x", "admin_password": "pass1", "members": [{"name": "A"}]}).status_code for _ in range(11)]
         assert codes[:10] == [200] * 10 and codes[10] == 429
 
 
 def test_upi_encrypted_at_rest():
     from app import db
     with TestClient(app) as c:
-        slug = c.post("/api/splits", json={"name": "x", "members": [{"name": "A", "upi_id": "secret@ybl"}]}).json()["slug"]
+        slug = c.post("/api/splits", json={"name": "x", "admin_password": "pass1", "members": [{"name": "A", "upi_id": "secret@ybl"}]}).json()["slug"]
         assert c.get(f"/api/splits/{slug}").json()["members"][0]["upi_id"] == "secret@ybl"
         con = db.connect()
         stored = con.execute("SELECT upi_id FROM members WHERE name = 'A' ORDER BY id DESC").fetchone()[0]
@@ -139,3 +145,12 @@ def test_qr():
         r = c.get(f"/api/splits/demo/qr?to={aman}&amount=80000")
         assert r.status_code == 200 and r.headers["content-type"].startswith("image/svg+xml")
         assert c.get(f"/api/splits/demo/qr?to={kabir}&amount=100").status_code == 404  # no UPI ID
+
+
+def test_login_rate_limit_and_demo():
+    with TestClient(app) as c:
+        slug = c.post("/api/splits", json={"name": "x", "admin_password": "pass1", "members": [{"name": "A"}]}).json()["slug"]
+        codes = [c.post(f"/api/splits/{slug}/admin-login", json={"password": "bad"}).status_code for _ in range(11)]
+        assert codes[:10] == [401] * 10 and codes[10] == 429
+        token = c.post("/api/splits/demo/admin-login", json={"password": "demo"}).json()["admin_token"]
+        assert c.delete("/api/splits/demo", headers={"X-Admin-Token": token}).status_code == 400

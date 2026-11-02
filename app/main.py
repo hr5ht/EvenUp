@@ -13,6 +13,7 @@ from typing import Dict, List, Literal, Optional
 import qrcode
 import qrcode.image.svg
 from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -27,11 +28,17 @@ UPI_RE = r"^[a-zA-Z0-9._-]{1,256}@[a-zA-Z]{2,64}$"
 # (limit, window seconds) per client IP
 CREATE_LIMIT = (10, 3600)
 WRITE_LIMIT = (60, 60)
+LOGIN_LIMIT = (10, 900)  # per split, so guessing the admin password is slow from any number of IPs
 
 # UPI IDs are encrypted at rest. Set UPI_KEY in production (Fernet.generate_key()).
 if not os.environ.get("UPI_KEY"):
     print("WARNING: UPI_KEY not set, using an insecure dev key")
 FERNET = Fernet(os.environ.get("UPI_KEY", "ZGV2LWtleS1kby1ub3QtdXNlLWluLXByb2R1Y3Rpb24="))
+
+# Signs admin session tokens. Set SECRET_KEY in production.
+if not os.environ.get("SECRET_KEY"):
+    print("WARNING: SECRET_KEY not set, using an insecure dev key")
+SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-do-not-use-in-production").encode()
 
 
 def enc(v):
@@ -129,7 +136,12 @@ class MemberIn(BaseModel):
 class SplitIn(BaseModel):
     name: str = Field(min_length=1, max_length=60)
     members: List[MemberIn] = Field(min_length=1, max_length=50)
+    admin_password: str = Field(min_length=4, max_length=100)  # first member is the admin
     website: str = ""  # honeypot, humans never see it
+
+
+class LoginIn(BaseModel):
+    password: str = Field(max_length=100)
 
 
 class ExpenseIn(BaseModel):
@@ -148,8 +160,23 @@ def now():
     return int(time.time())
 
 
-def hash_token(t):
-    return hashlib.sha256(t.encode()).hexdigest()
+def scrypt(pw, salt):
+    return Scrypt(salt=salt, length=32, n=2**14, r=8, p=1).derive(pw.encode()).hex()
+
+
+def hash_password(pw):
+    salt = os.urandom(16)
+    return salt.hex() + "$" + scrypt(pw, salt)
+
+
+def check_password(pw, stored):
+    salt, h = stored.split("$")
+    return hmac.compare_digest(scrypt(pw, bytes.fromhex(salt)), h)
+
+
+def admin_token(split_id, pw_hash):
+    # Stateless admin session. Tied to the password hash, so changing the password logs everyone out.
+    return hmac.new(SECRET_KEY, f"{split_id}:{pw_hash}".encode(), hashlib.sha256).hexdigest()
 
 
 def load_split(con, slug):
@@ -162,8 +189,8 @@ def load_split(con, slug):
 
 
 def require_admin(s, token):
-    if not token or not hmac.compare_digest(hash_token(token), s["admin_token_hash"]):
-        raise HTTPException(403, "Admin link required")
+    if not token or not hmac.compare_digest(token, admin_token(s["id"], s["admin_pw_hash"])):
+        raise HTTPException(403, "Admin password required")
 
 
 def member_ids(con, split_id):
@@ -215,21 +242,22 @@ def get_expense(con, split_id, expense_id):
 
 def create_split(con, body, slug=None):
     slug = slug or secrets.token_urlsafe(16)  # 128-bit, unguessable
-    token = secrets.token_urlsafe(16)
+    pw_hash = hash_password(body.admin_password)
     t = now()
-    cur = con.execute(
-        "INSERT INTO splits (slug, name, admin_token_hash, last_activity_at, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-        (slug, body.name, hash_token(token), t, t + TTL, t),
-    )
-    for m in body.members:
-        con.execute("INSERT INTO members (split_id, name, upi_id) VALUES (?, ?, ?)", (cur.lastrowid, m.name, enc(m.upi_id)))
-    log(con, cur.lastrowid, "created", None, {"name": body.name})
-    return slug, token, cur.lastrowid
+    sid = con.execute(
+        "INSERT INTO splits (slug, name, admin_pw_hash, last_activity_at, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        (slug, body.name, pw_hash, t, t + TTL, t),
+    ).lastrowid
+    ids = [con.execute("INSERT INTO members (split_id, name, upi_id) VALUES (?, ?, ?)",
+                       (sid, m.name, enc(m.upi_id))).lastrowid for m in body.members]
+    con.execute("UPDATE splits SET admin_member_id = ? WHERE id = ?", (ids[0], sid))
+    log(con, sid, "created", None, {"name": body.name})
+    return slug, admin_token(sid, pw_hash), sid, ids[0]
 
 
 def seed_demo(con):
     con.execute("DELETE FROM splits WHERE slug = ?", (DEMO,))
-    _, _, sid = create_split(con, SplitIn(name="Goa dinner (demo)", members=[
+    _, _, sid, _ = create_split(con, SplitIn(name="Goa dinner (demo)", admin_password="demo", members=[
         MemberIn(name="Aman", upi_id="aman@okaxis"),
         MemberIn(name="Riya", upi_id="riya@ybl"),
         MemberIn(name="Kabir"),
@@ -256,9 +284,20 @@ def create(body: SplitIn, con=Depends(db.get_db)):
     names = [m.name.strip().lower() for m in body.members]
     if len(set(names)) != len(names):
         raise HTTPException(400, "Member names must be unique")
-    slug, token, _ = create_split(con, body)
+    slug, token, _, admin_id = create_split(con, body)
     con.commit()
-    return {"slug": slug, "admin_token": token}
+    return {"slug": slug, "admin_token": token, "admin_member_id": admin_id}
+
+
+@app.post("/api/splits/{slug}/admin-login")
+def admin_login(slug: str, body: LoginIn, con=Depends(db.get_db)):
+    s = load_split(con, slug)
+    con.commit()
+    if rate_limited(("login", slug), *LOGIN_LIMIT):
+        raise HTTPException(429, "Too many attempts. Try again in 15 minutes.")
+    if not check_password(body.password, s["admin_pw_hash"]):
+        raise HTTPException(401, "Wrong password")
+    return {"admin_token": admin_token(s["id"], s["admin_pw_hash"])}
 
 
 @app.get("/api/splits/{slug}")
@@ -278,6 +317,7 @@ def read(slug: str, con=Depends(db.get_db)):
         "SELECT id, action, expense_id, details, created_at FROM activity WHERE split_id = ? ORDER BY id DESC LIMIT 50", (s["id"],))]
     return {
         "name": s["name"],
+        "admin_member_id": s["admin_member_id"],
         "expires_at": None if slug == DEMO else s["expires_at"],
         "members": members,
         "expenses": expenses,
@@ -408,6 +448,8 @@ def remove_member(slug: str, member_id: int, x_admin_token: Optional[str] = Head
     m = con.execute("SELECT * FROM members WHERE id = ? AND split_id = ?", (member_id, s["id"])).fetchone()
     if not m:
         raise HTTPException(404, "Member not found")
+    if member_id == s["admin_member_id"]:
+        raise HTTPException(400, "The admin can't be removed")
     used = "SELECT id FROM expenses WHERE (paid_by = :m OR id IN (SELECT expense_id FROM shares WHERE member_id = :m))"
     if con.execute(used + " AND deleted = 0", {"m": member_id}).fetchone():
         raise HTTPException(400, f"{m['name']} is in some expenses. Edit or delete those first.")
@@ -422,6 +464,8 @@ def remove_member(slug: str, member_id: int, x_admin_token: Optional[str] = Head
 def delete_split(slug: str, x_admin_token: Optional[str] = Header(None), con=Depends(db.get_db)):
     s = load_split(con, slug)
     require_admin(s, x_admin_token)
+    if slug == DEMO:
+        raise HTTPException(400, "The demo can't be deleted")
     con.execute("DELETE FROM splits WHERE id = ?", (s["id"],))
     con.commit()
     return {"ok": True}

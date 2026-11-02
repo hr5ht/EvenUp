@@ -1,8 +1,9 @@
 const membersBox = document.getElementById("members");
 
-function addMemberRow(name = "") {
+function addMemberRow() {
+  const first = !membersBox.children.length;
   const row = el("div", { className: "row" },
-    el("input", { type: "text", placeholder: "Name", maxLength: 40, value: name, className: "m-name" }),
+    el("input", { type: "text", placeholder: first ? "Your name" : "Name", maxLength: 40, required: first, className: "m-name" }),
     el("input", { type: "text", placeholder: "UPI ID (name@bank)", maxLength: 100, className: "m-upi" }),
   );
   membersBox.append(row);
@@ -30,19 +31,18 @@ document.getElementById("create").onsubmit = async (e) => {
   const button = e.submitter;
   button.disabled = true;
   try {
-    const { slug, admin_token } = await api("POST", "/api/splits", {
+    const { slug, admin_token, admin_member_id } = await api("POST", "/api/splits", {
       name: document.getElementById("name").value.trim(),
       members,
+      admin_password: document.getElementById("admin-password").value,
       website: document.getElementById("website").value,
     });
+    // This device is already "you, the admin" when the split opens.
+    saveIdentity(slug, { me: admin_member_id, adminToken: admin_token });
     const share = `${location.origin}/g/${slug}`;
-    // Token sits in the URL fragment, which browsers never send to the server.
-    const admin = `${share}#admin=${admin_token}`;
     document.getElementById("share-link").textContent = share;
-    document.getElementById("admin-link").textContent = admin;
     document.getElementById("copy-share").onclick = (ev) => copyText(share, ev.target);
-    document.getElementById("copy-admin").onclick = (ev) => copyText(admin, ev.target);
-    document.getElementById("open").href = admin;
+    document.getElementById("open").href = share;
     document.getElementById("create").hidden = true;
     document.getElementById("created").hidden = false;
   } catch (err) {

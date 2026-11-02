@@ -1,13 +1,15 @@
 const slug = location.pathname.split("/")[2];
 const base = `/api/splits/${slug}`;
-const adminToken = location.hash.startsWith("#admin=") ? location.hash.slice(7) : null;
 const $ = (id) => document.getElementById(id);
 
+let identity = loadIdentity(slug); // {me: member_id, adminToken}
 let data = null;
 let membersKey = "";
 let editing = null; // {id, version} while editing an expense
+let pickerShown = false;
 
 const nameOf = (id) => (data.members.find((m) => m.id === id) || {}).name || "?";
+const label = (id) => nameOf(id) + (id === identity.me ? " (you)" : "");
 const splitType = () => document.querySelector("input[name=split]:checked").value;
 
 async function load() {
@@ -26,7 +28,8 @@ function render() {
   $("title").textContent = data.name;
   document.title = `${data.name} · EvenUp`;
   $("content").hidden = false;
-  $("admin").hidden = !adminToken;
+  $("admin").hidden = !identity.adminToken;
+  renderYou();
 
   if (data.expires_at) {
     const hours = Math.max(0, Math.round((data.expires_at * 1000 - Date.now()) / 3600000));
@@ -38,13 +41,92 @@ function render() {
   renderBalances();
   renderExpenses();
   renderActivity();
-  if (adminToken) renderAdminMembers();
+  if (identity.adminToken) renderAdminMembers();
 
   // Only rebuild member inputs when members change, so polling doesn't wipe a half-filled form.
   const key = data.members.map((m) => m.id).join(",");
   if (key !== membersKey) {
     membersKey = key;
     buildMemberInputs();
+  }
+
+  // New visitor (or their member was removed): ask who they are, once per page load.
+  if (!pickerShown && !data.members.some((m) => m.id === identity.me)) {
+    pickerShown = true;
+    openPicker();
+  }
+}
+
+// ---------- who are you ----------
+
+function setIdentity(next) {
+  identity = next;
+  saveIdentity(slug, identity);
+  $("paid-by").value = identity.me || $("paid-by").value;
+  render();
+}
+
+function renderYou() {
+  const me = data.members.find((m) => m.id === identity.me);
+  $("you-text").textContent = me
+    ? `You're ${me.name}${identity.adminToken ? " · admin" : ""}`
+    : "You haven't picked your name.";
+  $("switch").textContent = me ? "Switch" : "Pick your name";
+}
+
+function openPicker() {
+  $("who-list").replaceChildren(...data.members.map((m) => {
+    const b = el("button", { type: "button", textContent: m.name + (m.id === data.admin_member_id ? " (admin)" : "") });
+    b.onclick = () => choose(m);
+    return b;
+  }));
+  $("who-list").hidden = false;
+  $("pw-form").hidden = true;
+  $("who-title").textContent = "Who are you?";
+  $("demo-hint").hidden = slug !== "demo";
+  $("who-dialog").showModal();
+}
+
+function choose(m) {
+  const isAdmin = m.id === data.admin_member_id;
+  if (!isAdmin || (identity.me === m.id && identity.adminToken)) {
+    setIdentity({ me: m.id, adminToken: isAdmin ? identity.adminToken : null });
+    $("who-dialog").close();
+    return;
+  }
+  $("who-title").textContent = `Hi ${m.name}`;
+  $("who-list").hidden = true;
+  $("pw-form").hidden = false;
+  $("pw-error").textContent = "";
+  $("admin-pw").value = "";
+  $("admin-pw").focus();
+  $("pw-form").onsubmit = async (ev) => {
+    ev.preventDefault();
+    try {
+      const { admin_token } = await api("POST", `${base}/admin-login`, { password: $("admin-pw").value });
+      setIdentity({ me: m.id, adminToken: admin_token });
+      $("who-dialog").close();
+    } catch (err) {
+      $("pw-error").textContent = err.message;
+    }
+  };
+  $("pw-skip").onclick = () => {
+    setIdentity({ me: m.id, adminToken: null });
+    $("who-dialog").close();
+  };
+}
+$("switch").onclick = openPicker;
+$("pw-back").onclick = openPicker;
+
+async function adminApi(method, url, body) {
+  try {
+    return await api(method, url, body, { "X-Admin-Token": identity.adminToken });
+  } catch (err) {
+    if (err.status === 403) {
+      setIdentity({ me: identity.me, adminToken: null });
+      throw new Error("Admin session ended. Tap Switch, pick your name and enter the password again.");
+    }
+    throw err;
   }
 }
 
@@ -84,7 +166,7 @@ function renderSettlement() {
       actions.append(copy);
     }
     list.append(el("li", {},
-      el("span", { className: "grow", textContent: `${nameOf(p.from)} pays ${to.name}` }),
+      el("span", { className: "grow", textContent: `${label(p.from)} pays ${label(to.id)}` }),
       el("span", { className: "amount", textContent: rupees(p.amount_paise) }),
       actions,
     ));
@@ -98,7 +180,7 @@ function renderBalances() {
     const b = data.balances[m.id] || 0;
     const text = b > 0 ? `gets back ${rupees(b)}` : b < 0 ? `owes ${rupees(-b)}` : "settled";
     list.append(el("li", {},
-      el("span", { className: "grow", textContent: m.name }),
+      el("span", { className: "grow", textContent: label(m.id) }),
       el("span", { className: `amount ${b > 0 ? "owed" : b < 0 ? "owe" : ""}`, textContent: text }),
     ));
   }
@@ -143,7 +225,7 @@ function renderAdminMembers() {
       if (!confirm(`Remove ${m.name}?`)) return;
       $("admin-error").textContent = "";
       try {
-        await api("DELETE", `${base}/members/${m.id}`, null, { "X-Admin-Token": adminToken });
+        await adminApi("DELETE", `${base}/members/${m.id}`);
         await load();
       } catch (err) {
         $("admin-error").textContent = err.message;
@@ -181,6 +263,7 @@ function renderActivity() {
 
 function buildMemberInputs() {
   $("paid-by").replaceChildren(...data.members.map((m) => el("option", { value: m.id, textContent: m.name })));
+  if (identity.me) $("paid-by").value = identity.me;
   $("equal-box").replaceChildren(...data.members.map((m) =>
     el("label", {}, el("input", { type: "checkbox", value: m.id, checked: true }), m.name)));
   $("exact-box").replaceChildren(...data.members.map((m) =>
@@ -216,6 +299,7 @@ function startEdit(e) {
 function resetForm() {
   editing = null;
   $("expense-form").reset();
+  if (identity.me) $("paid-by").value = identity.me;
   $("equal-box").querySelectorAll("input").forEach((c) => (c.checked = true));
   showSplitType();
   $("form-title").textContent = "Add expense";
@@ -408,10 +492,10 @@ $("download-png").onclick = async (ev) => {
 $("add-member").onclick = async () => {
   $("admin-error").textContent = "";
   try {
-    await api("POST", `${base}/members`, {
+    await adminApi("POST", `${base}/members`, {
       name: $("new-member").value.trim(),
       upi_id: $("new-member-upi").value.trim() || null,
-    }, { "X-Admin-Token": adminToken });
+    });
     $("new-member").value = "";
     $("new-member-upi").value = "";
     await load();
@@ -423,7 +507,7 @@ $("add-member").onclick = async () => {
 $("delete-split").onclick = async () => {
   if (!confirm("Delete this split for everyone? This can't be undone.")) return;
   try {
-    await api("DELETE", base, null, { "X-Admin-Token": adminToken });
+    await adminApi("DELETE", base);
     location.href = "/";
   } catch (err) {
     $("admin-error").textContent = err.message;

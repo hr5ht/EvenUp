@@ -198,3 +198,10 @@ dialog::backdrop { background: rgb(0 0 0 / 0.5); }
   .no-print, button, dialog { display: none !important; }
   .card { break-inside: avoid; }
 }
+
+/* ---------- who are you ---------- */
+button.link { border: 0; background: none; padding: 0; color: var(--accent); text-decoration: underline; }
+.you-bar { margin: 0 0 8px; }
+#who-dialog { width: 360px; text-align: left; }
+.who-list { display: grid; gap: 8px; }
+.who-list button { text-align: left; padding: 12px 14px; }

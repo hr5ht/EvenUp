@@ -36,9 +36,26 @@ async function api(method, url, body, headers) {
   if (!res.ok) {
     let msg = data.detail;
     if (Array.isArray(msg)) msg = msg.map((d) => d.msg).join(", ");
-    throw new Error(msg || `Request failed (${res.status})`);
+    throw Object.assign(new Error(msg || `Request failed (${res.status})`), { status: res.status });
   }
   return data;
+}
+
+// Who this device is in a split: {me: member_id, adminToken}. Lives in localStorage only.
+function loadIdentity(slug) {
+  try {
+    return JSON.parse(localStorage.getItem(`evenup:${slug}`)) || {};
+  } catch {
+    return {};
+  }
+}
+
+function saveIdentity(slug, identity) {
+  try {
+    localStorage.setItem(`evenup:${slug}`, JSON.stringify(identity));
+  } catch {
+    // Private mode etc.: works for this visit, forgotten afterwards.
+  }
 }
 
 async function copyText(text, button) {

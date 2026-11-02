@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS splits (
     id INTEGER PRIMARY KEY,
     slug TEXT UNIQUE NOT NULL,
     name TEXT NOT NULL,
-    admin_token_hash TEXT NOT NULL,
+    admin_pw_hash TEXT NOT NULL,
+    admin_member_id INTEGER,
     last_activity_at INTEGER NOT NULL,
     expires_at INTEGER NOT NULL,
     created_at INTEGER NOT NULL

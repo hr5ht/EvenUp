@@ -14,6 +14,7 @@
   <p class="muted no-print"><a href="/">EvenUp</a></p>
   <h1 id="title">Loading…</h1>
   <p class="error" id="load-error"></p>
+  <p class="muted no-print you-bar"><span id="you-text"></span> <button type="button" id="switch" class="link">Switch</button></p>
   <div class="banner no-print" id="expiry" hidden></div>
 
   <div id="content" hidden>
@@ -81,6 +82,22 @@
       <div class="actions"><button type="button" id="delete-split">Delete this split now</button></div>
     </section>
   </div>
+
+  <dialog id="who-dialog">
+    <h2 id="who-title">Who are you?</h2>
+    <div id="who-list" class="who-list"></div>
+    <form id="pw-form" hidden>
+      <label for="admin-pw">You're the admin. Enter the admin password to manage this split.</label>
+      <input type="password" id="admin-pw" maxlength="100" autocomplete="current-password" required>
+      <p class="error" id="pw-error"></p>
+      <div class="actions">
+        <button class="primary" type="submit">Unlock</button>
+        <button type="button" id="pw-skip">Continue without admin</button>
+        <button type="button" id="pw-back" class="link">Not me</button>
+      </div>
+    </form>
+    <p class="muted" id="demo-hint" hidden>Demo admin password: <strong>demo</strong></p>
+  </dialog>
 
   <dialog id="qr-dialog">
     <img id="qr-img" alt="UPI QR code" width="240" height="240">
