@@ -694,8 +694,8 @@ $("download-png").onclick = async (ev) => {
 
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
     const file = new File([blob], `${data.name.replace(/[^\w -]/g, "").trim() || "split"}.png`, { type: "image/png" });
-    // Phones get the share sheet (straight to WhatsApp); desktops get a download.
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    // Phones get the share sheet (straight to WhatsApp). Laptops download, even where they could share (macOS).
+    if ((IS_ANDROID || IS_IOS) && navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({ files: [file], title: data.name }).catch(() => {});
     } else {
       const a = el("a", { href: URL.createObjectURL(file), download: file.name });
