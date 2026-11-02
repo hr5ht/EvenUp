@@ -488,6 +488,15 @@ dialog.sheet::before { content: ""; align-self: center; flex-shrink: 0; width: 3
 .exact-row { display: grid; grid-template-columns: 1fr 120px; align-items: center; gap: var(--s3); }
 .exact-row + .exact-row { margin-top: var(--s2); }
 
+/* who are you: first visit is the whole screen until a name is picked */
+dialog.sheet.gate { height: 100vh; height: 100dvh; max-height: none; border: 0; border-radius: 0; background: var(--bg); }
+dialog.sheet.gate[open] { animation: fade 0.3s ease; }
+dialog.sheet.gate::before, dialog.sheet.gate [data-close] { display: none; }
+dialog.sheet.gate::backdrop { background: var(--bg); }
+.gate .sheet-head { padding-top: calc(var(--s7) + env(safe-area-inset-top)); }
+.gate .sheet-head h2 { font-size: 28px; }
+@media (min-width: 480px) { dialog.sheet.gate { border-inline: 1px solid var(--line-2); } }
+#who-sub { margin-bottom: var(--s5); }
 /* who are you */
 .who-list button.current { color: var(--accent); }
 .who-list button::after { display: none; }

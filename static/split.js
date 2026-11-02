@@ -5,8 +5,7 @@ const $ = (id) => document.getElementById(id);
 let identity = loadIdentity(slug); // {me: member_id, adminToken: only when me is the admin}
 let data = null;
 let membersKey = "";
-let editing = null; // {id, version} while editing an expense
-let pickerShown = false;
+let editing = null; // {id, version, paidBy} while editing an expense
 
 const member = (id) => data.members.find((m) => m.id === id);
 const nameOf = (id) => (member(id) || {}).name || "?";
@@ -46,7 +45,7 @@ document.querySelectorAll("[data-open]").forEach((b) => (b.onclick = () => openS
 document.querySelectorAll("[data-close]").forEach((b) => (b.onclick = () => b.closest("dialog").close()));
 // Tapping the dimmed backdrop closes a sheet. Clicks inside land on its children, not the dialog itself.
 document.querySelectorAll("dialog").forEach((d) => d.addEventListener("click", (ev) => {
-  if (ev.target === d) d.close();
+  if (ev.target === d && !d.classList.contains("gate")) d.close();
 }));
 
 let toastTimer;
@@ -81,8 +80,10 @@ async function load() {
 function render() {
   $("title").textContent = data.name;
   document.title = `${data.name} · EvenUp`;
-  $("content").hidden = false;
-  $("fab").hidden = false;
+  // Nothing of the split shows until you've said who you are.
+  const known = !!member(identity.me);
+  $("content").hidden = !known;
+  $("fab").hidden = !known;
   $("admin-tile").hidden = !isAdmin();
 
   if (data.expires_at) {
@@ -109,11 +110,8 @@ function render() {
     buildMemberInputs();
   }
 
-  // New visitor (or their member was removed): ask who they are, once per page load.
-  if (!pickerShown && !member(identity.me)) {
-    pickerShown = true;
-    openPicker();
-  }
+  // New visitor (or their member was removed): "Who are you?" comes first, full screen.
+  if (!known && !$("who-dialog").open) openPicker();
 }
 
 function renderHero() {
@@ -141,7 +139,6 @@ function renderHero() {
 function setIdentity(next) {
   identity = next;
   saveIdentity(slug, identity);
-  $("paid-by").value = identity.me || $("paid-by").value;
   render();
 }
 
@@ -172,6 +169,10 @@ function showPickerStep(step, title) {
 }
 
 function openPicker() {
+  const gate = !member(identity.me);
+  $("who-dialog").classList.toggle("gate", gate);
+  $("who-sub").hidden = !gate;
+  $("who-sub").textContent = `Pick your name to open ${data.name}.`;
   const people = data.members.map((m) => {
     const admin = m.id === data.admin_id;
     const b = el("button", { type: "button", className: m.id === identity.me ? "current" : "" },
@@ -208,6 +209,8 @@ $("pw-form").onsubmit = async (ev) => {
   }
 };
 $("switch").onclick = openPicker;
+// Escape on the full-screen picker can't skip it: no name, no split.
+$("who-dialog").addEventListener("close", () => { if (!member(identity.me)) openPicker(); });
 $("pw-back").onclick = openPicker;
 $("join-back").onclick = openPicker;
 
@@ -228,9 +231,8 @@ $("join-form").onsubmit = async (ev) => {
     $("join-form").reset();
     identity = { me: id, adminToken: null };
     saveIdentity(slug, identity);
-    $("who-dialog").close();
     await load();
-    $("paid-by").value = id;
+    $("who-dialog").close();
   } catch (err) {
     $("join-error").textContent = err.status === 422 ? UPI_HINT : err.message;
   }
@@ -241,8 +243,8 @@ async function adminApi(method, url, body) {
     return await api(method, url, body, { "X-Admin-Token": identity.adminToken });
   } catch (err) {
     if (err.status === 403) {
-      setIdentity({ me: null, adminToken: null });
-      throw new Error("Admin session ended. Tap the name at the top, pick yours and enter the password again.");
+      setIdentity({ me: identity.me, adminToken: null });
+      throw new Error("Admin session ended. Tap your name at the top and enter the password again.");
     }
     throw err;
   }
@@ -365,8 +367,6 @@ function openExpense(e) {
 }
 
 function buildMemberInputs() {
-  $("paid-by").replaceChildren(...data.members.map((m) => el("option", { value: m.id, textContent: m.name })));
-  if (identity.me) $("paid-by").value = identity.me;
   $("equal-box").replaceChildren(...data.members.map((m) =>
     el("label", {}, el("input", { type: "checkbox", value: m.id, checked: true }), el("span", { textContent: m.name }))));
   $("exact-box").replaceChildren(...data.members.map((m) =>
@@ -382,10 +382,10 @@ function showSplitType() {
 document.querySelectorAll("input[name=split]").forEach((r) => (r.onchange = showSplitType));
 
 function startEdit(e) {
-  editing = { id: e.id, version: e.version };
+  editing = { id: e.id, version: e.version, paidBy: e.paid_by };
+  $("form-payer").textContent = `Paid by ${e.paid_by === identity.me ? "you" : nameOf(e.paid_by)}`;
   $("desc").value = e.description;
   $("amount").value = plainAmount(e.amount_paise);
-  $("paid-by").value = e.paid_by;
   const ids = Object.keys(e.shares).map(Number);
   const amounts = Object.values(e.shares);
   const isEqual = Math.max(...amounts) - Math.min(...amounts) <= 1;
@@ -402,7 +402,7 @@ function startEdit(e) {
 function resetForm() {
   editing = null;
   $("expense-form").reset();
-  if (identity.me) $("paid-by").value = identity.me;
+  $("form-payer").textContent = "Paid by you";
   $("equal-box").querySelectorAll("input").forEach((c) => (c.checked = true));
   showSplitType();
   $("form-title").textContent = "Add expense";
@@ -428,7 +428,8 @@ $("expense-form").onsubmit = async (ev) => {
   const body = {
     description: $("desc").value.trim(),
     amount_paise: amount,
-    paid_by: Number($("paid-by").value),
+    // New expenses are paid by you; editing keeps whoever paid.
+    paid_by: editing ? editing.paidBy : identity.me,
     split: splitType(),
   };
   if (body.split === "equal") {

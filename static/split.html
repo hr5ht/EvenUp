@@ -115,14 +115,12 @@
   <form id="expense-form" class="sheet-form">
     <div class="sheet-head"><h2 id="form-title">Add expense</h2><button type="button" class="icon-btn" data-close aria-label="Close">✕</button></div>
     <div class="sheet-body">
+      <p class="muted" id="form-payer"></p>
       <label for="amount">Amount (₹)</label>
       <input type="text" id="amount" class="amount-input" inputmode="decimal" placeholder="0" required>
 
       <label for="desc">What for?</label>
       <input type="text" id="desc" maxlength="100" placeholder="Dinner, cab, tickets…" required>
-
-      <label for="paid-by">Paid by</label>
-      <select id="paid-by"></select>
 
       <label>Split</label>
       <div class="segmented">
@@ -140,6 +138,7 @@
 <dialog class="sheet" id="who-dialog">
   <div class="sheet-head"><h2 id="who-title">Who are you?</h2><button type="button" class="icon-btn" data-close aria-label="Close">✕</button></div>
   <div class="sheet-body">
+    <p class="muted" id="who-sub" hidden></p>
     <div id="who-list" class="menu who-list"></div>
     <button type="button" id="join-open" class="link join-open">I'm not on the list</button>
     <form id="join-form" hidden>
