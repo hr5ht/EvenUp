@@ -4,12 +4,13 @@ import json
 import os
 import secrets
 import time
+from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Dict, List, Literal, Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -19,6 +20,9 @@ TTL = 48 * 3600
 DEMO = "demo"
 STATIC = Path(__file__).parent.parent / "static"
 UPI_RE = r"^[a-zA-Z0-9._-]{1,256}@[a-zA-Z]{2,64}$"
+# (limit, window seconds) per client IP
+CREATE_LIMIT = (10, 3600)
+WRITE_LIMIT = (60, 60)
 
 
 
@@ -36,9 +40,34 @@ app = FastAPI(docs_url=None, redoc_url=None, lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
 
+# ponytail: in-memory per-process limiter, move to Redis/DB if running more than one instance
+HITS = defaultdict(deque)
+
+
+def rate_limited(key, limit, window):
+    if len(HITS) > 10000:
+        HITS.clear()
+    hits, t = HITS[key], time.monotonic()
+    while hits and hits[0] <= t - window:
+        hits.popleft()
+    if len(hits) >= limit:
+        return True
+    hits.append(t)
+    return False
+
+
 @app.middleware("http")
 async def security_headers(request, call_next):
-    resp = await call_next(request)
+    ip = request.client.host if request.client else "?"
+    if request.method != "GET" and request.url.path.startswith("/api/"):
+        creating = request.method == "POST" and request.url.path == "/api/splits"
+        kind, limit = ("create", CREATE_LIMIT) if creating else ("write", WRITE_LIMIT)
+        if rate_limited((kind, ip), *limit):
+            resp = JSONResponse({"detail": "Too many requests. Wait a bit and try again."}, status_code=429)
+        else:
+            resp = await call_next(request)
+    else:
+        resp = await call_next(request)
     resp.headers.update({
         "Content-Security-Policy": "default-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
         "X-Frame-Options": "DENY",

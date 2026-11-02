@@ -111,3 +111,9 @@ def test_cross_split_access_and_guards():
         assert c.post("/cron/cleanup", headers={"X-Cron-Secret": "s3cret"}).status_code == 200
         assert c.get("/api/splits/demo").status_code == 200
         assert "Content-Security-Policy" in c.get("/").headers
+
+
+def test_rate_limit():
+    with TestClient(app, client=("10.0.0.1", 1)) as c:
+        codes = [c.post("/api/splits", json={"name": "x", "members": [{"name": "A"}]}).status_code for _ in range(11)]
+        assert codes[:10] == [200] * 10 and codes[10] == 429
