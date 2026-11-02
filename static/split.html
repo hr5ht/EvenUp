@@ -49,11 +49,10 @@
       <ul class="list" id="my-payments"></ul>
     </section>
 
-    <nav class="tiles">
-      <button type="button" class="tile" data-open="settle-sheet"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg></span><span class="tile-text"><strong>Settle up</strong><span id="tile-settle"></span></span></button>
+    <nav class="tiles three">
       <button type="button" class="tile" data-open="balances-sheet"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M8 17v-4M13 17V9M18 17V5"/></svg></span><span class="tile-text"><strong>Balances</strong><span id="tile-balances"></span></span></button>
       <button type="button" class="tile" data-open="share-sheet"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v13"/></svg></span><span class="tile-text"><strong>Share</strong><span>Link, image</span></span></button>
-      <button type="button" class="tile" data-open="activity-sheet"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="tile-text"><strong>Activity</strong><span>History, undo</span></span></button>
+      <button type="button" class="tile" data-open="activity-sheet"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="tile-text"><strong>Activity</strong><span>History</span></span></button>
       <button type="button" class="tile tile-wide live-only" data-open="admin-sheet" id="admin-tile" hidden><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span><span class="tile-text"><strong>Admin</strong><span>Members, UPI IDs, delete split</span></span></button>
     </nav>
 
@@ -66,14 +65,6 @@
 <div class="toast" id="toast" role="status" hidden></div>
 
 <!-- ---------- sheets ---------- -->
-
-<dialog class="sheet" id="settle-sheet">
-  <div class="sheet-head"><h2>Settle up</h2><button type="button" class="icon-btn" data-close aria-label="Close">✕</button></div>
-  <div class="sheet-body">
-    <p class="muted" id="settle-note"></p>
-    <ul class="list" id="settlement"></ul>
-  </div>
-</dialog>
 
 <dialog class="sheet" id="balances-sheet">
   <div class="sheet-head"><h2>Balances</h2><button type="button" class="icon-btn" data-close aria-label="Close">✕</button></div>

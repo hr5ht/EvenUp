@@ -266,6 +266,8 @@ button.link { display: inline; min-height: 0; padding: 0; border: 0; background:
 
 /* ---------- tiles: icon, title, value ---------- */
 .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); }
+.tiles.three { grid-template-columns: repeat(3, 1fr); gap: var(--s2); }
+.tiles.three .tile { gap: var(--s3); padding: var(--s3); }
 .tile {
   display: flex;
   flex-direction: column;

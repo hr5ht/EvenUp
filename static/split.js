@@ -18,8 +18,6 @@ const payMethod = (e) => e.description.split(" · ").pop(); // payments are stor
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const UPI_HINT = "That doesn't look like a UPI ID (name@bank).";
 const paymentsOf = (id) => data.settlement.filter((p) => p.from === id || p.to === id);
-// Settle up shows only your payments; everyone's until you pick a name.
-const visiblePayments = () => (member(identity.me) ? paymentsOf(identity.me) : data.settlement);
 
 // Roll the big number to its new value. Polling re-renders with the same value, which skips the animation.
 function countUp(node, paise) {
@@ -114,10 +112,7 @@ function render() {
 
   renderYou();
   renderHero();
-  const pays = visiblePayments();
-  $("tile-settle").textContent = pays.length ? plural(pays.length, "payment") : "All settled 🎉";
   $("tile-balances").textContent = plural(data.members.length, "person").replace("persons", "people");
-  renderSettlement();
   renderBalances();
   renderExpenses();
   renderActivity();
@@ -388,17 +383,6 @@ function paymentRow(p) {
   );
 }
 
-function renderSettlement() {
-  const mine = !!member(identity.me);
-  const pays = visiblePayments();
-  $("settle-note").textContent = mine
-    ? "Only your payments. Balances shows the whole group."
-    : "The fewest payments that make everyone even.";
-  $("settlement").replaceChildren(...(pays.length
-    ? pays.map(paymentRow)
-    : [el("li", {}, el("span", { className: "grow", textContent: mine ? "You're all settled 🎉" : "All square 🎉" }))]));
-}
-
 function renderBalances() {
   $("balances").replaceChildren(...data.members.map((m) => {
     const b = data.balances[m.id] || 0;
@@ -607,9 +591,14 @@ const ACTIONS = {
 };
 
 function renderActivity() {
-  $("activity").replaceChildren(...data.activity.map((a) => {
+  const kindOf = (id) => (data.expenses.find((e) => e.id === id) || {}).kind;
+  // New expenses are already in the expense list, so the log keeps payments and every other change.
+  const shown = data.activity.filter((a) => !(a.action === "added" && kindOf(a.expense_id) === "expense"));
+  $("activity").replaceChildren(...shown.map((a) => {
     const d = a.details;
     const what = d.description ? `${d.description} (${rupees(d.amount_paise)})` : d.name || "";
+    // A payment's description already says it all: "Neha paid Riya · UPI".
+    const title = a.action === "added" ? what : `${ACTIONS[a.action] || a.action} ${what}`;
     let undo = null;
     // Only the latest change to each expense can be undone; the server checks this too.
     if (a.expense_id && data.activity.find((x) => x.expense_id === a.expense_id) === a) {
@@ -618,7 +607,7 @@ function renderActivity() {
     }
     return el("li", {},
       el("span", { className: "grow" },
-        el("div", { textContent: `${ACTIONS[a.action] || a.action} ${what}` }),
+        el("div", { textContent: title }),
         el("div", { className: "muted", textContent: new Date(a.created_at * 1000).toLocaleString() }),
       ),
       undo,
