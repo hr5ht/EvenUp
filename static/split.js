@@ -86,7 +86,7 @@ $("upi-form").onsubmit = async (ev) => {
 };
 
 function openPicker() {
-  $("who-list").replaceChildren(...data.members.map((m) => {
+  const people = data.members.map((m) => {
     const b = el("button", { type: "button", textContent: m.name });
     b.onclick = () => {
       // Admin is unlocked per device, independent of which name you pick.
@@ -94,10 +94,12 @@ function openPicker() {
       $("who-dialog").close();
     };
     return b;
-  }));
+  });
+  const admin = el("button", { type: "button", className: "who-admin", textContent: "Admin" });
+  admin.onclick = openAdminLogin;
+  $("who-list").replaceChildren(...(identity.adminToken ? [] : [admin]), ...people);
   $("who-list").hidden = false;
-  $("join-open").parentElement.hidden = false;
-  $("admin-open").hidden = !!identity.adminToken;
+  $("join-open").hidden = false;
   $("join-form").hidden = true;
   $("pw-form").hidden = true;
   $("who-title").textContent = "Who are you?";
@@ -105,15 +107,15 @@ function openPicker() {
   $("who-dialog").showModal();
 }
 
-$("admin-open").onclick = () => {
+function openAdminLogin() {
   $("who-title").textContent = "Admin";
   $("who-list").hidden = true;
-  $("join-open").parentElement.hidden = true;
+  $("join-open").hidden = true;
   $("pw-form").hidden = false;
   $("pw-error").textContent = "";
   $("admin-pw").value = "";
   $("admin-pw").focus();
-};
+}
 
 $("pw-form").onsubmit = async (ev) => {
   ev.preventDefault();
@@ -136,7 +138,7 @@ $("join-back").onclick = openPicker;
 $("join-open").onclick = () => {
   $("who-title").textContent = "Join this split";
   $("who-list").hidden = true;
-  $("join-open").parentElement.hidden = true;
+  $("join-open").hidden = true;
   $("join-form").hidden = false;
   $("join-error").textContent = "";
   $("join-name").focus();
