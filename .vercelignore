@@ -1,0 +1,7 @@
+.venv
+.env
+evenup.db
+tests
+plan.md
+newplan.md
+__pycache__

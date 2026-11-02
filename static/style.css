@@ -516,7 +516,6 @@ dialog.sheet.fullscreen::backdrop { background: var(--bg); }
 .who-list .badge { margin-left: auto; }
 .who-list button:has(.badge)::after { margin-left: var(--s3); }
 .join-open { margin-top: var(--s4); }
-#demo-hint { margin-top: var(--s4); }
 
 /* QR stays black on white so scanners can read it */
 .qr { display: block; max-width: 100%; height: auto; margin: 0 auto var(--s4); padding: var(--s2); border-radius: var(--r); background: #fff; }

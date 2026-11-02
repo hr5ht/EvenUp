@@ -194,7 +194,6 @@ function openPicker() {
   });
   $("who-list").replaceChildren(...people);
   showPickerStep("list", "Who are you?");
-  $("demo-hint").hidden = slug !== "demo";
   openSheet("who-dialog");
 }
 

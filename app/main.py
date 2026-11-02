@@ -5,7 +5,6 @@ import os
 import secrets
 import time
 from collections import defaultdict, deque
-from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import quote, urlencode
 from typing import Dict, List, Literal, Optional
@@ -15,14 +14,13 @@ import qrcode.image.svg
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
 from fastapi import Depends, FastAPI, Header, HTTPException
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from . import db, money
 
 TTL = 48 * 3600
-DEMO = "demo"
 STATIC = Path(__file__).parent.parent / "static"
 UPI_RE = r"^[a-zA-Z0-9._-]{1,256}@[a-zA-Z]{2,64}$"
 # (limit, window seconds) per client IP
@@ -50,17 +48,8 @@ def dec(v):
 
 
 
-@asynccontextmanager
-async def lifespan(app):
-    db.init()
-    con = db.connect()
-    seed_demo(con)
-    con.commit()
-    con.close()
-    yield
-
-
-app = FastAPI(docs_url=None, redoc_url=None, lifespan=lifespan)
+db.init()  # runs once per cold start on Vercel
+app = FastAPI(docs_url=None, redoc_url=None)
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
 
@@ -82,7 +71,8 @@ def rate_limited(key, limit, window):
 
 @app.middleware("http")
 async def security_headers(request, call_next):
-    ip = request.client.host if request.client else "?"
+    # Behind Vercel the socket peer is Vercel's proxy; it sets x-real-ip to the visitor's address.
+    ip = (os.environ.get("VERCEL") and request.headers.get("x-real-ip")) or (request.client.host if request.client else "?")
     if request.method != "GET" and request.url.path.startswith("/api/"):
         creating = request.method == "POST" and request.url.path == "/api/splits"
         kind, limit = ("create", CREATE_LIMIT) if creating else ("write", WRITE_LIMIT)
@@ -119,11 +109,6 @@ def new():
 @app.get("/g/{slug}")
 def split_page(slug: str):
     return FileResponse(STATIC / "split.html")
-
-
-@app.get("/demo")
-def demo():
-    return RedirectResponse(f"/g/{DEMO}")
 
 
 # ---------- models ----------
@@ -182,7 +167,7 @@ def admin_token(split_id, pw_hash):
 
 def load_split(con, slug):
     s = con.execute("SELECT * FROM splits WHERE slug = ?", (slug,)).fetchone()
-    if not s or (s["expires_at"] < now() and slug != DEMO):
+    if not s or s["expires_at"] < now():
         raise HTTPException(404, "Split not found or expired")
     t = now()
     con.execute("UPDATE splits SET last_activity_at = ?, expires_at = ? WHERE id = ?", (t, t + TTL, s["id"]))
@@ -246,34 +231,14 @@ def create_split(con, body, slug=None):
     pw_hash = hash_password(body.admin_password)
     t = now()
     sid = con.execute(
-        "INSERT INTO splits (slug, name, admin_pw_hash, last_activity_at, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO splits (slug, name, admin_pw_hash, last_activity_at, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING id",
         (slug, body.name, pw_hash, t, t + TTL, t),
-    ).lastrowid
-    ids = [con.execute("INSERT INTO members (split_id, name, upi_id) VALUES (?, ?, ?)",
-                       (sid, m.name, enc(m.upi_id))).lastrowid for m in body.members]
+    ).fetchone()["id"]
+    ids = [con.execute("INSERT INTO members (split_id, name, upi_id) VALUES (?, ?, ?) RETURNING id",
+                       (sid, m.name, enc(m.upi_id))).fetchone()["id"] for m in body.members]
     con.execute("UPDATE splits SET admin_member_id = ? WHERE id = ?", (ids[0], sid))
     log(con, sid, "created", None, {"name": body.name})
     return slug, admin_token(sid, pw_hash), sid, ids[0]
-
-
-def seed_demo(con):
-    con.execute("DELETE FROM splits WHERE slug = ?", (DEMO,))
-    _, _, sid, _ = create_split(con, SplitIn(name="Goa dinner (demo)", admin_password="demo", members=[
-        MemberIn(name="Aman", upi_id="aman@okaxis"),
-        MemberIn(name="Riya", upi_id="riya@ybl"),
-        MemberIn(name="Kabir"),
-    ]), slug=DEMO)
-    a, r, k = member_ids(con, sid)
-    for paid_by, amount, desc, shares in [
-        (a, 240000, "Dinner at Britto's", money.split_equal(240000, [a, r, k])),
-        (r, 90000, "Cab", money.split_equal(90000, [a, r, k])),
-        (k, 50000, "Drinks", {a: 30000, k: 20000}),
-    ]:
-        cur = con.execute(
-            "INSERT INTO expenses (split_id, paid_by, amount_paise, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-            (sid, paid_by, amount, desc, now(), now()),
-        )
-        write_shares(con, cur.lastrowid, shares)
 
 
 # ---------- API ----------
@@ -318,7 +283,7 @@ def read(slug: str, con=Depends(db.get_db)):
         "SELECT id, action, expense_id, details, created_at FROM activity WHERE split_id = ? ORDER BY id DESC LIMIT 50", (s["id"],))]
     return {
         "name": s["name"],
-        "expires_at": None if slug == DEMO else s["expires_at"],
+        "expires_at": s["expires_at"],
         "admin_id": s["admin_member_id"],
         "members": members,
         "expenses": expenses,
@@ -355,14 +320,14 @@ def add_expense(slug: str, body: ExpenseIn, con=Depends(db.get_db)):
     shares = compute_shares(member_ids(con, s["id"]), body)
     if body.kind == "payment" and (len(shares) != 1 or body.paid_by in shares):
         raise HTTPException(400, "A payment goes from one member to one other member")
-    cur = con.execute(
-        "INSERT INTO expenses (split_id, paid_by, amount_paise, description, kind, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    eid = con.execute(
+        "INSERT INTO expenses (split_id, paid_by, amount_paise, description, kind, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
         (s["id"], body.paid_by, body.amount_paise, body.description, body.kind, now(), now()),
-    )
-    write_shares(con, cur.lastrowid, shares)
-    log(con, s["id"], "added", cur.lastrowid, {"description": body.description, "amount_paise": body.amount_paise})
+    ).fetchone()["id"]
+    write_shares(con, eid, shares)
+    log(con, s["id"], "added", eid, {"description": body.description, "amount_paise": body.amount_paise})
     con.commit()
-    return {"id": cur.lastrowid}
+    return {"id": eid}
 
 
 @app.put("/api/splits/{slug}/expenses/{expense_id}")
@@ -406,7 +371,7 @@ def undo(slug: str, activity_id: int, con=Depends(db.get_db)):
     a = con.execute("SELECT * FROM activity WHERE id = ? AND split_id = ?", (activity_id, s["id"])).fetchone()
     if not a or a["expense_id"] is None:
         raise HTTPException(404, "Nothing to undo")
-    latest = con.execute("SELECT MAX(id) FROM activity WHERE expense_id = ?", (a["expense_id"],)).fetchone()[0]
+    latest = con.execute("SELECT MAX(id) AS latest FROM activity WHERE expense_id = ?", (a["expense_id"],)).fetchone()["latest"]
     if latest != a["id"]:
         raise HTTPException(409, "Only the latest change to an expense can be undone. Reload and try again.")
     e = get_expense(con, s["id"], a["expense_id"])
@@ -440,8 +405,8 @@ def add_member(slug: str, body: MemberIn, con=Depends(db.get_db)):
         raise HTTPException(400, "That name is already in this split. Pick it from the list instead.")
     if len(existing) >= 50:
         raise HTTPException(400, "This split is full (50 members)")
-    mid = con.execute("INSERT INTO members (split_id, name, upi_id) VALUES (?, ?, ?)",
-                      (s["id"], body.name, enc(body.upi_id))).lastrowid
+    mid = con.execute("INSERT INTO members (split_id, name, upi_id) VALUES (?, ?, ?) RETURNING id",
+                      (s["id"], body.name, enc(body.upi_id))).fetchone()["id"]
     log(con, s["id"], "member_added", None, {"name": body.name})
     con.commit()
     return {"id": mid}
@@ -476,10 +441,10 @@ def remove_member(slug: str, member_id: int, x_admin_token: Optional[str] = Head
         raise HTTPException(404, "Member not found")
     if member_id == s["admin_member_id"]:
         raise HTTPException(400, "The admin can't be removed")
-    used = "SELECT id FROM expenses WHERE (paid_by = :m OR id IN (SELECT expense_id FROM shares WHERE member_id = :m))"
-    if con.execute(used + " AND deleted = 0", {"m": member_id}).fetchone():
+    used = "SELECT id FROM expenses WHERE (paid_by = ? OR id IN (SELECT expense_id FROM shares WHERE member_id = ?))"
+    if con.execute(used + " AND deleted = 0", (member_id, member_id)).fetchone():
         raise HTTPException(400, f"{m['name']} is in some expenses. Edit or delete those first.")
-    con.execute(f"DELETE FROM expenses WHERE id IN ({used} AND deleted = 1)", {"m": member_id})
+    con.execute(f"DELETE FROM expenses WHERE id IN ({used} AND deleted = 1)", (member_id, member_id))
     con.execute("DELETE FROM members WHERE id = ?", (member_id,))
     log(con, s["id"], "member_removed", None, {"name": m["name"]})
     con.commit()
@@ -490,19 +455,19 @@ def remove_member(slug: str, member_id: int, x_admin_token: Optional[str] = Head
 def delete_split(slug: str, x_admin_token: Optional[str] = Header(None), con=Depends(db.get_db)):
     s = load_split(con, slug)
     require_admin(s, x_admin_token)
-    if slug == DEMO:
-        raise HTTPException(400, "The demo can't be deleted")
     con.execute("DELETE FROM splits WHERE id = ?", (s["id"],))
     con.commit()
     return {"ok": True}
 
 
-@app.post("/cron/cleanup")
-def cleanup(x_cron_secret: Optional[str] = Header(None), con=Depends(db.get_db)):
+@app.api_route("/cron/cleanup", methods=["GET", "POST"])
+def cleanup(x_cron_secret: Optional[str] = Header(None), authorization: Optional[str] = Header(None),
+            con=Depends(db.get_db)):
+    # Vercel Cron calls this daily with GET and "Authorization: Bearer $CRON_SECRET".
     secret = os.environ.get("CRON_SECRET")
-    if not secret or not x_cron_secret or not hmac.compare_digest(secret, x_cron_secret):
+    given = x_cron_secret or (authorization or "").removeprefix("Bearer ")
+    if not secret or not given or not hmac.compare_digest(secret, given):
         raise HTTPException(403)
-    n = con.execute("DELETE FROM splits WHERE expires_at < ? AND slug != ?", (now(), DEMO)).rowcount
-    seed_demo(con)  # reset demo so vandalism doesn't stick
+    n = con.execute("DELETE FROM splits WHERE expires_at < ?", (now(),)).rowcount
     con.commit()
     return {"deleted": n}

@@ -1,0 +1,5 @@
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/api/index" }],
+  "functions": { "api/index.py": { "includeFiles": "static/**" } },
+  "crons": [{ "path": "/cron/cleanup", "schedule": "0 3 * * *" }]
+}

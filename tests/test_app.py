@@ -1,7 +1,7 @@
 import os
 import tempfile
 
-os.environ["EVENUP_DB"] = os.path.join(tempfile.mkdtemp(), "test.db")
+os.environ["EVENUP_DB"] = os.path.join(tempfile.mkdtemp(), "test.db")  # SQLite unless DATABASE_URL is set
 os.environ["CRON_SECRET"] = "s3cret"
 
 from fastapi.testclient import TestClient  # noqa: E402
@@ -129,10 +129,11 @@ def test_cross_split_access_and_guards():
         assert c.post("/api/splits", json={"name": "x", "admin_password": "pass1", "members": [{"name": "A"}], "website": "spam"}).status_code == 400
         assert c.post("/api/splits", json={"name": "x", "admin_password": "pass1", "members": [{"name": "A"}, {"name": "a"}]}).status_code == 400
         assert c.post("/api/splits", json={"name": "x", "admin_password": "pass1", "members": [{"name": "A", "upi_id": "nope"}]}).status_code == 422
-        # cron needs the secret; demo survives cleanup
+        # cron needs the secret
         assert c.post("/cron/cleanup").status_code == 403
         assert c.post("/cron/cleanup", headers={"X-Cron-Secret": "s3cret"}).status_code == 200
-        assert c.get("/api/splits/demo").status_code == 200
+        assert c.get("/cron/cleanup", headers={"Authorization": "Bearer s3cret"}).status_code == 200  # Vercel Cron
+        assert c.get("/cron/cleanup", headers={"Authorization": "Bearer nope"}).status_code == 403
         assert "Content-Security-Policy" in c.get("/").headers
 
 
@@ -164,7 +165,7 @@ def test_upi_encrypted_at_rest():
         slug = c.post("/api/splits", json={"name": "x", "admin_password": "pass1", "members": [{"name": "A", "upi_id": "secret@ybl"}]}).json()["slug"]
         assert c.get(f"/api/splits/{slug}").json()["members"][0]["upi_id"] == "secret@ybl"
         con = db.connect()
-        stored = con.execute("SELECT upi_id FROM members WHERE name = 'A' ORDER BY id DESC").fetchone()[0]
+        stored = con.execute("SELECT upi_id FROM members WHERE name = 'A' ORDER BY id DESC").fetchone()["upi_id"]
         con.close()
         assert "secret" not in stored
 
@@ -172,18 +173,17 @@ def test_upi_encrypted_at_rest():
 def test_qr():
     from app.main import upi_link
     assert upi_link("a@ybl", "Aman K", 12345, "Goa trip") == "upi://pay?pa=a@ybl&pn=Aman%20K&am=123.45&cu=INR&tn=Goa%20trip"
-    with TestClient(app) as c:
-        g = c.get("/api/splits/demo").json()
-        aman, _, kabir = [m["id"] for m in g["members"]]
-        r = c.get(f"/api/splits/demo/qr?to={aman}&amount=80000")
+    with TestClient(app, client=("10.0.0.3", 1)) as c:
+        slug = c.post("/api/splits", json={"name": "Q", "admin_password": "pass1", "members": [
+            {"name": "Aman", "upi_id": "aman@okaxis"}, {"name": "Kabir"}]}).json()["slug"]
+        aman, kabir = [m["id"] for m in c.get(f"/api/splits/{slug}").json()["members"]]
+        r = c.get(f"/api/splits/{slug}/qr?to={aman}&amount=80000")
         assert r.status_code == 200 and r.headers["content-type"].startswith("image/svg+xml")
-        assert c.get(f"/api/splits/demo/qr?to={kabir}&amount=100").status_code == 404  # no UPI ID
+        assert c.get(f"/api/splits/{slug}/qr?to={kabir}&amount=100").status_code == 404  # no UPI ID
 
 
-def test_login_rate_limit_and_demo():
+def test_login_rate_limit():
     with TestClient(app) as c:
         slug = c.post("/api/splits", json={"name": "x", "admin_password": "pass1", "members": [{"name": "A"}]}).json()["slug"]
         codes = [c.post(f"/api/splits/{slug}/admin-login", json={"password": "bad"}).status_code for _ in range(11)]
         assert codes[:10] == [401] * 10 and codes[10] == 429
-        token = c.post("/api/splits/demo/admin-login", json={"password": "demo"}).json()["admin_token"]
-        assert c.delete("/api/splits/demo", headers={"X-Admin-Token": token}).status_code == 400
