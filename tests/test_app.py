@@ -57,10 +57,20 @@ def test_flow():
         assert c.put(f"/api/splits/{slug}/expenses/{eid}", json=body).status_code == 200
         assert c.put(f"/api/splits/{slug}/expenses/{eid}", json=body).status_code == 409
 
+        # undo edit, then undo the undo
+        undo = lambda: c.post(f"/api/splits/{slug}/activity/{latest()}/undo")  # noqa: E731
+        latest = lambda: c.get(f"/api/splits/{slug}").json()["activity"][0]["id"]  # noqa: E731
+        assert undo().status_code == 200
+        assert c.get(f"/api/splits/{slug}").json()["balances"][str(a)] == 10000 - 3334
+        assert undo().status_code == 200
+        assert c.get(f"/api/splits/{slug}").json()["balances"][str(a)] == 4500
+
         # delete + undo
         c.delete(f"/api/splits/{slug}/expenses/{eid}")
         assert c.get(f"/api/splits/{slug}").json()["settlement"] == []
-        c.post(f"/api/splits/{slug}/expenses/{eid}/restore")
+        older = c.get(f"/api/splits/{slug}").json()["activity"][1]["id"]
+        assert c.post(f"/api/splits/{slug}/activity/{older}/undo").status_code == 409  # not the latest
+        assert undo().status_code == 200
         assert c.get(f"/api/splits/{slug}").json()["settlement"] == [{"from": b, "to": a, "amount_paise": 4500}]
 
         # payer must belong to this split

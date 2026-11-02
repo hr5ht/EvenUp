@@ -149,6 +149,11 @@ def write_shares(con, expense_id, shares):
     )
 
 
+def snapshot(con, e):
+    shares = {r["member_id"]: r["share_paise"] for r in con.execute("SELECT * FROM shares WHERE expense_id = ?", (e["id"],))}
+    return {"paid_by": e["paid_by"], "amount_paise": e["amount_paise"], "description": e["description"], "shares": shares}
+
+
 def get_expense(con, split_id, expense_id):
     e = con.execute("SELECT * FROM expenses WHERE id = ? AND split_id = ?", (expense_id, split_id)).fetchone()
     if not e:
@@ -246,7 +251,7 @@ def add_expense(slug: str, body: ExpenseIn, con=Depends(db.get_db)):
 @app.put("/api/splits/{slug}/expenses/{expense_id}")
 def edit_expense(slug: str, expense_id: int, body: ExpenseIn, con=Depends(db.get_db)):
     s = load_split(con, slug)
-    get_expense(con, s["id"], expense_id)
+    prev = snapshot(con, get_expense(con, s["id"], expense_id))
     shares = compute_shares(member_ids(con, s["id"]), body)
     # Optimistic lock: only update if nobody changed it since the client loaded it.
     cur = con.execute(
@@ -257,27 +262,54 @@ def edit_expense(slug: str, expense_id: int, body: ExpenseIn, con=Depends(db.get
     if cur.rowcount == 0:
         raise HTTPException(409, "This expense changed since you opened it. Reload and try again.")
     write_shares(con, expense_id, shares)
-    log(con, s["id"], "edited", expense_id, {"description": body.description, "amount_paise": body.amount_paise})
+    log(con, s["id"], "edited", expense_id,
+        {"description": body.description, "amount_paise": body.amount_paise, "prev": prev})
     con.commit()
     return {"ok": True}
 
 
 @app.delete("/api/splits/{slug}/expenses/{expense_id}")
 def delete_expense(slug: str, expense_id: int, con=Depends(db.get_db)):
-    return set_deleted(con, slug, expense_id, True)
-
-
-@app.post("/api/splits/{slug}/expenses/{expense_id}/restore")
-def restore_expense(slug: str, expense_id: int, con=Depends(db.get_db)):
-    return set_deleted(con, slug, expense_id, False)
-
-
-def set_deleted(con, slug, expense_id, deleted):
     s = load_split(con, slug)
-    e = get_expense(con, s["id"], expense_id)
-    con.execute("UPDATE expenses SET deleted = ?, version = version + 1 WHERE id = ?", (int(deleted), expense_id))
-    log(con, s["id"], "deleted" if deleted else "restored", expense_id,
+    set_deleted(con, s["id"], get_expense(con, s["id"], expense_id), True)
+    con.commit()
+    return {"ok": True}
+
+
+def set_deleted(con, split_id, e, deleted):
+    con.execute("UPDATE expenses SET deleted = ?, version = version + 1 WHERE id = ?", (int(deleted), e["id"]))
+    log(con, split_id, "deleted" if deleted else "restored", e["id"],
         {"description": e["description"], "amount_paise": e["amount_paise"]})
+
+
+@app.post("/api/splits/{slug}/activity/{activity_id}/undo")
+def undo(slug: str, activity_id: int, con=Depends(db.get_db)):
+    """Undo the latest change to an expense. The undo is itself logged, so it can be undone too."""
+    s = load_split(con, slug)
+    a = con.execute("SELECT * FROM activity WHERE id = ? AND split_id = ?", (activity_id, s["id"])).fetchone()
+    if not a or a["expense_id"] is None:
+        raise HTTPException(404, "Nothing to undo")
+    latest = con.execute("SELECT MAX(id) FROM activity WHERE expense_id = ?", (a["expense_id"],)).fetchone()[0]
+    if latest != a["id"]:
+        raise HTTPException(409, "Only the latest change to an expense can be undone. Reload and try again.")
+    e = get_expense(con, s["id"], a["expense_id"])
+    if a["action"] in ("added", "restored"):
+        set_deleted(con, s["id"], e, True)
+    elif a["action"] == "deleted":
+        set_deleted(con, s["id"], e, False)
+    elif a["action"] == "edited":
+        prev = json.loads(a["details"])["prev"]
+        shares = {int(m): p for m, p in prev["shares"].items()}
+        if not {prev["paid_by"], *shares} <= set(member_ids(con, s["id"])):
+            raise HTTPException(409, "Can't undo: a member in that version was removed")
+        current = snapshot(con, e)
+        con.execute(
+            "UPDATE expenses SET paid_by = ?, amount_paise = ?, description = ?, version = version + 1, updated_at = ? WHERE id = ?",
+            (prev["paid_by"], prev["amount_paise"], prev["description"], now(), e["id"]),
+        )
+        write_shares(con, e["id"], shares)
+        log(con, s["id"], "edited", e["id"],
+            {"description": prev["description"], "amount_paise": prev["amount_paise"], "prev": current})
     con.commit()
     return {"ok": True}
 

@@ -132,16 +132,11 @@ function renderActivity() {
   for (const a of data.activity) {
     const d = a.details;
     const what = d.description ? `${d.description} (${rupees(d.amount_paise)})` : d.name || "";
-    const exp = data.expenses.find((e) => e.id === a.expense_id);
     let undo = null;
-    // Undo is offered on the latest add/delete of an expense whose state still matches it.
-    const latest = exp && data.activity.find((x) => x.expense_id === a.expense_id) === a;
-    if (latest && a.action === "deleted" && exp.deleted) {
+    // Only the latest change to each expense can be undone; the server checks this too.
+    if (a.expense_id && data.activity.find((x) => x.expense_id === a.expense_id) === a) {
       undo = el("button", { type: "button", className: "small", textContent: "Undo" });
-      undo.onclick = () => act(() => api("POST", `${base}/expenses/${exp.id}/restore`));
-    } else if (latest && (a.action === "added" || a.action === "restored") && !exp.deleted) {
-      undo = el("button", { type: "button", className: "small", textContent: "Undo" });
-      undo.onclick = () => act(() => api("DELETE", `${base}/expenses/${exp.id}`));
+      undo.onclick = () => act(() => api("POST", `${base}/activity/${a.id}/undo`));
     }
     list.append(el("li", {},
       el("span", { className: "grow" },
