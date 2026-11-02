@@ -50,6 +50,21 @@ document.querySelectorAll("dialog").forEach((d) => d.addEventListener("click", (
   if (ev.target === d && !d.classList.contains("fullscreen")) d.close();
 }));
 
+// In-app stand-in for confirm(): resolves true only when the red button is tapped.
+function askConfirm(title, text, okLabel) {
+  $("confirm-title").textContent = title;
+  $("confirm-text").textContent = text;
+  $("confirm-ok").textContent = okLabel;
+  openSheet("confirm-sheet");
+  return new Promise((resolve) => {
+    $("confirm-ok").onclick = () => {
+      resolve(true);
+      $("confirm-sheet").close();
+    };
+    $("confirm-sheet").onclose = () => resolve(false); // Cancel, ✕, Escape or tapping outside
+  });
+}
+
 let toastTimer;
 function toast(text, action, fn) {
   const t = $("toast");
@@ -611,7 +626,7 @@ function renderAdminMembers() {
   $("admin-members").replaceChildren(...data.members.map((m) => {
     const remove = el("button", { type: "button", className: "small", textContent: "Remove" });
     remove.onclick = async () => {
-      if (!confirm(`Remove ${m.name}?`)) return;
+      if (!(await askConfirm(`Remove ${m.name}?`, "They can join again from the link if they need to.", "Remove"))) return;
       $("admin-error").textContent = "";
       try {
         await adminApi("DELETE", `${base}/members/${m.id}`);
@@ -656,7 +671,7 @@ $("add-member").onclick = async () => {
 };
 
 $("delete-split").onclick = async () => {
-  if (!confirm("Delete this split for everyone? This can't be undone.")) return;
+  if (!(await askConfirm("Delete this split?", "It's deleted for everyone, with all its expenses and payments. This can't be undone.", "Delete split"))) return;
   try {
     await adminApi("DELETE", base);
     location.href = "/";

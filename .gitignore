@@ -4,3 +4,5 @@ __pycache__/
 .env
 plan.md
 newplan.md
+.vercel
+.env*
