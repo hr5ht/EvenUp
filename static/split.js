@@ -2,7 +2,7 @@ const slug = location.pathname.split("/")[2];
 const base = `/api/splits/${slug}`;
 const $ = (id) => document.getElementById(id);
 
-let identity = loadIdentity(slug); // {me: member_id, adminToken}
+let identity = loadIdentity(slug); // {me: member_id, adminToken: only when me is the admin}
 let data = null;
 let membersKey = "";
 let editing = null; // {id, version} while editing an expense
@@ -11,6 +11,7 @@ let pickerShown = false;
 const member = (id) => data.members.find((m) => m.id === id);
 const nameOf = (id) => (member(id) || {}).name || "?";
 const label = (id) => nameOf(id) + (id === identity.me ? " (you)" : "");
+const isAdmin = () => !!identity.adminToken && identity.me === data.admin_id;
 const splitType = () => document.querySelector("input[name=split]:checked").value;
 const liveExpenses = () => data.expenses.filter((e) => !e.deleted);
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
@@ -62,7 +63,7 @@ function render() {
   document.title = `${data.name} · EvenUp`;
   $("content").hidden = false;
   $("fab").hidden = false;
-  $("admin-tile").hidden = !identity.adminToken;
+  $("admin-tile").hidden = !isAdmin();
 
   if (data.expires_at) {
     const hours = Math.max(0, Math.round((data.expires_at * 1000 - Date.now()) / 3600000));
@@ -78,7 +79,7 @@ function render() {
   renderBalances();
   renderExpenses();
   renderActivity();
-  if (identity.adminToken) renderAdminMembers();
+  if (isAdmin()) renderAdminMembers();
 
   // Only rebuild member inputs when members change, so polling doesn't wipe a half-filled form.
   const key = data.members.map((m) => m.id).join(",");
@@ -88,7 +89,7 @@ function render() {
   }
 
   // New visitor (or their member was removed): ask who they are, once per page load.
-  if (!pickerShown && !identity.adminToken && !member(identity.me)) {
+  if (!pickerShown && !member(identity.me)) {
     pickerShown = true;
     openPicker();
   }
@@ -116,7 +117,7 @@ function renderHero() {
 }
 
 // ---------- who are you ----------
-// You're either one member ({me}) or the admin ({adminToken}), never both.
+// The admin is one of the members. Picking their name asks for the password; the token goes with that name only.
 
 function setIdentity(next) {
   identity = next;
@@ -127,7 +128,7 @@ function setIdentity(next) {
 
 function renderYou() {
   const me = member(identity.me);
-  $("you-text").textContent = identity.adminToken ? "Admin ▾" : me ? `${me.name} ▾` : "Who are you?";
+  $("you-text").textContent = me ? `${me.name}${isAdmin() ? " · admin" : ""} ▾` : "Who are you?";
   $("upi-form").hidden = !me || !!me.upi_id;
 }
 
@@ -153,23 +154,24 @@ function showPickerStep(step, title) {
 
 function openPicker() {
   const people = data.members.map((m) => {
-    const b = el("button", { type: "button", textContent: m.name, className: m.id === identity.me ? "current" : "" });
+    const admin = m.id === data.admin_id;
+    const b = el("button", { type: "button", className: m.id === identity.me ? "current" : "" },
+      el("span", { textContent: m.name }), admin ? el("span", { className: "badge", textContent: "admin" }) : null);
     b.onclick = () => {
-      // Picking a name leaves admin mode, so a friend using this phone isn't the admin.
-      setIdentity({ me: m.id, adminToken: null });
+      if (admin && !isAdmin()) {
+        showPickerStep("admin", m.name);
+        $("pw-error").textContent = "";
+        $("admin-pw").value = "";
+        $("admin-pw").focus();
+        return;
+      }
+      // Any other name drops the admin token, so a friend using this phone isn't the admin.
+      setIdentity({ me: m.id, adminToken: admin ? identity.adminToken : null });
       $("who-dialog").close();
     };
     return b;
   });
-  const admin = el("button", { type: "button", className: `who-admin ${identity.adminToken ? "current" : ""}`, textContent: "Admin" });
-  admin.onclick = () => {
-    if (identity.adminToken) return $("who-dialog").close();
-    showPickerStep("admin", "Admin");
-    $("pw-error").textContent = "";
-    $("admin-pw").value = "";
-    $("admin-pw").focus();
-  };
-  $("who-list").replaceChildren(admin, ...people);
+  $("who-list").replaceChildren(...people);
   showPickerStep("list", "Who are you?");
   $("demo-hint").hidden = slug !== "demo";
   openSheet("who-dialog");
@@ -179,7 +181,7 @@ $("pw-form").onsubmit = async (ev) => {
   ev.preventDefault();
   try {
     const { admin_token } = await api("POST", `${base}/admin-login`, { password: $("admin-pw").value });
-    setIdentity({ me: null, adminToken: admin_token });
+    setIdentity({ me: data.admin_id, adminToken: admin_token });
     $("who-dialog").close();
     toast("Admin unlocked");
   } catch (err) {
@@ -221,7 +223,7 @@ async function adminApi(method, url, body) {
   } catch (err) {
     if (err.status === 403) {
       setIdentity({ me: null, adminToken: null });
-      throw new Error("Admin session ended. Tap your name at the top, choose Admin and enter the password again.");
+      throw new Error("Admin session ended. Tap the name at the top, pick yours and enter the password again.");
     }
     throw err;
   }

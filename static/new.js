@@ -14,24 +14,21 @@ document.getElementById("create").onsubmit = async (e) => {
   e.preventDefault();
   const error = document.getElementById("error");
   error.textContent = "";
-  const members = [...membersBox.children]
-    .map((row) => ({ name: row.querySelector(".m-name").value.trim() }))
+  // You go first: the server makes the first member the admin.
+  const members = [document.getElementById("my-name"), ...membersBox.querySelectorAll(".m-name")]
+    .map((input) => ({ name: input.value.trim() }))
     .filter((m) => m.name);
-  if (!members.length) {
-    error.textContent = "Add at least one member.";
-    return;
-  }
   const button = e.submitter;
   button.disabled = true;
   try {
-    const { slug, admin_token } = await api("POST", "/api/splits", {
+    const { slug, admin_token, admin_id } = await api("POST", "/api/splits", {
       name: document.getElementById("name").value.trim(),
       members,
       admin_password: document.getElementById("admin-password").value,
       website: document.getElementById("website").value,
     });
-    // This device opens the split as the admin.
-    saveIdentity(slug, { adminToken: admin_token });
+    // This device opens the split as you, the admin.
+    saveIdentity(slug, { me: admin_id, adminToken: admin_token });
     const share = `${location.origin}/g/${slug}`;
     document.getElementById("share-link").textContent = share;
     document.getElementById("copy-share").onclick = (ev) => copyText(share, ev.target);

@@ -135,8 +135,8 @@ class MemberIn(BaseModel):
 
 class SplitIn(BaseModel):
     name: str = Field(min_length=1, max_length=60)
-    members: List[MemberIn] = Field(min_length=1, max_length=50)
-    admin_password: str = Field(min_length=4, max_length=100)  # admin is a role unlocked by password, not a member
+    members: List[MemberIn] = Field(min_length=1, max_length=50)  # the first one is the creator, who becomes admin
+    admin_password: str = Field(min_length=4, max_length=100)
     website: str = ""  # honeypot, humans never see it
 
 
@@ -248,15 +248,16 @@ def create_split(con, body, slug=None):
         "INSERT INTO splits (slug, name, admin_pw_hash, last_activity_at, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?)",
         (slug, body.name, pw_hash, t, t + TTL, t),
     ).lastrowid
-    for m in body.members:
-        con.execute("INSERT INTO members (split_id, name, upi_id) VALUES (?, ?, ?)", (sid, m.name, enc(m.upi_id)))
+    ids = [con.execute("INSERT INTO members (split_id, name, upi_id) VALUES (?, ?, ?)",
+                       (sid, m.name, enc(m.upi_id))).lastrowid for m in body.members]
+    con.execute("UPDATE splits SET admin_member_id = ? WHERE id = ?", (ids[0], sid))
     log(con, sid, "created", None, {"name": body.name})
-    return slug, admin_token(sid, pw_hash), sid
+    return slug, admin_token(sid, pw_hash), sid, ids[0]
 
 
 def seed_demo(con):
     con.execute("DELETE FROM splits WHERE slug = ?", (DEMO,))
-    _, _, sid = create_split(con, SplitIn(name="Goa dinner (demo)", admin_password="demo", members=[
+    _, _, sid, _ = create_split(con, SplitIn(name="Goa dinner (demo)", admin_password="demo", members=[
         MemberIn(name="Aman", upi_id="aman@okaxis"),
         MemberIn(name="Riya", upi_id="riya@ybl"),
         MemberIn(name="Kabir"),
@@ -283,9 +284,9 @@ def create(body: SplitIn, con=Depends(db.get_db)):
     names = [m.name.strip().lower() for m in body.members]
     if len(set(names)) != len(names):
         raise HTTPException(400, "Member names must be unique")
-    slug, token, _ = create_split(con, body)
+    slug, token, _, admin_id = create_split(con, body)
     con.commit()
-    return {"slug": slug, "admin_token": token}
+    return {"slug": slug, "admin_token": token, "admin_id": admin_id}
 
 
 @app.post("/api/splits/{slug}/admin-login")
@@ -317,6 +318,7 @@ def read(slug: str, con=Depends(db.get_db)):
     return {
         "name": s["name"],
         "expires_at": None if slug == DEMO else s["expires_at"],
+        "admin_id": s["admin_member_id"],
         "members": members,
         "expenses": expenses,
         "balances": bal,
@@ -469,6 +471,8 @@ def remove_member(slug: str, member_id: int, x_admin_token: Optional[str] = Head
     m = con.execute("SELECT * FROM members WHERE id = ? AND split_id = ?", (member_id, s["id"])).fetchone()
     if not m:
         raise HTTPException(404, "Member not found")
+    if member_id == s["admin_member_id"]:
+        raise HTTPException(400, "The admin can't be removed")
     used = "SELECT id FROM expenses WHERE (paid_by = :m OR id IN (SELECT expense_id FROM shares WHERE member_id = :m))"
     if con.execute(used + " AND deleted = 0", {"m": member_id}).fetchone():
         raise HTTPException(400, f"{m['name']} is in some expenses. Edit or delete those first.")

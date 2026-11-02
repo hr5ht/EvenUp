@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS splits (
     slug TEXT UNIQUE NOT NULL,
     name TEXT NOT NULL,
     admin_pw_hash TEXT NOT NULL,
+    admin_member_id INTEGER,  -- the creator, always a member of the group
     last_activity_at INTEGER NOT NULL,
     expires_at INTEGER NOT NULL,
     created_at INTEGER NOT NULL

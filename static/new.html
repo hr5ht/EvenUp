@@ -19,13 +19,16 @@
     <label for="name">Name</label>
     <input type="text" id="name" maxlength="60" placeholder="Friday dinner" required>
 
-    <label>Members</label>
+    <label for="my-name">Your name <span class="muted">(you'll be the admin)</span></label>
+    <input type="text" id="my-name" maxlength="40" placeholder="Your name" required>
+
+    <label>Others in the group</label>
     <div id="members"></div>
     <button type="button" id="add-member" class="small">+ Add member</button>
 
     <label for="admin-password">Admin password</label>
     <input type="password" id="admin-password" minlength="4" maxlength="100" autocomplete="new-password" required>
-    <p class="muted">Lets you manage the split (members, UPI IDs, delete) from any device: tap "I'm the admin" and type it. Everyone adds their own UPI ID when they open the link, and anyone missing can add themselves.</p>
+    <p class="muted">Lets you manage the split (members, UPI IDs, delete) from any device: pick your name and type it. Everyone adds their own UPI ID when they open the link, and anyone missing can add themselves.</p>
 
     <input type="text" name="website" id="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
 
@@ -37,7 +40,7 @@
     <h2>Split created</h2>
     <label>Share link: send this to the group</label>
     <div class="link-box" id="share-link"></div>
-    <p class="muted">Everyone uses the same link and picks their name. Only you know the admin password.</p>
+    <p class="muted">Everyone uses the same link and picks their name. Your name asks for the admin password.</p>
     <div class="actions">
       <button type="button" id="copy-share">Copy link</button>
       <a id="open" class="button primary" href="#">Open split</a>

@@ -38,6 +38,7 @@ def test_flow():
         assert len(slug) >= 22
         g = c.get(f"/api/splits/{slug}").json()
         a, b, cc = [m["id"] for m in g["members"]]
+        assert r.json()["admin_id"] == g["admin_id"] == a  # first member is the admin
 
         # equal split, uneven paise
         r = c.post(f"/api/splits/{slug}/expenses", json={
@@ -98,6 +99,7 @@ def test_flow():
         # remove member: blocked while in a live expense, allowed otherwise
         adm = {"X-Admin-Token": token}
         assert c.delete(f"/api/splits/{slug}/members/{b}", headers=adm).status_code == 400
+        assert c.delete(f"/api/splits/{slug}/members/{a}", headers=adm).json()["detail"] == "The admin can't be removed"
         assert c.delete(f"/api/splits/{slug}/members/{cc}").status_code == 403
         assert c.delete(f"/api/splits/{slug}/members/{cc}", headers=adm).status_code == 200
         assert len(c.get(f"/api/splits/{slug}").json()["members"]) == 3

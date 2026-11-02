@@ -391,7 +391,8 @@ dialog.sheet[open] { display: flex; flex-direction: column; animation: sheet-up 
 .who-list { display: grid; gap: 8px; }
 .who-list button { padding: 14px 16px; text-align: left; }
 .who-list button.current { border-color: var(--accent); font-weight: 600; }
-.who-list .who-admin { border-style: dashed; color: var(--accent); font-weight: 600; }
+.who-list button { display: flex; justify-content: space-between; align-items: center; }
+.badge { font-size: 12px; font-weight: 600; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 2px 8px; }
 .join-open { margin-top: 14px; }
 
 /* QR */
