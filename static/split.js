@@ -8,9 +8,41 @@ let membersKey = "";
 let editing = null; // {id, version} while editing an expense
 let pickerShown = false;
 
-const nameOf = (id) => (data.members.find((m) => m.id === id) || {}).name || "?";
+const member = (id) => data.members.find((m) => m.id === id);
+const nameOf = (id) => (member(id) || {}).name || "?";
 const label = (id) => nameOf(id) + (id === identity.me ? " (you)" : "");
 const splitType = () => document.querySelector("input[name=split]:checked").value;
+const liveExpenses = () => data.expenses.filter((e) => !e.deleted);
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+const UPI_HINT = "That doesn't look like a UPI ID (name@bank).";
+
+// ---------- sheets ----------
+
+function openSheet(id) {
+  if (!$(id).open) $(id).showModal();
+}
+document.querySelectorAll("[data-open]").forEach((b) => (b.onclick = () => openSheet(b.dataset.open)));
+document.querySelectorAll("[data-close]").forEach((b) => (b.onclick = () => b.closest("dialog").close()));
+// Tapping the dimmed backdrop closes a sheet. Clicks inside land on its children, not the dialog itself.
+document.querySelectorAll("dialog").forEach((d) => d.addEventListener("click", (ev) => {
+  if (ev.target === d) d.close();
+}));
+
+let toastTimer;
+function toast(text, action, fn) {
+  const t = $("toast");
+  t.replaceChildren(el("span", { textContent: text }));
+  if (action) {
+    const b = el("button", { type: "button", className: "link", textContent: action });
+    b.onclick = () => { t.hidden = true; fn(); };
+    t.append(b);
+  }
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => (t.hidden = true), 5000);
+}
+
+// ---------- load + render ----------
 
 async function load() {
   try {
@@ -19,6 +51,7 @@ async function load() {
     $("title").textContent = "Split not found";
     $("load-error").textContent = "It may have expired after 48 hours of inactivity, or the link is wrong.";
     $("content").hidden = true;
+    $("fab").hidden = true;
     return;
   }
   render();
@@ -28,15 +61,19 @@ function render() {
   $("title").textContent = data.name;
   document.title = `${data.name} · EvenUp`;
   $("content").hidden = false;
-  $("admin").hidden = !identity.adminToken;
-  renderYou();
+  $("fab").hidden = false;
+  $("admin-tile").hidden = !identity.adminToken;
 
   if (data.expires_at) {
     const hours = Math.max(0, Math.round((data.expires_at * 1000 - Date.now()) / 3600000));
-    $("expiry").textContent = `This split is deleted after 48h of inactivity (${hours}h left if nobody opens it). Copy the summary to keep it.`;
+    $("expiry").textContent = `Deleted after 48h of inactivity (${hours}h left). Share the summary to keep it.`;
     $("expiry").hidden = false;
   }
 
+  renderYou();
+  renderHero();
+  $("tile-settle").textContent = data.settlement.length ? plural(data.settlement.length, "payment") : "All square 🎉";
+  $("tile-balances").textContent = plural(data.members.length, "person").replace("persons", "people");
   renderSettlement();
   renderBalances();
   renderExpenses();
@@ -51,9 +88,30 @@ function render() {
   }
 
   // New visitor (or their member was removed): ask who they are, once per page load.
-  if (!pickerShown && !identity.adminToken && !data.members.some((m) => m.id === identity.me)) {
+  if (!pickerShown && !identity.adminToken && !member(identity.me)) {
     pickerShown = true;
     openPicker();
+  }
+}
+
+function renderHero() {
+  const live = liveExpenses();
+  const total = live.reduce((a, e) => a + e.amount_paise, 0);
+  const me = member(identity.me);
+  $("hero-sub").textContent = `${rupees(total)} spent · ${plural(live.length, "expense")}`;
+  if (me) {
+    const b = data.balances[me.id] || 0;
+    $("hero-label").textContent = b > 0 ? "You get back" : b < 0 ? "You owe" : "You're all settled";
+    $("hero-amount").textContent = rupees(Math.abs(b));
+    $("hero-amount").className = `hero-amount ${b > 0 ? "owed" : b < 0 ? "owe" : ""}`;
+    $("my-payments").replaceChildren(...data.settlement
+      .filter((p) => p.from === me.id || p.to === me.id)
+      .map(paymentRow));
+  } else {
+    $("hero-label").textContent = "Total spent";
+    $("hero-amount").textContent = rupees(total);
+    $("hero-amount").className = "hero-amount";
+    $("my-payments").replaceChildren();
   }
 }
 
@@ -68,10 +126,8 @@ function setIdentity(next) {
 }
 
 function renderYou() {
-  const me = data.members.find((m) => m.id === identity.me);
-  $("you-text").textContent = identity.adminToken ? "You're the admin."
-    : me ? `You're ${me.name}.` : "You haven't picked your name.";
-  $("switch").textContent = me || identity.adminToken ? "Switch" : "Pick your name";
+  const me = member(identity.me);
+  $("you-text").textContent = identity.adminToken ? "Admin ▾" : me ? `${me.name} ▾` : "Who are you?";
   $("upi-form").hidden = !me || !!me.upi_id;
 }
 
@@ -81,14 +137,23 @@ $("upi-form").onsubmit = async (ev) => {
   try {
     await api("PUT", `${base}/members/${identity.me}/upi`, { upi_id: $("my-upi").value.trim() });
     await load();
+    toast("UPI ID saved");
   } catch (err) {
-    $("upi-error").textContent = err.status === 422 ? "That doesn't look like a UPI ID (name@bank)." : err.message;
+    $("upi-error").textContent = err.status === 422 ? UPI_HINT : err.message;
   }
 };
 
+function showPickerStep(step, title) {
+  $("who-title").textContent = title;
+  $("who-list").hidden = step !== "list";
+  $("join-open").hidden = step !== "list";
+  $("join-form").hidden = step !== "join";
+  $("pw-form").hidden = step !== "admin";
+}
+
 function openPicker() {
   const people = data.members.map((m) => {
-    const b = el("button", { type: "button", textContent: m.name });
+    const b = el("button", { type: "button", textContent: m.name, className: m.id === identity.me ? "current" : "" });
     b.onclick = () => {
       // Picking a name leaves admin mode, so a friend using this phone isn't the admin.
       setIdentity({ me: m.id, adminToken: null });
@@ -96,26 +161,18 @@ function openPicker() {
     };
     return b;
   });
-  const admin = el("button", { type: "button", className: "who-admin", textContent: "Admin" });
-  admin.onclick = () => (identity.adminToken ? $("who-dialog").close() : openAdminLogin());
+  const admin = el("button", { type: "button", className: `who-admin ${identity.adminToken ? "current" : ""}`, textContent: "Admin" });
+  admin.onclick = () => {
+    if (identity.adminToken) return $("who-dialog").close();
+    showPickerStep("admin", "Admin");
+    $("pw-error").textContent = "";
+    $("admin-pw").value = "";
+    $("admin-pw").focus();
+  };
   $("who-list").replaceChildren(admin, ...people);
-  $("who-list").hidden = false;
-  $("join-open").hidden = false;
-  $("join-form").hidden = true;
-  $("pw-form").hidden = true;
-  $("who-title").textContent = "Who are you?";
+  showPickerStep("list", "Who are you?");
   $("demo-hint").hidden = slug !== "demo";
-  $("who-dialog").showModal();
-}
-
-function openAdminLogin() {
-  $("who-title").textContent = "Admin";
-  $("who-list").hidden = true;
-  $("join-open").hidden = true;
-  $("pw-form").hidden = false;
-  $("pw-error").textContent = "";
-  $("admin-pw").value = "";
-  $("admin-pw").focus();
+  openSheet("who-dialog");
 }
 
 $("pw-form").onsubmit = async (ev) => {
@@ -124,6 +181,7 @@ $("pw-form").onsubmit = async (ev) => {
     const { admin_token } = await api("POST", `${base}/admin-login`, { password: $("admin-pw").value });
     setIdentity({ me: null, adminToken: admin_token });
     $("who-dialog").close();
+    toast("Admin unlocked");
   } catch (err) {
     $("pw-error").textContent = err.message;
   }
@@ -133,10 +191,7 @@ $("pw-back").onclick = openPicker;
 $("join-back").onclick = openPicker;
 
 $("join-open").onclick = () => {
-  $("who-title").textContent = "Join this split";
-  $("who-list").hidden = true;
-  $("join-open").hidden = true;
-  $("join-form").hidden = false;
+  showPickerStep("join", "Join this split");
   $("join-error").textContent = "";
   $("join-name").focus();
 };
@@ -156,7 +211,7 @@ $("join-form").onsubmit = async (ev) => {
     await load();
     $("paid-by").value = id;
   } catch (err) {
-    $("join-error").textContent = err.status === 422 ? "That doesn't look like a UPI ID (name@bank)." : err.message;
+    $("join-error").textContent = err.status === 422 ? UPI_HINT : err.message;
   }
 };
 
@@ -166,11 +221,13 @@ async function adminApi(method, url, body) {
   } catch (err) {
     if (err.status === 403) {
       setIdentity({ me: null, adminToken: null });
-      throw new Error("Admin session ended. Tap Switch, choose Admin and enter the password again.");
+      throw new Error("Admin session ended. Tap your name at the top, choose Admin and enter the password again.");
     }
     throw err;
   }
 }
+
+// ---------- settle up ----------
 
 // Same format as upi_link() in main.py. %20 not +, and @ left as is, for picky UPI apps.
 function upiLink(to, paise) {
@@ -181,147 +238,104 @@ function upiLink(to, paise) {
   return `upi://pay?${query}`;
 }
 
-function showQr(from, to, paise) {
-  $("qr-img").src = `${base}/qr?to=${to.id}&amount=${paise}`;
-  $("qr-caption").textContent = `${nameOf(from)} pays ${to.name} ${rupees(paise)} · ${to.upi_id}`;
+function showQr(p) {
+  const to = member(p.to);
+  $("qr-img").src = `${base}/qr?to=${to.id}&amount=${p.amount_paise}`;
+  $("qr-caption").textContent = `${nameOf(p.from)} pays ${to.name} ${rupees(p.amount_paise)} · ${to.upi_id}`;
+  $("qr-copy").onclick = (ev) => copyText(`${to.upi_id} ${plainAmount(p.amount_paise)}`, ev.currentTarget);
   $("qr-dialog").showModal();
 }
-$("qr-close").onclick = () => $("qr-dialog").close();
+
+function paymentRow(p) {
+  const to = member(p.to);
+  const actions = el("div", { className: "row" });
+  if (to.upi_id) {
+    actions.append(el("a", { href: upiLink(to, p.amount_paise), className: "button small primary", textContent: "Pay" }));
+    const qr = el("button", { type: "button", className: "small", textContent: "QR" });
+    qr.onclick = () => showQr(p);
+    actions.append(qr);
+  } else {
+    actions.append(el("span", { className: "muted", textContent: `${to.name} hasn't added a UPI ID` }));
+  }
+  return el("li", { className: "pay-row" },
+    el("div", { className: "pay-main" },
+      el("span", { className: "grow", textContent: `${label(p.from)} → ${label(p.to)}` }),
+      el("strong", { className: "amount", textContent: rupees(p.amount_paise) }),
+    ),
+    actions,
+  );
+}
 
 function renderSettlement() {
-  const list = $("settlement");
-  list.replaceChildren();
-  if (!data.settlement.length) {
-    list.append(el("li", {}, el("span", { className: "grow", textContent: "All square 🎉" })));
-    return;
-  }
-  for (const p of data.settlement) {
-    const to = data.members.find((m) => m.id === p.to);
-    const actions = el("span", { className: "row" });
-    if (to.upi_id) {
-      actions.append(el("a", { href: upiLink(to, p.amount_paise) }, el("button", { type: "button", className: "small primary", textContent: "Pay" })));
-      const qr = el("button", { type: "button", className: "small", textContent: "QR" });
-      qr.onclick = () => showQr(p.from, to, p.amount_paise);
-      actions.append(qr);
-      const copy = el("button", { type: "button", className: "small", textContent: "Copy UPI" });
-      copy.onclick = () => copyText(`${to.upi_id} ${plainAmount(p.amount_paise)}`, copy);
-      actions.append(copy);
-    }
-    list.append(el("li", {},
-      el("span", { className: "grow", textContent: `${label(p.from)} pays ${label(to.id)}` }),
-      el("span", { className: "amount", textContent: rupees(p.amount_paise) }),
-      actions,
-    ));
-  }
+  $("settlement").replaceChildren(...(data.settlement.length
+    ? data.settlement.map(paymentRow)
+    : [el("li", {}, el("span", { className: "grow", textContent: "All square 🎉" }))]));
 }
 
 function renderBalances() {
-  const list = $("balances");
-  list.replaceChildren();
-  for (const m of data.members) {
+  $("balances").replaceChildren(...data.members.map((m) => {
     const b = data.balances[m.id] || 0;
     const text = b > 0 ? `gets back ${rupees(b)}` : b < 0 ? `owes ${rupees(-b)}` : "settled";
-    list.append(el("li", {},
+    return el("li", {},
       el("span", { className: "grow", textContent: label(m.id) }),
       el("span", { className: `amount ${b > 0 ? "owed" : b < 0 ? "owe" : ""}`, textContent: text }),
-    ));
-  }
-}
-
-function renderExpenses() {
-  const list = $("expenses");
-  list.replaceChildren();
-  const live = data.expenses.filter((e) => !e.deleted);
-  if (!live.length) list.append(el("li", { className: "muted", textContent: "No expenses yet." }));
-  for (const e of live) {
-    const edit = el("button", { type: "button", className: "small", textContent: "Edit" });
-    edit.onclick = () => startEdit(e);
-    const del = el("button", { type: "button", className: "small", textContent: "Delete" });
-    del.onclick = () => act(() => api("DELETE", `${base}/expenses/${e.id}`));
-    const who = Object.keys(e.shares).map((id) => nameOf(Number(id))).join(", ");
-    list.append(el("li", {},
-      el("span", { className: "grow" },
-        el("div", { textContent: e.description }),
-        el("div", { className: "muted", textContent: `${nameOf(e.paid_by)} paid · split with ${who}` }),
-      ),
-      el("span", { className: "amount", textContent: rupees(e.amount_paise) }),
-      el("span", { className: "row" }, edit, del),
-    ));
-  }
-}
-
-const ACTIONS = {
-  created: "Split created",
-  added: "Added",
-  edited: "Edited",
-  deleted: "Deleted",
-  restored: "Restored",
-  member_added: "Member added:",
-  member_removed: "Member removed:",
-  upi_set: "UPI ID updated for",
-};
-
-function renderAdminMembers() {
-  $("admin-members").replaceChildren(...data.members.map((m) => {
-    const remove = el("button", { type: "button", className: "small", textContent: "Remove" });
-    remove.onclick = async () => {
-      if (!confirm(`Remove ${m.name}?`)) return;
-      $("admin-error").textContent = "";
-      try {
-        await adminApi("DELETE", `${base}/members/${m.id}`);
-        await load();
-      } catch (err) {
-        $("admin-error").textContent = err.message;
-      }
-    };
-    const editUpi = el("button", { type: "button", className: "small", textContent: "UPI" });
-    editUpi.onclick = async () => {
-      const value = prompt(`UPI ID for ${m.name} (leave empty to clear)`, m.upi_id || "");
-      if (value === null) return;
-      $("admin-error").textContent = "";
-      try {
-        await adminApi("PUT", `${base}/members/${m.id}/upi`, { upi_id: value.trim() || null });
-        await load();
-      } catch (err) {
-        $("admin-error").textContent = err.status === 422 ? "That doesn't look like a UPI ID (name@bank)." : err.message;
-      }
-    };
-    return el("li", {},
-      el("span", { className: "grow" }, el("div", { textContent: m.name }),
-        el("div", { className: "muted", textContent: m.upi_id || "no UPI ID" })),
-      editUpi,
-      remove,
     );
   }));
 }
 
-function renderActivity() {
-  const list = $("activity");
-  list.replaceChildren();
-  for (const a of data.activity) {
-    const d = a.details;
-    const what = d.description ? `${d.description} (${rupees(d.amount_paise)})` : d.name || "";
-    let undo = null;
-    // Only the latest change to each expense can be undone; the server checks this too.
-    if (a.expense_id && data.activity.find((x) => x.expense_id === a.expense_id) === a) {
-      undo = el("button", { type: "button", className: "small", textContent: "Undo" });
-      undo.onclick = () => act(() => api("POST", `${base}/activity/${a.id}/undo`));
-    }
-    list.append(el("li", {},
-      el("span", { className: "grow" },
-        el("div", { textContent: `${ACTIONS[a.action] || a.action} ${what}` }),
-        el("div", { className: "muted", textContent: new Date(a.created_at * 1000).toLocaleString() }),
-      ),
-      undo,
-    ));
+// ---------- expenses ----------
+
+function renderExpenses() {
+  const live = liveExpenses();
+  if (!live.length) {
+    $("expenses").replaceChildren(el("li", { className: "muted empty", textContent: "No expenses yet. Tap + Add expense." }));
+    return;
   }
+  $("expenses").replaceChildren(...live.map((e) => {
+    const mine = e.shares[identity.me];
+    const row = el("button", { type: "button", className: "exp-row" },
+      el("span", { className: "grow" },
+        el("span", { className: "title", textContent: e.description }),
+        el("span", { className: "muted", textContent: `${label(e.paid_by)} paid${mine ? ` · your share ${rupees(mine)}` : ""}` }),
+      ),
+      el("strong", { className: "amount", textContent: rupees(e.amount_paise) }),
+    );
+    row.onclick = () => openExpense(e);
+    return el("li", {}, row);
+  }));
+}
+
+function openExpense(e) {
+  $("exp-title").textContent = e.description;
+  $("exp-detail").replaceChildren(
+    el("p", { className: "hero-amount", textContent: rupees(e.amount_paise) }),
+    el("p", { className: "muted", textContent: `Paid by ${label(e.paid_by)} · ${new Date(e.created_at * 1000).toLocaleString()}` }),
+    el("h3", { textContent: "Split between" }),
+    el("ul", { className: "list" }, ...Object.entries(e.shares).map(([id, s]) => el("li", {},
+      el("span", { className: "grow", textContent: label(Number(id)) }),
+      el("span", { className: "amount", textContent: rupees(s) }),
+    ))),
+  );
+  $("exp-edit").onclick = () => {
+    $("expense-sheet").close();
+    startEdit(e);
+  };
+  $("exp-delete").onclick = async () => {
+    $("expense-sheet").close();
+    await act(() => api("DELETE", `${base}/expenses/${e.id}`));
+    toast(`Deleted ${e.description}`, "Undo", () => act(() => {
+      const a = data.activity.find((x) => x.expense_id === e.id);
+      return api("POST", `${base}/activity/${a.id}/undo`);
+    }));
+  };
+  openSheet("expense-sheet");
 }
 
 function buildMemberInputs() {
   $("paid-by").replaceChildren(...data.members.map((m) => el("option", { value: m.id, textContent: m.name })));
   if (identity.me) $("paid-by").value = identity.me;
   $("equal-box").replaceChildren(...data.members.map((m) =>
-    el("label", {}, el("input", { type: "checkbox", value: m.id, checked: true }), m.name)));
+    el("label", {}, el("input", { type: "checkbox", value: m.id, checked: true }), el("span", { textContent: m.name }))));
   $("exact-box").replaceChildren(...data.members.map((m) =>
     el("div", { className: "exact-row" },
       el("span", { textContent: m.name }),
@@ -348,8 +362,8 @@ function startEdit(e) {
   showSplitType();
   $("form-title").textContent = "Edit expense";
   $("save").textContent = "Save changes";
-  $("cancel-edit").hidden = false;
-  $("expense-form").scrollIntoView({ behavior: "smooth" });
+  $("form-error").textContent = "";
+  openSheet("form-sheet");
 }
 
 function resetForm() {
@@ -360,10 +374,14 @@ function resetForm() {
   showSplitType();
   $("form-title").textContent = "Add expense";
   $("save").textContent = "Add expense";
-  $("cancel-edit").hidden = true;
   $("form-error").textContent = "";
 }
-$("cancel-edit").onclick = resetForm;
+
+$("fab").onclick = () => {
+  resetForm();
+  openSheet("form-sheet");
+  $("amount").focus();
+};
 
 $("expense-form").onsubmit = async (ev) => {
   ev.preventDefault();
@@ -405,10 +423,13 @@ $("expense-form").onsubmit = async (ev) => {
   }
   $("save").disabled = true;
   try {
+    const wasEditing = editing;
     if (editing) await api("PUT", `${base}/expenses/${editing.id}`, { ...body, version: editing.version });
     else await api("POST", `${base}/expenses`, body);
+    $("form-sheet").close();
     resetForm();
     await load();
+    toast(wasEditing ? "Changes saved" : `Added ${body.description}`);
   } catch (err) {
     error.textContent = err.message;
   } finally {
@@ -425,22 +446,124 @@ async function act(fn) {
   await load();
 }
 
-$("copy-summary").onclick = (ev) => {
-  const lines = [`${data.name}`, ""];
-  for (const e of data.expenses.filter((x) => !x.deleted)) {
-    lines.push(`• ${e.description}: ${rupees(e.amount_paise)} (paid by ${nameOf(e.paid_by)})`);
+// ---------- activity ----------
+
+const ACTIONS = {
+  created: "Split created",
+  added: "Added",
+  edited: "Edited",
+  deleted: "Deleted",
+  restored: "Restored",
+  member_added: "Member added:",
+  member_removed: "Member removed:",
+  upi_set: "UPI ID updated for",
+};
+
+function renderActivity() {
+  $("activity").replaceChildren(...data.activity.map((a) => {
+    const d = a.details;
+    const what = d.description ? `${d.description} (${rupees(d.amount_paise)})` : d.name || "";
+    let undo = null;
+    // Only the latest change to each expense can be undone; the server checks this too.
+    if (a.expense_id && data.activity.find((x) => x.expense_id === a.expense_id) === a) {
+      undo = el("button", { type: "button", className: "small", textContent: "Undo" });
+      undo.onclick = () => act(() => api("POST", `${base}/activity/${a.id}/undo`));
+    }
+    return el("li", {},
+      el("span", { className: "grow" },
+        el("div", { textContent: `${ACTIONS[a.action] || a.action} ${what}` }),
+        el("div", { className: "muted", textContent: new Date(a.created_at * 1000).toLocaleString() }),
+      ),
+      undo,
+    );
+  }));
+}
+
+// ---------- admin ----------
+
+function renderAdminMembers() {
+  $("admin-members").replaceChildren(...data.members.map((m) => {
+    const remove = el("button", { type: "button", className: "small", textContent: "Remove" });
+    remove.onclick = async () => {
+      if (!confirm(`Remove ${m.name}?`)) return;
+      $("admin-error").textContent = "";
+      try {
+        await adminApi("DELETE", `${base}/members/${m.id}`);
+        await load();
+      } catch (err) {
+        $("admin-error").textContent = err.message;
+      }
+    };
+    const editUpi = el("button", { type: "button", className: "small", textContent: "UPI" });
+    editUpi.onclick = async () => {
+      const value = prompt(`UPI ID for ${m.name} (leave empty to clear)`, m.upi_id || "");
+      if (value === null) return;
+      $("admin-error").textContent = "";
+      try {
+        await adminApi("PUT", `${base}/members/${m.id}/upi`, { upi_id: value.trim() || null });
+        await load();
+      } catch (err) {
+        $("admin-error").textContent = err.status === 422 ? UPI_HINT : err.message;
+      }
+    };
+    return el("li", {},
+      el("span", { className: "grow" }, el("div", { textContent: m.name }),
+        el("div", { className: "muted", textContent: m.upi_id || "no UPI ID" })),
+      el("span", { className: "row" }, editUpi, remove),
+    );
+  }));
+}
+
+$("add-member").onclick = async () => {
+  $("admin-error").textContent = "";
+  try {
+    await adminApi("POST", `${base}/members`, {
+      name: $("new-member").value.trim(),
+      upi_id: $("new-member-upi").value.trim() || null,
+    });
+    $("new-member").value = "";
+    $("new-member-upi").value = "";
+    await load();
+  } catch (err) {
+    $("admin-error").textContent = err.message;
   }
+};
+
+$("delete-split").onclick = async () => {
+  if (!confirm("Delete this split for everyone? This can't be undone.")) return;
+  try {
+    await adminApi("DELETE", base);
+    location.href = "/";
+  } catch (err) {
+    $("admin-error").textContent = err.message;
+  }
+};
+
+// ---------- share ----------
+
+function summaryText() {
+  const live = liveExpenses();
+  const total = live.reduce((a, e) => a + e.amount_paise, 0);
+  const lines = [data.name, `${new Date().toLocaleDateString("en-IN")} · Total ${rupees(total)}`, ""];
+  for (const e of live) lines.push(`• ${e.description}: ${rupees(e.amount_paise)} (paid by ${nameOf(e.paid_by)})`);
   lines.push("", "Settle up:");
   if (!data.settlement.length) lines.push("All square 🎉");
   for (const p of data.settlement) {
-    const to = data.members.find((m) => m.id === p.to);
+    const to = member(p.to);
     lines.push(`${nameOf(p.from)} → ${to.name}: ${rupees(p.amount_paise)}${to.upi_id ? ` (UPI: ${to.upi_id})` : ""}`);
   }
   lines.push("", location.origin + location.pathname);
-  copyText(lines.join("\n"), ev.target);
-};
+  return lines.join("\n");
+}
 
-$("print-pdf").onclick = () => window.print(); // browser's "Save as PDF"
+$("copy-link").onclick = (ev) => copyText(location.origin + location.pathname, ev.currentTarget);
+$("copy-summary").onclick = (ev) => copyText(summaryText(), ev.currentTarget);
+
+$("print-pdf").onclick = () => {
+  $("share-sheet").close();
+  $("print-area").textContent = summaryText();
+  window.print(); // browser's "Save as PDF"
+};
 
 function loadImage(src) {
   return new Promise((resolve, reject) => {
@@ -459,13 +582,13 @@ function fit(ctx, text, maxWidth) {
 }
 
 $("download-png").onclick = async (ev) => {
-  const button = ev.target;
+  const button = ev.currentTarget;
   button.disabled = true;
   try {
     const W = 800, PAD = 40, ROW = 44, QR = 160;
-    const expenses = data.expenses.filter((e) => !e.deleted);
+    const expenses = liveExpenses();
     const pays = await Promise.all(data.settlement.map(async (p) => {
-      const to = data.members.find((m) => m.id === p.to);
+      const to = member(p.to);
       const qr = to.upi_id ? await loadImage(`${base}/qr?to=${to.id}&amount=${p.amount_paise}`) : null;
       return { ...p, to, qr };
     }));
@@ -542,31 +665,6 @@ $("download-png").onclick = async (ev) => {
     alert(`Couldn't make the image: ${err.message || err}`);
   } finally {
     button.disabled = false;
-  }
-};
-
-$("add-member").onclick = async () => {
-  $("admin-error").textContent = "";
-  try {
-    await adminApi("POST", `${base}/members`, {
-      name: $("new-member").value.trim(),
-      upi_id: $("new-member-upi").value.trim() || null,
-    });
-    $("new-member").value = "";
-    $("new-member-upi").value = "";
-    await load();
-  } catch (err) {
-    $("admin-error").textContent = err.message;
-  }
-};
-
-$("delete-split").onclick = async () => {
-  if (!confirm("Delete this split for everyone? This can't be undone.")) return;
-  try {
-    await adminApi("DELETE", base);
-    location.href = "/";
-  } catch (err) {
-    $("admin-error").textContent = err.message;
   }
 };
 
