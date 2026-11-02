@@ -690,15 +690,6 @@ $("delete-split").onclick = async () => {
 
 $("copy-link").onclick = (ev) => copyText(location.origin + location.pathname, ev.currentTarget);
 
-function loadImage(src) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = src;
-  });
-}
-
 // Shorten text with … until it fits in maxWidth.
 function fit(ctx, text, maxWidth) {
   if (ctx.measureText(text).width <= maxWidth) return text;
@@ -710,71 +701,94 @@ $("download-png").onclick = async (ev) => {
   const button = ev.currentTarget;
   button.disabled = true;
   try {
-    const W = 800, PAD = 40, ROW = 44, QR = 160;
+    // A compact receipt: white and grey on black, the app's one accent only for money coming back.
+    // Balances only, plus every recorded payment so anyone can check it.
+    const W = 600, PAD = 32;
+    const C = { text: "#f5f5f7", muted: "#8e8e93", line: "#333336", accent: "#c6ff3d" };
+    const money = (p) => rupees(p).replace(/\.00$/, ""); // ₹650, not ₹650.00
     const expenses = liveExpenses();
-    const pays = await Promise.all(data.settlement.map(async (p) => {
-      const to = member(p.to);
-      const qr = to.upi_id ? await loadImage(`${base}/qr?to=${to.id}&amount=${p.amount_paise}`) : null;
-      return { ...p, to, qr };
-    }));
-    const H = 120 + 60 + Math.max(1, expenses.length) * ROW + 60
-      + Math.max(1, pays.length) * ROW + pays.filter((p) => p.qr).length * (QR + 16) + 70;
-
-    const canvas = el("canvas", { width: W, height: H });
-    const ctx = canvas.getContext("2d");
-    const font = (size, weight = 400) => (ctx.font = `${weight} ${size}px system-ui, -apple-system, sans-serif`);
-    const right = (text, y) => { ctx.textAlign = "right"; ctx.fillText(text, W - PAD, y); ctx.textAlign = "left"; };
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(0, 0, W, H);
-
-    let y = PAD + 32;
-    ctx.fillStyle = "#1a1d21";
-    font(32, 700);
-    ctx.fillText(fit(ctx, data.name, W - 2 * PAD), PAD, y);
-    y += 32;
-    ctx.fillStyle = "#6b7280";
-    font(16);
     const total = expenses.reduce((a, e) => a + e.amount_paise, 0);
-    ctx.fillText(`${new Date().toLocaleDateString("en-IN")} · Total ${rupees(total)}`, PAD, y);
+    const payments = data.expenses.filter((e) => !e.deleted && e.kind === "payment").reverse();
+    const payee = (e) => Number(Object.keys(e.shares)[0]);
+    const people = data.members.map((m) => ({
+      name: m.name,
+      balance: data.balances[m.id] || 0,
+      // Who still pays whom, from both ends: "pays Riya" under Aman, "gets from Aman" under Riya.
+      lines: data.settlement.filter((p) => p.from === m.id).map((p) => [`pays ${nameOf(p.to)}`, p.amount_paise])
+        .concat(data.settlement.filter((p) => p.to === m.id).map((p) => [`gets from ${nameOf(p.from)}`, p.amount_paise])),
+    }));
 
-    const section = (title) => {
-      y += 56;
-      ctx.fillStyle = "#0f766e";
-      font(20, 700);
-      ctx.fillText(title, PAD, y);
-      y += 8;
-    };
+    // Drawn twice: once to measure the height, once for real.
+    const draw = (ctx, H) => {
+      const font = (size, weight = 400) => (ctx.font = `${weight} ${size}px system-ui, -apple-system, "Segoe UI", sans-serif`);
+      // Returns the width drawn, so a label can sit just left of a right-aligned amount.
+      const text = (str, x, y, color, size, weight = 400, align = "left") => {
+        font(size, weight);
+        ctx.fillStyle = color;
+        ctx.textAlign = align;
+        ctx.fillText(str, x, y);
+        return ctx.measureText(str).width;
+      };
+      const rule = () => { y += 20; ctx.fillStyle = C.line; ctx.fillRect(PAD, y, W - 2 * PAD, 1); };
+      const heading = (str) => { y += 30; text(str, PAD, y, C.muted, 12, 600); y += 2; };
+      const R = W - PAD;
 
-    section("Expenses");
-    if (!expenses.length) { y += ROW; ctx.fillStyle = "#6b7280"; font(18); ctx.fillText("No expenses", PAD, y); }
-    for (const e of expenses) {
-      y += ROW;
-      ctx.fillStyle = "#1a1d21";
-      font(18);
-      ctx.fillText(fit(ctx, `${e.description} · paid by ${nameOf(e.paid_by)}`, W - 2 * PAD - 160), PAD, y);
-      right(rupees(e.amount_paise), y);
-    }
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, W, H);
 
-    section("Settle up");
-    if (!pays.length) { y += ROW; ctx.fillStyle = "#1a1d21"; font(18); ctx.fillText("All square 🎉", PAD, y); }
-    for (const p of pays) {
-      y += ROW;
-      ctx.fillStyle = "#1a1d21";
-      font(18, 600);
-      ctx.fillText(fit(ctx, `${nameOf(p.from)} pays ${p.to.name}`, W - 2 * PAD - 160), PAD, y);
-      right(rupees(p.amount_paise), y);
-      if (p.qr) {
-        ctx.drawImage(p.qr, PAD, y + 12, QR, QR);
-        ctx.fillStyle = "#6b7280";
-        font(16);
-        ctx.fillText(`Scan to pay ${p.to.upi_id}`, PAD + QR + 16, y + 12 + QR / 2);
-        y += QR + 16;
+      let y = PAD + 26;
+      font(28, 700);
+      text(fit(ctx, data.name, W - 2 * PAD), PAD, y, C.text, 28, 700);
+      y += 24;
+      const date = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+      text(`${date} · ${money(total)} spent · ${plural(expenses.length, "expense")} · ${plural(people.length, "person").replace("persons", "people")}`,
+        PAD, y, C.muted, 14);
+      rule();
+
+      heading("BALANCES");
+      for (const p of people) {
+        y += 28;
+        const b = p.balance;
+        let right = b ? text(money(Math.abs(b)), R, y, b > 0 ? C.accent : C.text, 16, 700, "right") : text("settled", R, y, C.muted, 14, 400, "right");
+        if (b) right += 6 + text(b > 0 ? "gets back" : "owes", R - right - 6, y, C.muted, 13, 400, "right");
+        font(16, 600);
+        text(fit(ctx, p.name, W - 2 * PAD - right - 16), PAD, y, C.text, 16, 600);
+        // Its payments hang off a thin tree line, like └ in a terminal.
+        const stem = y + 6;
+        for (const [what, amount] of p.lines) {
+          y += 22;
+          ctx.fillStyle = C.line;
+          ctx.fillRect(PAD + 5, stem, 1, y - 5 - stem);
+          ctx.fillRect(PAD + 5, y - 5, 9, 1);
+          text(what, PAD + 20, y, C.muted, 13);
+          text(money(amount), R, y, C.muted, 13, 400, "right");
+        }
       }
-    }
 
-    ctx.fillStyle = "#9aa0a6";
-    font(14);
-    ctx.fillText("Split with EvenUp", PAD, H - PAD + 10);
+      if (payments.length) {
+        rule();
+        heading("PAYMENTS MADE");
+        for (const p of payments) {
+          y += 26;
+          const amount = text(money(p.amount_paise), R, y, C.text, 15, 600, "right");
+          font(15, 600);
+          text(fit(ctx, `${nameOf(p.paid_by)} paid ${nameOf(payee(p))}`, W - 2 * PAD - amount - 16), PAD, y, C.text, 15, 600);
+          y += 18;
+          text(`${payMethod(p)} · ${new Date(p.created_at * 1000).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}`,
+            PAD, y, C.muted, 12);
+        }
+      }
+
+      rule();
+      y += 24;
+      text("Split with EvenUp", PAD, y, C.muted, 12);
+      return y + PAD - 8;
+    };
+    const H = draw(el("canvas").getContext("2d"), 0);
+    const canvas = el("canvas", { width: W * 2, height: H * 2 }); // 2x, sharp on phones
+    const ctx = canvas.getContext("2d");
+    ctx.scale(2, 2);
+    draw(ctx, H);
 
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
     await saveFile(blob, "png", "image/png");
