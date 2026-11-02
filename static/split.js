@@ -15,6 +15,8 @@ const splitType = () => document.querySelector("input[name=split]:checked").valu
 const liveExpenses = () => data.expenses.filter((e) => !e.deleted);
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const UPI_HINT = "That doesn't look like a UPI ID (name@bank).";
+// Used when the description is left empty.
+const FILLERS = ["Snacks run", "Chai break", "Quick bite", "Odds and ends", "Little treat", "Random stuff", "Bits and bobs", "Mystery spend"];
 const paymentsOf = (id) => data.settlement.filter((p) => p.from === id || p.to === id);
 // Settle up shows only your payments; everyone's until you pick a name.
 const visiblePayments = () => (member(identity.me) ? paymentsOf(identity.me) : data.settlement);
@@ -426,7 +428,7 @@ $("expense-form").onsubmit = async (ev) => {
     return;
   }
   const body = {
-    description: $("desc").value.trim(),
+    description: $("desc").value.trim() || FILLERS[Math.floor(Math.random() * FILLERS.length)],
     amount_paise: amount,
     // New expenses are paid by you; editing keeps whoever paid.
     paid_by: editing ? editing.paidBy : identity.me,
