@@ -269,17 +269,6 @@ function upiLink(to, paise, scheme = "upi://pay") {
   return `${scheme}?${query}`;
 }
 
-function showQr(p) {
-  const to = member(p.to);
-  $("qr-img").src = `${base}/qr?to=${to.id}&amount=${p.amount_paise}`;
-  $("qr-caption").textContent = `${nameOf(p.from)} pays ${to.name} ${rupees(p.amount_paise)} · ${to.upi_id}`;
-  $("qr-hint").textContent = p.to === identity.me
-    ? `Let ${nameOf(p.from)} scan this with any UPI app.`
-    : "Scan this with the UPI app on your phone.";
-  $("qr-copy").onclick = (ev) => copyText(to.upi_id, ev.currentTarget);
-  $("qr-dialog").showModal();
-}
-
 // ---------- settle up one payment: cash or UPI, then record it ----------
 
 let paying = null; // the settlement row being paid
@@ -358,12 +347,8 @@ function paymentRow(p) {
     const settle = el("button", { type: "button", className: "small primary", textContent: "Settle up" });
     settle.onclick = () => openSettle(p);
     actions.append(settle);
-  } else if (p.to === identity.me && to.upi_id) {
-    // You're being paid: hand them your phone and they scan it.
-    const qr = el("button", { type: "button", className: "small", textContent: "Show QR" });
-    qr.onclick = () => showQr(p);
-    actions.append(qr);
-  } else if (p.to === identity.me) {
+  } else if (p.to === identity.me && !to.upi_id) {
+    // You're being paid: nothing to do except make sure they can pay you.
     actions.append(el("span", { className: "muted", textContent: "Add your UPI ID to get paid" }));
   }
   return el("li", { className: "pay-row" },
