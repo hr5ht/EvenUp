@@ -3,46 +3,65 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="robots" content="noindex">
-  <title>EvenUp</title>
+  <title>EvenUp · Split bills, settle with UPI</title>
+  <meta name="description" content="Split bills with friends and settle up with UPI in one tap. No account needed for quick splits.">
   <link rel="stylesheet" href="/static/style.css">
-  <script src="/static/common.js" defer></script>
-  <script src="/static/index.js" defer></script>
 </head>
 <body>
-<main>
-  <h1>EvenUp</h1>
-  <p class="muted">Split a bill, settle with UPI. No account needed. Splits delete themselves after 48 hours of inactivity.</p>
+<header class="nav">
+  <a href="/" class="logo">EvenUp</a>
+  <!-- Accounts arrive with trips and groups (v2). These buttons do nothing yet. -->
+  <nav class="row">
+    <button type="button" title="Coming soon">Log in</button>
+    <button type="button" class="primary" title="Coming soon">Sign up</button>
+  </nav>
+</header>
 
-  <form id="create" class="card">
-    <h2>New quick split</h2>
-    <label for="name">Name</label>
-    <input type="text" id="name" maxlength="60" placeholder="Friday dinner" required>
-
-    <label>Members <span class="muted">(UPI ID optional)</span></label>
-    <div id="members"></div>
-    <button type="button" id="add-member" class="small">+ Add member</button>
-
-    <input type="text" name="website" id="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-
-    <p class="error" id="error"></p>
-    <div class="actions"><button class="primary" type="submit">Create split</button></div>
-  </form>
-
-  <section id="created" class="card" hidden>
-    <h2>Split created</h2>
-    <label>Share link: send this to the group</label>
-    <div class="link-box" id="share-link"></div>
-    <div class="actions"><button type="button" id="copy-share" class="small">Copy</button></div>
-
-    <label>Admin link: shown only once, keep it private</label>
-    <div class="link-box" id="admin-link"></div>
-    <div class="actions"><button type="button" id="copy-admin" class="small">Copy</button></div>
-
-    <div class="actions"><a id="open" href="#"><button type="button" class="primary">Open split</button></a></div>
+<main class="wide">
+  <section class="hero">
+    <h1>Split the bill.<br>Settle with UPI.</h1>
+    <p class="lead">Add who paid what, and EvenUp works out the fewest payments to settle up. Everyone pays with one tap in GPay, PhonePe or Paytm.</p>
+    <div class="actions">
+      <a class="button primary big" href="/new">Start a quick split</a>
+      <a class="button big" href="/demo">See a demo</a>
+    </div>
+    <p class="muted">No account needed. Quick splits delete themselves after 48 hours of inactivity.</p>
   </section>
 
-  <p class="muted"><a href="/demo">See a demo split</a></p>
+  <section class="features">
+    <div class="card">
+      <h2>No sign-up</h2>
+      <p class="muted">Create a split, share the link on WhatsApp. Anyone with the link can add expenses.</p>
+    </div>
+    <div class="card">
+      <h2>UPI-native</h2>
+      <p class="muted">Every payment gets a Pay button and a QR code, prefilled with the right amount.</p>
+    </div>
+    <div class="card">
+      <h2>Fewest payments</h2>
+      <p class="muted">Debts are simplified so a group of n people needs at most n − 1 payments.</p>
+    </div>
+    <div class="card">
+      <h2>Private by default</h2>
+      <p class="muted">Unguessable links, encrypted UPI IDs, and data that deletes itself.</p>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>How it works</h2>
+    <ol class="steps">
+      <li><strong>Create</strong> a split with everyone's names (UPI IDs optional).</li>
+      <li><strong>Share</strong> the link. Everyone adds what they paid.</li>
+      <li><strong>Settle</strong>: tap Pay or scan the QR. Download a summary for the group chat.</li>
+    </ol>
+  </section>
+
+  <section class="card soon">
+    <h2>Coming soon: trips and groups</h2>
+    <p class="muted">Sign in to keep longer trips and flatmate groups, with monthly settle-ups and a dashboard across devices.</p>
+  </section>
 </main>
+
+<footer class="muted footer">EvenUp · Money never passes through this app, it only does the maths.</footer>
 </body>
 </html>

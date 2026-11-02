@@ -91,8 +91,9 @@ async def security_headers(request, call_next):
         "X-Content-Type-Options": "nosniff",
         "Referrer-Policy": "no-referrer",
         "Strict-Transport-Security": "max-age=31536000",
-        "X-Robots-Tag": "noindex",
     })
+    if request.url.path not in ("/", "/static/style.css"):  # only the landing page is indexable
+        resp.headers["X-Robots-Tag"] = "noindex"
     return resp
 
 
@@ -101,6 +102,11 @@ async def security_headers(request, call_next):
 @app.get("/")
 def index():
     return FileResponse(STATIC / "index.html")
+
+
+@app.get("/new")
+def new():
+    return FileResponse(STATIC / "new.html")
 
 
 @app.get("/g/{slug}")

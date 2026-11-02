@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>New quick split · EvenUp</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/common.js" defer></script>
+  <script src="/static/new.js" defer></script>
+</head>
+<body>
+<main>
+  <p class="muted"><a href="/">EvenUp</a></p>
+  <h1>New quick split</h1>
+  <p class="muted">No account needed. Splits delete themselves after 48 hours of inactivity.</p>
+
+  <form id="create" class="card">
+    <label for="name">Name</label>
+    <input type="text" id="name" maxlength="60" placeholder="Friday dinner" required>
+
+    <label>Members <span class="muted">(UPI ID optional)</span></label>
+    <div id="members"></div>
+    <button type="button" id="add-member" class="small">+ Add member</button>
+
+    <input type="text" name="website" id="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+    <p class="error" id="error"></p>
+    <div class="actions"><button class="primary" type="submit">Create split</button></div>
+  </form>
+
+  <section id="created" class="card" hidden>
+    <h2>Split created</h2>
+    <label>Share link: send this to the group</label>
+    <div class="link-box" id="share-link"></div>
+    <div class="actions"><button type="button" id="copy-share" class="small">Copy</button></div>
+
+    <label>Admin link: shown only once, keep it private</label>
+    <div class="link-box" id="admin-link"></div>
+    <div class="actions"><button type="button" id="copy-admin" class="small">Copy</button></div>
+
+    <div class="actions"><a id="open" href="#"><button type="button" class="primary">Open split</button></a></div>
+  </section>
+
+  <p class="muted"><a href="/demo">See a demo split</a></p>
+</main>
+</body>
+</html>
