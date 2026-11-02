@@ -47,7 +47,7 @@ document.querySelectorAll("[data-open]").forEach((b) => (b.onclick = () => openS
 document.querySelectorAll("[data-close]").forEach((b) => (b.onclick = () => b.closest("dialog").close()));
 // Tapping the dimmed backdrop closes a sheet. Clicks inside land on its children, not the dialog itself.
 document.querySelectorAll("dialog").forEach((d) => d.addEventListener("click", (ev) => {
-  if (ev.target === d && !d.classList.contains("gate")) d.close();
+  if (ev.target === d && !d.classList.contains("fullscreen")) d.close();
 }));
 
 let toastTimer;
@@ -171,9 +171,8 @@ function showPickerStep(step, title) {
 }
 
 function openPicker() {
-  const gate = !member(identity.me);
-  $("who-dialog").classList.toggle("gate", gate);
-  $("who-sub").hidden = !gate;
+  // Same full screen every time; only someone who picked a name before gets a ✕ back to the split.
+  $("who-dialog").classList.toggle("gate", !member(identity.me));
   $("who-sub").textContent = `Pick your name to open ${data.name}.`;
   const people = data.members.map((m) => {
     const admin = m.id === data.admin_id;

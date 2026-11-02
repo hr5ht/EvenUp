@@ -489,13 +489,13 @@ dialog.sheet::before { content: ""; align-self: center; flex-shrink: 0; width: 3
 .exact-row + .exact-row { margin-top: var(--s2); }
 
 /* who are you: first visit is the whole screen until a name is picked */
-dialog.sheet.gate { height: 100vh; height: 100dvh; max-height: none; border: 0; border-radius: 0; background: var(--bg); }
-dialog.sheet.gate[open] { animation: fade 0.3s ease; }
-dialog.sheet.gate::before, dialog.sheet.gate [data-close] { display: none; }
-dialog.sheet.gate::backdrop { background: var(--bg); }
-.gate .sheet-head { padding-top: calc(var(--s7) + env(safe-area-inset-top)); }
-.gate .sheet-head h2 { font-size: 28px; }
-@media (min-width: 480px) { dialog.sheet.gate { border-inline: 1px solid var(--line-2); } }
+dialog.sheet.fullscreen { height: 100vh; height: 100dvh; max-height: none; border: 0; border-radius: 0; background: var(--bg); }
+dialog.sheet.fullscreen[open] { animation: fade 0.3s ease; }
+dialog.sheet.fullscreen::before, .gate [data-close] { display: none; }
+dialog.sheet.fullscreen::backdrop { background: var(--bg); }
+.fullscreen .sheet-head { padding-top: calc(var(--s7) + env(safe-area-inset-top)); }
+.fullscreen .sheet-head h2 { font-size: 28px; }
+@media (min-width: 480px) { dialog.sheet.fullscreen { border-inline: 1px solid var(--line-2); } }
 #who-sub { margin-bottom: var(--s5); }
 .optional { color: var(--dim); font-weight: 400; }
 /* who are you */
