@@ -192,10 +192,6 @@
     <div id="pay-upi-step" hidden>
       <img id="pay-qr" class="qr" alt="UPI QR code" width="220" height="220">
       <p class="muted center" id="pay-upi-hint"></p>
-      <div id="pay-apps-box" hidden>
-        <span class="muted">Or open a specific app</span>
-        <div class="menu" id="pay-apps"></div>
-      </div>
       <div class="pay-manual">
         <span class="muted">Or pay by hand to this UPI ID</span>
         <div class="row"><span class="link-box" id="pay-upi-id"></span><button type="button" id="pay-copy" class="small">Copy</button></div>
@@ -208,6 +204,12 @@
     <button type="button" id="pay-done" class="primary">Mark as paid</button>
     <a id="pay-now" class="button primary" hidden>Pay now</a>
   </div>
+</dialog>
+
+<!-- iPhone only: iOS has no UPI app chooser like Android, so Pay now asks here. -->
+<dialog class="sheet" id="app-sheet">
+  <div class="sheet-head"><h2>Choose your app</h2><button type="button" class="icon-btn" data-close aria-label="Close">✕</button></div>
+  <div class="sheet-body"><div class="menu" id="app-list"></div></div>
 </dialog>
 </body>
 </html>

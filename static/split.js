@@ -272,9 +272,9 @@ const IS_ANDROID = /Android/i.test(navigator.userAgent);
 const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 // Phones and tablets, even in "desktop site" mode (which hides Android/iPhone from the user agent): a touch screen.
 const IS_PHONE = IS_ANDROID || IS_IOS || matchMedia("(pointer: coarse)").matches;
-// iOS has no "pick a UPI app" chooser like Android, so each app gets its own link.
-// ponytail: schemes from payment-gateway docs, not tried on a device; "Other UPI app" is the generic fallback.
-const IOS_APPS = [["Google Pay", "gpay://upi/pay"], ["PhonePe", "phonepe://pay"], ["Paytm", "paytmmp://pay"], ["Other UPI app", "upi://pay"]];
+// iOS has no "pick a UPI app" chooser like Android, so Pay now opens our own with each app's link.
+// PhonePe, Google Pay and Paytm are confirmed on an iPhone. BHIM's scheme isn't documented anywhere; bhim://pay is a guess.
+const IOS_APPS = [["PhonePe", "phonepe://pay"], ["Google Pay", "gpay://upi/pay"], ["Paytm", "paytmmp://pay"], ["BHIM", "bhim://pay"]];
 
 function upiLink(to, paise, scheme = "upi://pay") {
   const params = { pa: to.upi_id, pn: to.name, am: plainAmount(paise), cu: "INR", tn: data.name.slice(0, 50) };
@@ -322,18 +322,24 @@ $("pay-upi").onclick = () => {
   const to = member(paying.to);
   const amount = paying.amount_paise;
   $("pay-qr").src = `${base}/qr?to=${to.id}&amount=${amount}`;
-  $("pay-now").href = upiLink(to, amount);
+  // Android's upi:// shows the system's app chooser; iOS gets ours (see #pay-now's click below).
+  $("pay-now").href = IS_IOS ? "#" : upiLink(to, amount);
+  $("app-list").replaceChildren(...IOS_APPS.map(([name, scheme]) => el("a", { href: upiLink(to, amount, scheme), textContent: name })));
   $("pay-upi-hint").textContent = IS_PHONE
     ? "Tap Pay now to open your UPI app, then come back and tap I've paid."
     : "Scan with the UPI app on your phone, then tap I've paid.";
-  // iOS has no UPI app chooser, so plain upi:// may not open the app you use; offer each one too.
-  $("pay-apps").replaceChildren(...(IS_IOS ? IOS_APPS.slice(0, -1) : []).map(([name, scheme]) =>
-    el("a", { href: upiLink(to, amount, scheme), textContent: name })));
-  $("pay-apps-box").hidden = !IS_IOS;
   $("pay-upi-id").textContent = to.upi_id;
   $("pay-copy").onclick = (ev) => copyText(to.upi_id, ev.currentTarget);
   payStep("UPI");
 };
+
+$("pay-now").onclick = (ev) => {
+  if (!IS_IOS) return;
+  ev.preventDefault();
+  openSheet("app-sheet");
+};
+// Picking an app leaves for it; close the chooser so I've paid is waiting on return.
+$("app-list").onclick = (ev) => { if (ev.target.closest("a")) setTimeout(() => $("app-sheet").close(), 300); };
 
 $("pay-back").onclick = () => payStep("choose");
 
