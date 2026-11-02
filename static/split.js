@@ -10,7 +10,7 @@ let pickerShown = false;
 
 const member = (id) => data.members.find((m) => m.id === id);
 const nameOf = (id) => (member(id) || {}).name || "?";
-const label = (id) => nameOf(id) + (id === identity.me ? " (you)" : "");
+const label = (id) => (id === identity.me ? "You" : nameOf(id));
 const isAdmin = () => !!identity.adminToken && identity.me === data.admin_id;
 const splitType = () => document.querySelector("input[name=split]:checked").value;
 const liveExpenses = () => data.expenses.filter((e) => !e.deleted);
@@ -300,7 +300,8 @@ function renderSettlement() {
 function renderBalances() {
   $("balances").replaceChildren(...data.members.map((m) => {
     const b = data.balances[m.id] || 0;
-    const text = b > 0 ? `gets back ${rupees(b)}` : b < 0 ? `owes ${rupees(-b)}` : "settled";
+    const you = m.id === identity.me;
+    const text = b > 0 ? `${you ? "get" : "gets"} back ${rupees(b)}` : b < 0 ? `${you ? "owe" : "owes"} ${rupees(-b)}` : "settled";
     const pays = paymentsOf(m.id);
     return el("li", { className: "bal-row" },
       el("div", { className: "bal-main" },
