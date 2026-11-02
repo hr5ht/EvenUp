@@ -51,13 +51,14 @@ function render() {
   }
 
   // New visitor (or their member was removed): ask who they are, once per page load.
-  if (!pickerShown && !data.members.some((m) => m.id === identity.me)) {
+  if (!pickerShown && !identity.adminToken && !data.members.some((m) => m.id === identity.me)) {
     pickerShown = true;
     openPicker();
   }
 }
 
 // ---------- who are you ----------
+// You're either one member ({me}) or the admin ({adminToken}), never both.
 
 function setIdentity(next) {
   identity = next;
@@ -68,9 +69,9 @@ function setIdentity(next) {
 
 function renderYou() {
   const me = data.members.find((m) => m.id === identity.me);
-  $("you-text").textContent = (me ? `You're ${me.name}` : "You haven't picked your name.")
-    + (identity.adminToken ? " · admin" : "");
-  $("switch").textContent = me ? "Switch" : "Pick your name";
+  $("you-text").textContent = identity.adminToken ? "You're the admin."
+    : me ? `You're ${me.name}.` : "You haven't picked your name.";
+  $("switch").textContent = me || identity.adminToken ? "Switch" : "Pick your name";
   $("upi-form").hidden = !me || !!me.upi_id;
 }
 
@@ -89,15 +90,15 @@ function openPicker() {
   const people = data.members.map((m) => {
     const b = el("button", { type: "button", textContent: m.name });
     b.onclick = () => {
-      // Admin is unlocked per device, independent of which name you pick.
-      setIdentity({ me: m.id, adminToken: identity.adminToken });
+      // Picking a name leaves admin mode, so a friend using this phone isn't the admin.
+      setIdentity({ me: m.id, adminToken: null });
       $("who-dialog").close();
     };
     return b;
   });
   const admin = el("button", { type: "button", className: "who-admin", textContent: "Admin" });
-  admin.onclick = openAdminLogin;
-  $("who-list").replaceChildren(...(identity.adminToken ? [] : [admin]), ...people);
+  admin.onclick = () => (identity.adminToken ? $("who-dialog").close() : openAdminLogin());
+  $("who-list").replaceChildren(admin, ...people);
   $("who-list").hidden = false;
   $("join-open").hidden = false;
   $("join-form").hidden = true;
@@ -121,12 +122,8 @@ $("pw-form").onsubmit = async (ev) => {
   ev.preventDefault();
   try {
     const { admin_token } = await api("POST", `${base}/admin-login`, { password: $("admin-pw").value });
-    identity = { me: identity.me, adminToken: admin_token };
-    saveIdentity(slug, identity);
-    render();
-    // Still need a name to be "you" in the split.
-    if (data.members.some((m) => m.id === identity.me)) $("who-dialog").close();
-    else openPicker();
+    setIdentity({ me: null, adminToken: admin_token });
+    $("who-dialog").close();
   } catch (err) {
     $("pw-error").textContent = err.message;
   }
@@ -153,7 +150,7 @@ $("join-form").onsubmit = async (ev) => {
       upi_id: $("join-upi").value.trim() || null,
     });
     $("join-form").reset();
-    identity = { me: id, adminToken: identity.adminToken };
+    identity = { me: id, adminToken: null };
     saveIdentity(slug, identity);
     $("who-dialog").close();
     await load();
@@ -168,8 +165,8 @@ async function adminApi(method, url, body) {
     return await api(method, url, body, { "X-Admin-Token": identity.adminToken });
   } catch (err) {
     if (err.status === 403) {
-      setIdentity({ me: identity.me, adminToken: null });
-      throw new Error("Admin session ended. Tap Switch, pick your name and enter the password again.");
+      setIdentity({ me: null, adminToken: null });
+      throw new Error("Admin session ended. Tap Switch, choose Admin and enter the password again.");
     }
     throw err;
   }

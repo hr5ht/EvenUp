@@ -30,7 +30,7 @@ document.getElementById("create").onsubmit = async (e) => {
       admin_password: document.getElementById("admin-password").value,
       website: document.getElementById("website").value,
     });
-    // This device is already the admin when the split opens; it still picks a name there.
+    // This device opens the split as the admin.
     saveIdentity(slug, { adminToken: admin_token });
     const share = `${location.origin}/g/${slug}`;
     document.getElementById("share-link").textContent = share;
