@@ -24,7 +24,16 @@
   </header>
 
   <div id="content" class="stagger" hidden>
-    <form class="card" id="upi-form" hidden>
+    <section class="card" id="ended-card" hidden>
+      <p class="overline">Split ended</p>
+      <p class="muted" id="ended-text"></p>
+      <div class="actions split2">
+        <button type="button" id="ended-png">Download image</button>
+        <button type="button" id="ended-csv" class="primary">Download CSV</button>
+      </div>
+    </section>
+
+    <form class="card live-only" id="upi-form" hidden>
       <label for="my-upi">Add your UPI ID so people can pay you</label>
       <div class="row">
         <input type="text" id="my-upi" maxlength="100" placeholder="name@bank" required>
@@ -45,7 +54,7 @@
       <button type="button" class="tile" data-open="balances-sheet"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M8 17v-4M13 17V9M18 17V5"/></svg></span><span class="tile-text"><strong>Balances</strong><span id="tile-balances"></span></span></button>
       <button type="button" class="tile" data-open="share-sheet"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v13"/></svg></span><span class="tile-text"><strong>Share</strong><span>Link, image</span></span></button>
       <button type="button" class="tile" data-open="activity-sheet"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="tile-text"><strong>Activity</strong><span>History, undo</span></span></button>
-      <button type="button" class="tile tile-wide" data-open="admin-sheet" id="admin-tile" hidden><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span><span class="tile-text"><strong>Admin</strong><span>Members, UPI IDs, delete split</span></span></button>
+      <button type="button" class="tile tile-wide live-only" data-open="admin-sheet" id="admin-tile" hidden><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span><span class="tile-text"><strong>Admin</strong><span>Members, UPI IDs, delete split</span></span></button>
     </nav>
 
     <h2 class="section-title">Expenses</h2>
@@ -53,7 +62,7 @@
   </div>
 </main>
 
-<button type="button" class="fab primary" id="fab" hidden>+ Add expense</button>
+<button type="button" class="fab primary live-only" id="fab" hidden>+ Add expense</button>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <!-- ---------- sheets ---------- -->
@@ -80,6 +89,7 @@
     <div class="menu">
       <button type="button" id="copy-link">Copy link to this split</button>
       <button type="button" id="download-png">Save summary image</button>
+      <button type="button" id="download-csv">Download expenses (CSV)</button>
     </div>
   </div>
 </dialog>
@@ -105,7 +115,7 @@
 <dialog class="sheet" id="expense-sheet">
   <div class="sheet-head"><h2 id="exp-title"></h2><button type="button" class="icon-btn" data-close aria-label="Close">✕</button></div>
   <div class="sheet-body" id="exp-detail"></div>
-  <div class="sheet-foot two">
+  <div class="sheet-foot two live-only">
     <button type="button" id="exp-delete" class="danger">Delete</button>
     <button type="button" id="exp-edit" class="primary">Edit</button>
   </div>
@@ -140,7 +150,7 @@
   <div class="sheet-body">
     <p class="muted" id="who-sub"></p>
     <div id="who-list" class="menu who-list"></div>
-    <button type="button" id="join-open" class="link join-open">I'm not on the list</button>
+    <button type="button" id="join-open" class="link join-open live-only">I'm not on the list</button>
     <form id="join-form" hidden>
       <label for="join-name">Your name</label>
       <input type="text" id="join-name" maxlength="40" required>

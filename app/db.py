@@ -14,8 +14,8 @@ CREATE TABLE IF NOT EXISTS splits (
     name TEXT NOT NULL,
     admin_pw_hash TEXT NOT NULL,
     admin_member_id INTEGER,  -- the creator, always a member of the group
-    last_activity_at BIGINT NOT NULL,
-    expires_at BIGINT NOT NULL,
+    last_activity_at BIGINT NOT NULL,  -- unused since the lifetime became fixed, kept so existing databases match
+    expires_at BIGINT NOT NULL,  -- end of the open phase, then read-only for a day, then deleted
     created_at BIGINT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS members (

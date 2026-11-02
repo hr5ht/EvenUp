@@ -86,7 +86,7 @@ async function load() {
     data = await api("GET", base);
   } catch (err) {
     $("title").textContent = "Split not found";
-    $("load-error").textContent = "It may have expired after 48 hours of inactivity, or the link is wrong.";
+    $("load-error").textContent = "Splits are deleted a day after they end, or the link is wrong.";
     $("content").hidden = true;
     $("fab").hidden = true;
     return;
@@ -103,11 +103,14 @@ function render() {
   $("fab").hidden = !known;
   $("admin-tile").hidden = !isAdmin();
 
-  if (data.expires_at) {
-    const hours = Math.max(0, Math.round((data.expires_at * 1000 - Date.now()) / 3600000));
-    $("expiry").textContent = `Deleted after 48h of inactivity (${hours}h left). Save the summary image to keep it.`;
-    $("expiry").hidden = false;
-  }
+  // Open 48h from creation, then read-only for a day (the server decides which), then deleted.
+  const when = (t) => new Date(t * 1000).toLocaleString("en-IN", { weekday: "short", hour: "numeric", minute: "2-digit" });
+  document.body.classList.toggle("ended", data.ended);
+  $("ended-card").hidden = !data.ended;
+  $("ended-text").textContent = `It closed ${when(data.expires_at)}, so nothing can be added. Download the summary before ${when(data.deletes_at)}, when it's deleted for good.`;
+  const hours = Math.max(0, Math.round((data.expires_at * 1000 - Date.now()) / 3600000));
+  $("expiry").textContent = `Open until ${when(data.expires_at)} (${hours}h left), then read-only for a day.`;
+  $("expiry").hidden = data.ended;
 
   renderYou();
   renderHero();
@@ -194,7 +197,8 @@ function openPicker() {
     const b = el("button", { type: "button", className: m.id === identity.me ? "current" : "" },
       el("span", { textContent: m.name }), admin ? el("span", { className: "badge", textContent: "admin" }) : null);
     b.onclick = () => {
-      if (admin && !isAdmin()) {
+      // An ended split can't be changed, so its admin needs no password just to look.
+      if (admin && !isAdmin() && !data.ended) {
         showPickerStep("admin", m.name);
         $("pw-error").textContent = "";
         $("admin-pw").value = "";
@@ -368,12 +372,12 @@ function paymentRow(p) {
   const to = member(p.to);
   const actions = el("div", { className: "row" });
   if (p.from === identity.me) {
-    const settle = el("button", { type: "button", className: "small primary", textContent: "Settle up" });
+    const settle = el("button", { type: "button", className: "small primary live-only", textContent: "Settle up" });
     settle.onclick = () => openSettle(p);
     actions.append(settle);
   } else if (p.to === identity.me && !to.upi_id) {
     // You're being paid: nothing to do except make sure they can pay you.
-    actions.append(el("span", { className: "muted", textContent: "Add your UPI ID to get paid" }));
+    actions.append(el("span", { className: "muted live-only", textContent: "Add your UPI ID to get paid" }));
   }
   return el("li", { className: "pay-row" },
     el("div", { className: "pay-main" },
@@ -609,7 +613,7 @@ function renderActivity() {
     let undo = null;
     // Only the latest change to each expense can be undone; the server checks this too.
     if (a.expense_id && data.activity.find((x) => x.expense_id === a.expense_id) === a) {
-      undo = el("button", { type: "button", className: "small", textContent: "Undo" });
+      undo = el("button", { type: "button", className: "small live-only", textContent: "Undo" });
       undo.onclick = () => act(() => api("POST", `${base}/activity/${a.id}/undo`));
     }
     return el("li", {},
@@ -773,21 +777,45 @@ $("download-png").onclick = async (ev) => {
     ctx.fillText("Split with EvenUp", PAD, H - PAD + 10);
 
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
-    const file = new File([blob], `${data.name.replace(/[^\w -]/g, "").trim() || "split"}.png`, { type: "image/png" });
-    // Phones get the share sheet (straight to WhatsApp). Laptops download, even where they could share (macOS).
-    if (IS_PHONE && navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file], title: data.name }).catch(() => {});
-    } else {
-      const a = el("a", { href: URL.createObjectURL(file), download: file.name });
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    }
+    await saveFile(blob, "png", "image/png");
   } catch (err) {
     alert(`Couldn't make the image: ${err.message || err}`);
   } finally {
     button.disabled = false;
   }
 };
+
+async function saveFile(blob, ext, type) {
+  const file = new File([blob], `${data.name.replace(/[^\w -]/g, "").trim() || "split"}.${ext}`, { type });
+  // Phones get the share sheet (straight to WhatsApp). Laptops download, even where they could share (macOS).
+  if (IS_PHONE && navigator.canShare && navigator.canShare({ files: [file] })) {
+    await navigator.share({ files: [file], title: data.name }).catch(() => {});
+  } else {
+    const a = el("a", { href: URL.createObjectURL(file), download: file.name });
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+}
+
+// One row per expense and payment with everyone's share, then the final balances.
+$("download-csv").onclick = () => {
+  // Names come from anyone with the link: quote them, and defuse spreadsheet formulas (=, +, -, @).
+  const text = (v) => `"${String(v).replace(/^[=+\-@\t\r]/, "'$&").replace(/"/g, '""')}"`;
+  const amount = (p) => (p < 0 ? "-" : "") + plainAmount(Math.abs(p));
+  const rows = [["Date", "Type", "Description", "Paid by", "Amount (₹)", ...data.members.map((m) => m.name)].map(text)];
+  for (const e of data.expenses.filter((x) => !x.deleted).reverse()) {
+    rows.push([
+      text(new Date(e.created_at * 1000).toLocaleString("en-IN")), text(e.kind), text(e.description), text(nameOf(e.paid_by)),
+      amount(e.amount_paise), ...data.members.map((m) => (e.shares[m.id] ? amount(e.shares[m.id]) : "")),
+    ]);
+  }
+  rows.push([], [text("Balance (+ gets back, - owes)"), "", "", "", "", ...data.members.map((m) => amount(data.balances[m.id] || 0))]);
+  // BOM so Excel reads ₹ and non-English names as UTF-8.
+  saveFile(new Blob(["﻿" + rows.map((r) => r.join(",")).join("\r\n")], { type: "text/csv" }), "csv", "text/csv");
+};
+
+$("ended-png").onclick = $("download-png").onclick;
+$("ended-csv").onclick = $("download-csv").onclick;
 
 load();
 // ponytail: 15s polling for "live" updates, switch to SSE if it ever feels laggy

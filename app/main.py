@@ -20,7 +20,10 @@ from pydantic import BaseModel, Field
 
 from . import db, money
 
+# A split is open for TTL from creation (fixed, use doesn't extend it), then read-only for GRACE
+# so people can download the summary, then deleted.
 TTL = 48 * 3600
+GRACE = 24 * 3600
 STATIC = Path(__file__).parent.parent / "static"
 UPI_RE = r"^[a-zA-Z0-9._-]{1,256}@[a-zA-Z]{2,64}$"
 # (limit, window seconds) per client IP
@@ -165,12 +168,12 @@ def admin_token(split_id, pw_hash):
     return hmac.new(SECRET_KEY, f"{split_id}:{pw_hash}".encode(), hashlib.sha256).hexdigest()
 
 
-def load_split(con, slug):
+def load_split(con, slug, ended_ok=False):
     s = con.execute("SELECT * FROM splits WHERE slug = ?", (slug,)).fetchone()
-    if not s or s["expires_at"] < now():
+    if not s or s["expires_at"] + GRACE < now():
         raise HTTPException(404, "Split not found or expired")
-    t = now()
-    con.execute("UPDATE splits SET last_activity_at = ?, expires_at = ? WHERE id = ?", (t, t + TTL, s["id"]))
+    if not ended_ok and s["expires_at"] < now():
+        raise HTTPException(410, "This split has ended, so it can't be changed. Start a new one for new expenses.")
     return s
 
 
@@ -258,7 +261,6 @@ def create(body: SplitIn, con=Depends(db.get_db)):
 @app.post("/api/splits/{slug}/admin-login")
 def admin_login(slug: str, body: LoginIn, con=Depends(db.get_db)):
     s = load_split(con, slug)
-    con.commit()
     if rate_limited(("login", slug), *LOGIN_LIMIT):
         raise HTTPException(429, "Too many attempts. Try again in 15 minutes.")
     if not check_password(body.password, s["admin_pw_hash"]):
@@ -268,9 +270,10 @@ def admin_login(slug: str, body: LoginIn, con=Depends(db.get_db)):
 
 @app.get("/api/splits/{slug}")
 def read(slug: str, con=Depends(db.get_db)):
-    s = load_split(con, slug)
-    con.commit()
-    members = [{**dict(r), "upi_id": dec(r["upi_id"])} for r in con.execute(
+    s = load_split(con, slug, ended_ok=True)
+    ended = s["expires_at"] < now()
+    # Nobody pays through an ended split, so its UPI IDs stop being shown.
+    members = [{**dict(r), "upi_id": None if ended else dec(r["upi_id"])} for r in con.execute(
         "SELECT id, name, upi_id FROM members WHERE split_id = ? ORDER BY id", (s["id"],))]
     expenses = []
     for e in con.execute("SELECT * FROM expenses WHERE split_id = ? ORDER BY created_at DESC, id DESC", (s["id"],)):
@@ -284,6 +287,8 @@ def read(slug: str, con=Depends(db.get_db)):
     return {
         "name": s["name"],
         "expires_at": s["expires_at"],
+        "deletes_at": s["expires_at"] + GRACE,
+        "ended": ended,
         "admin_id": s["admin_member_id"],
         "members": members,
         "expenses": expenses,
@@ -304,7 +309,6 @@ def upi_link(upi_id, name, amount_paise, note):
 def qr(slug: str, to: int, amount: int, con=Depends(db.get_db)):
     """UPI QR for paying a member of this split. Only encodes this split's own UPI IDs."""
     s = load_split(con, slug)
-    con.commit()
     m = con.execute("SELECT * FROM members WHERE id = ? AND split_id = ?", (to, s["id"])).fetchone()
     if not m or not m["upi_id"] or not 0 < amount <= 10**10:
         raise HTTPException(404, "No UPI ID for this member")
@@ -468,6 +472,6 @@ def cleanup(x_cron_secret: Optional[str] = Header(None), authorization: Optional
     given = x_cron_secret or (authorization or "").removeprefix("Bearer ")
     if not secret or not given or not hmac.compare_digest(secret, given):
         raise HTTPException(403)
-    n = con.execute("DELETE FROM splits WHERE expires_at < ?", (now(),)).rowcount
+    n = con.execute("DELETE FROM splits WHERE expires_at < ?", (now() - GRACE,)).rowcount
     con.commit()
     return {"deleted": n}

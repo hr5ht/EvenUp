@@ -322,8 +322,6 @@ button.link { display: inline; min-height: 0; padding: 0; border: 0; background:
   font-weight: 700;
 }
 .steps p { margin-top: 2px; }
-.soon { border-style: dashed; }
-.soon h2 { margin: var(--s2) 0 var(--s1); }
 .footer { padding: var(--s5) var(--s4) var(--s7); text-align: center; }
 
 /* ---------- create page ---------- */
@@ -344,6 +342,9 @@ button.link { display: inline; min-height: 0; padding: 0; border: 0; background:
 
 /* ---------- split page ---------- */
 body:has(dialog[open]) { overflow: hidden; }
+/* An ended split is read-only: everything that changes it disappears. */
+body.ended .live-only { display: none !important; }
+#ended-card { border-color: var(--accent); }
 
 .you-chip {
   display: block;

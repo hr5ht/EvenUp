@@ -182,6 +182,38 @@ def test_qr():
         assert c.get(f"/api/splits/{slug}/qr?to={kabir}&amount=100").status_code == 404  # no UPI ID
 
 
+def test_lifetime():
+    from app import db
+    from app.main import GRACE, TTL, now
+
+    def age(slug, seconds):  # pretend the split was created `seconds` ago
+        con = db.connect()
+        con.execute("UPDATE splits SET expires_at = ? WHERE slug = ?", (now() + TTL - seconds, slug))
+        con.commit()
+        con.close()
+
+    with TestClient(app, client=("10.0.0.4", 1)) as c:
+        slug = c.post("/api/splits", json={"name": "L", "admin_password": "pass1", "members": [
+            {"name": "A", "upi_id": "a@ybl"}, {"name": "B"}]}).json()["slug"]
+        a, b = [m["id"] for m in c.get(f"/api/splits/{slug}").json()["members"]]
+        exp = {"paid_by": b, "amount_paise": 1000, "description": "x", "split": "equal", "participants": [a, b]}
+        before = c.get(f"/api/splits/{slug}").json()["expires_at"]
+        assert c.post(f"/api/splits/{slug}/expenses", json=exp).status_code == 200
+        assert c.get(f"/api/splits/{slug}").json()["expires_at"] == before  # use doesn't extend it
+
+        age(slug, TTL + 60)  # ended: readable, UPI IDs hidden, every change refused
+        g = c.get(f"/api/splits/{slug}").json()
+        assert g["ended"] and g["members"][0]["upi_id"] is None and g["settlement"]
+        assert c.post(f"/api/splits/{slug}/expenses", json=exp).status_code == 410
+        assert c.post(f"/api/splits/{slug}/members", json={"name": "C"}).status_code == 410
+        assert c.get(f"/api/splits/{slug}/qr?to={a}&amount=500").status_code == 410
+        assert c.post("/cron/cleanup", headers={"X-Cron-Secret": "s3cret"}).json()["deleted"] == 0
+
+        age(slug, TTL + GRACE + 60)  # gone
+        assert c.get(f"/api/splits/{slug}").status_code == 404
+        assert c.post("/cron/cleanup", headers={"X-Cron-Secret": "s3cret"}).json()["deleted"] == 1
+
+
 def test_login_rate_limit():
     with TestClient(app) as c:
         slug = c.post("/api/splits", json={"name": "x", "admin_password": "pass1", "members": [{"name": "A"}]}).json()["slug"]
