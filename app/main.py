@@ -275,11 +275,15 @@ def read(slug: str, con=Depends(db.get_db)):
     # Nobody pays through an ended split, so its UPI IDs stop being shown.
     members = [{**dict(r), "upi_id": None if ended else dec(r["upi_id"])} for r in con.execute(
         "SELECT id, name, upi_id FROM members WHERE split_id = ? ORDER BY id", (s["id"],))]
+    # Every share in the split in one query, not one query per expense.
+    shares = defaultdict(dict)
+    for r in con.execute("SELECT sh.expense_id, sh.member_id, sh.share_paise FROM shares sh "
+                         "JOIN expenses e ON e.id = sh.expense_id WHERE e.split_id = ?", (s["id"],)):
+        shares[r["expense_id"]][r["member_id"]] = r["share_paise"]
     expenses = []
     for e in con.execute("SELECT * FROM expenses WHERE split_id = ? ORDER BY created_at DESC, id DESC", (s["id"],)):
-        shares = {r["member_id"]: r["share_paise"] for r in con.execute("SELECT * FROM shares WHERE expense_id = ?", (e["id"],))}
         expenses.append({**{k: e[k] for k in ("id", "paid_by", "amount_paise", "description", "kind", "version", "created_at")},
-                         "deleted": bool(e["deleted"]), "shares": shares})
+                         "deleted": bool(e["deleted"]), "shares": shares[e["id"]]})
     live = [(e["paid_by"], e["amount_paise"], e["shares"]) for e in expenses if not e["deleted"]]
     bal = money.balances([m["id"] for m in members], live)
     activity = [{**dict(r), "details": json.loads(r["details"])} for r in con.execute(
