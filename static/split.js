@@ -280,6 +280,10 @@ function payStep(step) {
   $("pay-foot").hidden = step === "choose";
   $("pay-done").textContent = step === "Cash" ? "Mark as paid" : "I've paid";
   $("pay-done").dataset.method = step;
+  // Phones get Pay now (straight into the UPI app); then I've paid is the secondary step.
+  const payNow = step === "UPI" && (IS_ANDROID || IS_IOS);
+  $("pay-now").hidden = !payNow;
+  $("pay-done").classList.toggle("primary", !payNow);
   $("pay-error").textContent = "";
 }
 
@@ -303,10 +307,14 @@ $("pay-upi").onclick = () => {
   const to = member(paying.to);
   const amount = paying.amount_paise;
   $("pay-qr").src = `${base}/qr?to=${to.id}&amount=${amount}`;
-  // Same phone can't scan its own screen, so phones also get links into the UPI apps.
-  const apps = IS_ANDROID ? [["Open UPI app", "upi://pay"]] : IS_IOS ? IOS_APPS : [];
-  $("pay-apps").replaceChildren(...apps.map(([name, scheme]) => el("a", { href: upiLink(to, amount, scheme), textContent: name })));
-  $("pay-apps").hidden = !apps.length;
+  $("pay-now").href = upiLink(to, amount);
+  $("pay-upi-hint").textContent = IS_ANDROID || IS_IOS
+    ? "Tap Pay now to open your UPI app, then come back and tap I've paid."
+    : "Scan with the UPI app on your phone, then tap I've paid.";
+  // iOS has no UPI app chooser, so plain upi:// may not open the app you use; offer each one too.
+  $("pay-apps").replaceChildren(...(IS_IOS ? IOS_APPS.slice(0, -1) : []).map(([name, scheme]) =>
+    el("a", { href: upiLink(to, amount, scheme), textContent: name })));
+  $("pay-apps-box").hidden = !IS_IOS;
   $("pay-upi-id").textContent = to.upi_id;
   $("pay-copy").onclick = (ev) => copyText(to.upi_id, ev.currentTarget);
   payStep("UPI");

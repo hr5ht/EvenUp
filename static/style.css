@@ -257,7 +257,7 @@ button.link { display: inline; min-height: 0; padding: 0; border: 0; background:
 .menu a:active { background: var(--surface-3); }
 .pay-manual { display: grid; gap: var(--s2); margin-top: var(--s5); }
 .pay-manual .link-box { flex: 1; min-width: 0; }
-.pay-apps { margin-top: var(--s4); }
+#pay-apps-box { display: grid; gap: var(--s2); margin-top: var(--s4); }
 .pay-note { margin-top: var(--s3); }
 .pay-question { font-size: 17px; font-weight: 600; margin-bottom: var(--s2); }
 #pay-upi-step .qr { margin-bottom: var(--s3); }
@@ -477,7 +477,9 @@ dialog.sheet::before { content: ""; align-self: center; flex-shrink: 0; width: 3
 .sheet-body h3 { margin: var(--s5) 0 var(--s1); }
 .sheet-foot { display: grid; gap: var(--s2); padding: var(--s3) var(--s4) calc(var(--s3) + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); }
 .sheet-foot.two { grid-template-columns: 1fr 2fr; }
-.sheet-foot button { min-height: 52px; }
+.sheet-foot button, .sheet-foot .button { min-height: 52px; }
+#pay-foot { grid-template-columns: auto 1fr; }
+#pay-foot:has(#pay-now:not([hidden])) { grid-template-columns: auto 1fr 1fr; }
 .icon-btn { width: 32px; min-height: 32px; height: 32px; padding: 0; border: 0; border-radius: 999px; background: var(--surface-3); color: var(--muted); font-size: 13px; }
 .stack { margin-top: var(--s2); }
 .danger-zone { margin-top: var(--s5); padding-top: var(--s4); border-top: 1px solid var(--line); }
