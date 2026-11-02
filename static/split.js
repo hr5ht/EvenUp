@@ -17,6 +17,23 @@ const liveExpenses = () => data.expenses.filter((e) => !e.deleted);
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 const UPI_HINT = "That doesn't look like a UPI ID (name@bank).";
 
+// Roll the big number to its new value. Polling re-renders with the same value, which skips the animation.
+function countUp(node, paise) {
+  const from = Number(node.dataset.value || 0);
+  node.dataset.value = paise;
+  if (from === paise || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    node.textContent = rupees(paise);
+    return;
+  }
+  const start = performance.now();
+  const step = (t) => {
+    const k = Math.min(1, (t - start) / 700);
+    node.textContent = rupees(Math.round(from + (paise - from) * (1 - (1 - k) ** 3)));
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
 // ---------- sheets ----------
 
 function openSheet(id) {
@@ -103,14 +120,14 @@ function renderHero() {
   if (me) {
     const b = data.balances[me.id] || 0;
     $("hero-label").textContent = b > 0 ? "You get back" : b < 0 ? "You owe" : "You're all settled";
-    $("hero-amount").textContent = rupees(Math.abs(b));
+    countUp($("hero-amount"), Math.abs(b));
     $("hero-amount").className = `hero-amount ${b > 0 ? "owed" : b < 0 ? "owe" : ""}`;
     $("my-payments").replaceChildren(...data.settlement
       .filter((p) => p.from === me.id || p.to === me.id)
       .map(paymentRow));
   } else {
     $("hero-label").textContent = "Total spent";
-    $("hero-amount").textContent = rupees(total);
+    countUp($("hero-amount"), total);
     $("hero-amount").className = "hero-amount";
     $("my-payments").replaceChildren();
   }

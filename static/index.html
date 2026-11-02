@@ -2,63 +2,81 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
   <title>EvenUp · Split bills, settle with UPI</title>
   <meta name="description" content="Split bills with friends and settle up with UPI in one tap. No account needed for quick splits.">
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 <header class="nav">
-  <a href="/" class="logo">EvenUp</a>
-  <!-- Accounts arrive with trips and groups (v2). These buttons do nothing yet. -->
-  <nav class="row">
-    <button type="button" title="Coming soon">Log in</button>
-    <button type="button" class="primary" title="Coming soon">Sign up</button>
-  </nav>
+  <div class="nav-inner">
+    <a href="/" class="logo">EvenUp</a>
+    <!-- Accounts arrive with trips and groups (v2). These buttons do nothing yet. -->
+    <nav class="row">
+      <button type="button" class="small" title="Coming soon">Log in</button>
+      <button type="button" class="small primary" title="Coming soon">Sign up</button>
+    </nav>
+  </div>
 </header>
 
 <main class="wide">
-  <section class="hero">
-    <h1>Split the bill.<br>Settle with UPI.</h1>
+  <section class="intro stagger">
+    <span class="eyebrow">Quick split · no sign-up</span>
+    <h1>Split the bill.<br><em>Settle with UPI.</em></h1>
     <p class="lead">Add who paid what, and EvenUp works out the fewest payments to settle up. Everyone pays with one tap in GPay, PhonePe or Paytm.</p>
     <div class="actions">
       <a class="button primary big" href="/new">Start a quick split</a>
       <a class="button big" href="/demo">See a demo</a>
     </div>
-    <p class="muted">No account needed. Quick splits delete themselves after 48 hours of inactivity.</p>
+    <p class="muted">Quick splits delete themselves after 48 hours of inactivity.</p>
   </section>
 
-  <section class="features">
-    <div class="card">
+  <section class="bento stagger">
+    <div class="cell w4">
+      <span class="cell-num">Preview</span>
+      <div class="mock">
+        <div class="mock-head"><span>Goa dinner</span><span class="muted">3 people</span></div>
+        <p class="hero-label">You get back</p>
+        <p class="mock-amount owed">₹1,000.00</p>
+        <ul class="list">
+          <li><span class="grow">Kabir → You</span><strong class="amount">₹800.00</strong><span class="pill">Pay</span></li>
+          <li><span class="grow">Riya → You</span><strong class="amount">₹200.00</strong><span class="pill">Pay</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="cell half w2">
+      <span class="cell-num">01</span>
       <h2>No sign-up</h2>
-      <p class="muted">Create a split, share the link on WhatsApp. Anyone with the link can add expenses.</p>
+      <p class="muted">Share the link on WhatsApp. Anyone with it can add expenses.</p>
     </div>
-    <div class="card">
+    <div class="cell half w2">
+      <span class="cell-num">02</span>
       <h2>UPI-native</h2>
-      <p class="muted">Every payment gets a Pay button and a QR code, prefilled with the right amount.</p>
+      <p class="muted">Every payment gets a Pay button and a QR, amount prefilled.</p>
     </div>
-    <div class="card">
-      <h2>Fewest payments</h2>
-      <p class="muted">Debts are simplified so a group of n people needs at most n − 1 payments.</p>
+    <div class="cell w3">
+      <span class="cell-num">03 · Fewest payments</span>
+      <span class="stat">n − 1</span>
+      <p class="muted">Debts are simplified, so a group of n people needs at most n − 1 payments.</p>
     </div>
-    <div class="card">
-      <h2>Private by default</h2>
-      <p class="muted">Unguessable links, encrypted UPI IDs, and data that deletes itself.</p>
+    <div class="cell w3">
+      <span class="cell-num">04 · Private by default</span>
+      <h2>Unguessable links. Encrypted UPI IDs. Data that deletes itself.</h2>
     </div>
-  </section>
-
-  <section class="card">
-    <h2>How it works</h2>
-    <ol class="steps">
-      <li><strong>Create</strong> a split with everyone's names (UPI IDs optional).</li>
-      <li><strong>Share</strong> the link. Everyone adds what they paid.</li>
-      <li><strong>Settle</strong>: tap Pay or scan the QR. Download a summary for the group chat.</li>
-    </ol>
-  </section>
-
-  <section class="card soon">
-    <h2>Coming soon: trips and groups</h2>
-    <p class="muted">Sign in to keep longer trips and flatmate groups, with monthly settle-ups and a dashboard across devices.</p>
+    <div class="cell w6">
+      <span class="cell-num">How it works</span>
+      <ol class="steps">
+        <li><strong>Create</strong> a split with everyone's names.</li>
+        <li><strong>Share</strong> the link. Everyone adds what they paid and their UPI ID.</li>
+        <li><strong>Settle</strong>: tap Pay or scan the QR, then share a summary in the group chat.</li>
+      </ol>
+    </div>
+    <div class="cell w6 soon">
+      <span class="cell-num">Coming soon</span>
+      <h2>Trips and groups</h2>
+      <p class="muted">Sign in to keep longer trips and flatmate groups, with monthly settle-ups and a dashboard across devices.</p>
+    </div>
   </section>
 </main>
 

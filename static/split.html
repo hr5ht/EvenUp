@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex">
-  <meta name="theme-color" content="#0f766e">
+  <meta name="theme-color" content="#000000">
   <title>EvenUp split</title>
   <link rel="stylesheet" href="/static/style.css">
   <script src="/static/common.js" defer></script>
@@ -20,7 +20,7 @@
   <h1 id="title">Loading…</h1>
   <p class="error" id="load-error"></p>
 
-  <div id="content" hidden>
+  <div id="content" class="stagger" hidden>
     <div class="banner" id="expiry" hidden></div>
 
     <form class="card" id="upi-form" hidden>
@@ -39,7 +39,7 @@
       <ul class="list" id="my-payments"></ul>
     </section>
 
-    <nav class="tiles">
+    <nav class="tiles stagger">
       <button type="button" class="tile" data-open="settle-sheet"><strong>Settle up</strong><span id="tile-settle"></span></button>
       <button type="button" class="tile" data-open="balances-sheet"><strong>Balances</strong><span id="tile-balances"></span></button>
       <button type="button" class="tile" data-open="share-sheet"><strong>Share</strong><span>Link, text, image, PDF</span></button>

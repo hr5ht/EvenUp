@@ -2,42 +2,49 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#000000">
   <title>New quick split · EvenUp</title>
   <link rel="stylesheet" href="/static/style.css">
   <script src="/static/common.js" defer></script>
   <script src="/static/new.js" defer></script>
 </head>
 <body>
-<main>
-  <p class="muted"><a href="/">EvenUp</a></p>
-  <h1>New quick split</h1>
+<header class="topbar">
+  <a href="/" class="topbar-logo">EvenUp</a>
+  <a href="/demo" class="button small">See a demo</a>
+</header>
+
+<main class="stagger">
+  <span class="eyebrow">Quick split</span>
+  <h1>New split</h1>
   <p class="muted">No account needed. Splits delete themselves after 48 hours of inactivity.</p>
 
   <form id="create" class="card">
-    <label for="name">Name</label>
+    <label for="name" class="step"><b>01</b>Name</label>
     <input type="text" id="name" maxlength="60" placeholder="Friday dinner" required>
 
-    <label for="my-name">Your name <span class="muted">(you'll be the admin)</span></label>
+    <label for="my-name" class="step"><b>02</b>Your name <span class="muted">(you'll be the admin)</span></label>
     <input type="text" id="my-name" maxlength="40" placeholder="Your name" required>
 
-    <label>Others in the group</label>
+    <label class="step"><b>03</b>Others in the group</label>
     <div id="members"></div>
     <button type="button" id="add-member" class="small">+ Add member</button>
 
-    <label for="admin-password">Admin password</label>
+    <label for="admin-password" class="step"><b>04</b>Admin password</label>
     <input type="password" id="admin-password" minlength="4" maxlength="100" autocomplete="new-password" required>
     <p class="muted">Lets you manage the split (members, UPI IDs, delete) from any device: pick your name and type it. Everyone adds their own UPI ID when they open the link, and anyone missing can add themselves.</p>
 
     <input type="text" name="website" id="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
 
     <p class="error" id="error"></p>
-    <div class="actions"><button class="primary" type="submit">Create split</button></div>
+    <div class="actions"><button class="primary big" type="submit">Create split</button></div>
   </form>
 
   <section id="created" class="card" hidden>
-    <h2>Split created</h2>
+    <span class="eyebrow">Ready</span>
+    <h2 class="created-title">Split created</h2>
     <label>Share link: send this to the group</label>
     <div class="link-box" id="share-link"></div>
     <p class="muted">Everyone uses the same link and picks their name. Your name asks for the admin password.</p>
@@ -46,8 +53,6 @@
       <a id="open" class="button primary" href="#">Open split</a>
     </div>
   </section>
-
-  <p class="muted"><a href="/demo">See a demo split</a></p>
 </main>
 </body>
 </html>
