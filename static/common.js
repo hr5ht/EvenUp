@@ -85,3 +85,14 @@ function countUp(node, value, fmt = rupees, ms = 700) {
   };
   requestAnimationFrame(step);
 }
+
+// Spotlight: in any .spot grid, every cell lights up around the cursor, so the glow crosses cell borders.
+document.addEventListener("pointermove", (e) => {
+  const grid = e.target.closest?.(".spot");
+  if (!grid) return;
+  for (const cell of grid.children) {
+    const r = cell.getBoundingClientRect();
+    cell.style.setProperty("--mx", `${e.clientX - r.left}px`);
+    cell.style.setProperty("--my", `${e.clientY - r.top}px`);
+  }
+});

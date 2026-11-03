@@ -582,6 +582,7 @@ main.app { padding-bottom: calc(104px + env(safe-area-inset-bottom)); }
   box-shadow: 0 0 0 6px var(--bg), 0 12px 32px rgb(var(--shadow) / 0.25);
   animation: rise 0.5s var(--ease) 0.2s both;
 }
+.fab { overflow: hidden; } /* keeps the hover sheen inside the button */
 .fab kbd { display: none; }
 @media (min-width: 900px) {
   .fab {
@@ -695,12 +696,7 @@ dialog.sheet.fullscreen {
   max-width: none;
   max-height: none;
   border: 0;
-  background-color: var(--bg);
-  background-image:
-    linear-gradient(var(--line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--line) 1px, transparent 1px);
-  background-size: 64px 64px;
-  background-position: center top;
+  background: var(--bg);
 }
 dialog.sheet.fullscreen[open] { animation: fade 0.3s ease; }
 .gate [data-close] { display: none; }
@@ -881,9 +877,9 @@ a:hover .arr, button:hover .arr { transform: translateX(4px); }
 .stat-num { font: 600 clamp(32px, 4vw, 48px)/1 var(--mono); letter-spacing: -0.05em; }
 
 /* Feature cells: a spotlight follows the cursor, accent corners on hover. */
-.spot .cell { position: relative; overflow: hidden; }
-.spot .cell > * { position: relative; }
-.spot .cell::before {
+.spot > * { position: relative; overflow: hidden; }
+.spot > * > * { position: relative; }
+.spot > ::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -892,8 +888,8 @@ a:hover .arr, button:hover .arr { transform: translateX(4px); }
   transition: opacity 0.3s;
   pointer-events: none;
 }
-.spot:hover .cell::before { opacity: 1; }
-.spot .cell::after {
+.spot:hover > ::before { opacity: 1; }
+.spot > ::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -906,9 +902,9 @@ a:hover .arr, button:hover .arr { transform: translateX(4px); }
     linear-gradient(var(--accent), var(--accent)) bottom right / 14px 1px no-repeat,
     linear-gradient(var(--accent), var(--accent)) bottom right / 1px 14px no-repeat;
 }
-.spot .cell:hover::after { opacity: 1; }
-.cell .ico { transition: color 0.25s, border-color 0.25s, transform 0.35s var(--ease); }
-.cell:hover .ico { color: var(--accent); border-color: var(--accent); transform: translateY(-2px); }
+.spot > :hover::after { opacity: 1; }
+.spot .ico { transition: color 0.25s, border-color 0.25s, transform 0.35s var(--ease); }
+.spot > :hover .ico { color: var(--accent); border-color: var(--accent); transform: translateY(-2px); }
 
 /* FAQ */
 .faq-grid { display: grid; gap: var(--s6); }
@@ -1033,3 +1029,135 @@ a:hover .arr, button:hover .arr { transform: translateX(4px); }
   .js .window.in .pay-demo li + li { animation-delay: 1.05s; }
 }
 .cl { display: inline-block; }
+
+/* =====================================================================
+   Premium layer for the inner pages: new tab, the tab itself, "Who are you?"
+   ===================================================================== */
+@keyframes breathe { to { opacity: 0.5; } }
+@keyframes drift-sm { to { transform: translate(-70px, 50px) scale(1.25); } }
+@keyframes grow { from { transform: scaleX(0); } }
+@keyframes draw { from { stroke-dashoffset: 30; } }
+@keyframes pop-in { from { opacity: 0; transform: scale(0.6); } }
+
+/* A grid that fades out down the page and a blue glow breathing at the top, behind everything. */
+body:not(.home) { position: relative; isolation: isolate; }
+body:not(.home)::before, dialog.sheet.fullscreen::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 720px;
+  z-index: -1;
+  pointer-events: none;
+  background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 64px 64px;
+  background-position: center -1px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 100% at 50% 0, #000 25%, transparent 75%);
+  mask-image: radial-gradient(ellipse 70% 100% at 50% 0, #000 25%, transparent 75%);
+}
+body:not(.home)::after, dialog.sheet.fullscreen::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 560px;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(ellipse 45% 65% at 50% 0, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%);
+  animation: breathe 7s ease-in-out infinite alternate;
+}
+dialog.sheet.fullscreen { isolation: isolate; }
+
+/* Cards with a slow glow in one corner and accent corner marks. The tab's balance card glows red or green. */
+.glow-card { position: relative; isolation: isolate; overflow: hidden; }
+.glow-card::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: -160px;
+  right: -160px;
+  width: 360px;
+  height: 360px;
+  background: radial-gradient(circle, color-mix(in srgb, var(--glow, var(--accent)) 20%, transparent), transparent 65%);
+  animation: drift-sm 11s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+.glow-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.8;
+  background:
+    linear-gradient(var(--accent), var(--accent)) top left / 12px 1px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) top left / 1px 12px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) bottom right / 12px 1px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) bottom right / 1px 12px no-repeat;
+}
+.hero:has(.hero-amount.owe) { --glow: var(--owe); }
+.hero:has(.hero-amount.owed) { --glow: var(--owed); }
+.glow-card { transition: border-color 0.3s, box-shadow 0.3s; }
+#create:focus-within { border-color: color-mix(in srgb, var(--accent) 45%, transparent); box-shadow: 0 0 0 4px var(--accent-soft), 0 30px 60px -30px rgb(var(--shadow) / 0.3); }
+
+/* ---- new tab ---- */
+.two-col aside h1.display { font-size: clamp(38px, 5vw, 64px); text-align: left; }
+.two-col aside { justify-items: start; }
+.checks li { animation: rise 0.6s var(--ease) both; }
+.checks li:nth-child(1) { animation-delay: 0.55s; }
+.checks li:nth-child(2) { animation-delay: 0.63s; }
+.checks li:nth-child(3) { animation-delay: 0.71s; }
+.checks li:nth-child(4) { animation-delay: 0.79s; }
+.terminal { width: 100%; margin-top: var(--s3); box-shadow: 0 24px 48px -28px rgb(var(--shadow) / 0.3); }
+.terminal .code { padding: var(--s4); white-space: pre-wrap; word-break: break-all; }
+@media (max-width: 899px) { .terminal { display: none; } }
+.two-col > div > .card { animation: rise 0.8s var(--ease) 0.25s both; }
+.success { display: grid; place-items: center; width: 44px; height: 44px; margin-bottom: var(--s4); border: 1px solid var(--owed); background: color-mix(in srgb, var(--owed) 10%, transparent); color: var(--owed); animation: pop-in 0.5s var(--ease) both; }
+.success svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: square; stroke-dasharray: 30; animation: draw 0.6s var(--ease) 0.25s both; }
+#created .link-box { position: relative; overflow: hidden; }
+#created .link-box::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 35%, var(--accent-soft) 50%, transparent 65%); transform: translateX(-100%); animation: sweep 2.4s var(--ease) 0.6s infinite; }
+@keyframes sweep { 60%, 100% { transform: translateX(100%); } }
+
+/* ---- the tab ---- */
+.page-head .line { overflow: hidden; padding-bottom: 0.06em; }
+.loaded .page-head .line > h1 { animation: line-up 0.8s var(--ease) both; }
+.tag:not(.live) .pulse { display: none; }
+.life { width: 100%; max-width: 420px; height: 3px; margin-top: var(--s1); background: var(--line); overflow: hidden; }
+.life span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 40%, var(--owed))); transform-origin: left; transition: width 0.6s var(--ease); }
+.loaded .life span { animation: grow 1.2s var(--ease) 0.3s both; }
+.side > * { animation: rise 0.6s var(--ease) both; }
+.side > :nth-child(2) { animation-delay: 0.06s; }
+.side > :nth-child(3) { animation-delay: 0.12s; }
+.side > :nth-child(4) { animation-delay: 0.18s; }
+.side > :nth-child(5) { animation-delay: 0.24s; }
+.hero-amount { transition: color 0.3s; }
+#expenses.fresh > li { animation: rise 0.5s var(--ease) both; }
+#expenses.fresh > li:nth-child(2) { animation-delay: 0.05s; }
+#expenses.fresh > li:nth-child(3) { animation-delay: 0.1s; }
+#expenses.fresh > li:nth-child(4) { animation-delay: 0.15s; }
+#expenses.fresh > li:nth-child(5) { animation-delay: 0.2s; }
+#expenses.fresh > li:nth-child(n + 6) { animation-delay: 0.25s; }
+/* Hovering an expense: a blue bar slides in on the left, the amount nudges over. */
+.exp-row { position: relative; }
+.exp-row::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--accent); transform: scaleY(0); transition: transform 0.25s var(--ease); }
+.exp-row:hover::before, .exp-row:focus-visible::before { transform: scaleY(1); }
+.exp-row .amount { transition: transform 0.25s var(--ease), color 0.2s; }
+.exp-row:hover .amount { transform: translateX(-4px); color: var(--accent); }
+.upi-line { transition: border-color 0.2s; }
+.upi-line:hover { border-color: var(--line-2); }
+
+/* Sheets and the picker: their contents arrive one after another. */
+dialog.sheet:not(.fullscreen)[open] .sheet-body > * { animation: rise 0.45s var(--ease) both; }
+dialog.sheet:not(.fullscreen)[open] .sheet-body > :nth-child(2) { animation-delay: 0.06s; }
+dialog.sheet:not(.fullscreen)[open] .sheet-body > :nth-child(3) { animation-delay: 0.12s; }
+dialog.sheet:not(.fullscreen)[open] .sheet-body > :nth-child(n + 4) { animation-delay: 0.18s; }
+#who-dialog[open] .sheet-head h2 { animation: rise 0.7s var(--ease) both; }
+#who-dialog[open] #who-sub { animation: rise 0.7s var(--ease) 0.08s both; }
+#who-dialog[open] .who-list > * { animation: rise 0.5s var(--ease) both; }
+#who-dialog[open] .who-list > :nth-child(1) { animation-delay: 0.12s; }
+#who-dialog[open] .who-list > :nth-child(2) { animation-delay: 0.17s; }
+#who-dialog[open] .who-list > :nth-child(3) { animation-delay: 0.22s; }
+#who-dialog[open] .who-list > :nth-child(4) { animation-delay: 0.27s; }
+#who-dialog[open] .who-list > :nth-child(n + 5) { animation-delay: 0.32s; }
+#who-dialog[open] .join-open { animation: rise 0.5s var(--ease) 0.36s both; }
+.who-list button { position: relative; transition: background 0.2s, padding-left 0.25s var(--ease); }
+.who-list button:hover:not(:disabled) { padding-left: calc(var(--s4) + 6px); }
+.who-list button::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--accent); transform: scaleY(0); transition: transform 0.25s var(--ease); }
+.who-list button:hover::before { transform: scaleY(1); }

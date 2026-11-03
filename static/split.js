@@ -95,6 +95,17 @@ function render() {
   const hours = Math.max(0, Math.round((data.expires_at * 1000 - Date.now()) / 3600000));
   $("expiry").textContent = `Open until ${when(data.expires_at)} (${hours}h left), then read-only for a day.`;
   $("expiry").hidden = data.ended;
+  // Time left of the 48 hours, as a bar that empties.
+  $("life").hidden = data.ended;
+  $("life-bar").style.width = `${Math.max(2, Math.min(100, ((data.expires_at - Date.now() / 1000) / (48 * 3600)) * 100))}%`;
+  $("state-tag").classList.toggle("live", !data.ended);
+  $("state-tag").lastChild.textContent = data.ended ? "closed" : "live tab";
+  // First render only: the title slides in and the expense rows arrive one by one. Polling re-renders stay still.
+  if (!document.body.classList.contains("loaded")) {
+    document.body.classList.add("loaded");
+    $("expenses").classList.add("fresh");
+    setTimeout(() => $("expenses").classList.remove("fresh"), 1500);
+  }
 
   renderYou();
   renderHero();

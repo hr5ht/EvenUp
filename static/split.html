@@ -22,15 +22,16 @@
 
 <main class="app">
   <header class="page-head">
-    <span class="tag">tab</span>
-    <h1 id="title">Loading…</h1>
+    <span class="tag live" id="state-tag"><i class="pulse"></i>live tab</span>
+    <div class="line"><h1 id="title">Loading…</h1></div>
     <p class="muted" id="expiry" hidden></p>
+    <div class="life" id="life" hidden><span id="life-bar"></span></div>
     <p class="error" id="load-error"></p>
   </header>
 
   <div id="content" class="stagger" hidden>
     <div class="side">
-    <section class="card" id="ended-card" hidden>
+    <section class="card glow-card" id="ended-card" hidden>
       <p class="overline">Tab closed</p>
       <p class="muted" id="ended-text"></p>
       <div class="actions split2">
@@ -54,14 +55,14 @@
       <button type="button" class="link" id="upi-cancel" hidden>Cancel</button>
     </form>
 
-    <section class="card hero">
+    <section class="card hero glow-card">
       <p class="hero-label" id="hero-label"></p>
       <p class="hero-amount" id="hero-amount"></p>
       <p class="muted" id="hero-sub"></p>
       <ul class="list" id="my-payments"></ul>
     </section>
 
-    <nav class="tiles three">
+    <nav class="tiles three spot">
       <button type="button" class="tile" data-open="balances-sheet"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M8 17v-4M13 17V9M18 17V5"/></svg></span><span class="tile-text"><strong>Balances</strong><span id="tile-balances"></span></span></button>
       <button type="button" class="tile" data-open="share-sheet"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v13"/></svg></span><span class="tile-text"><strong>Share</strong><span>Link, image</span></span></button>
       <button type="button" class="tile" data-open="activity-sheet"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="tile-text"><strong>Activity</strong><span>History</span></span></button>

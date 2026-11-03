@@ -19,19 +19,25 @@
 
 <main class="two-col stagger">
   <aside>
-    <span class="tag">new tab</span>
-    <h1>Open a tab for the group.</h1>
-    <p class="muted">No account needed. Open for 48 hours, then read-only for a day, then deleted.</p>
+    <span class="announce intro i1"><span class="badge">New tab</span><span>Takes about a minute</span></span>
+    <h1 class="display"><span class="line"><span>Open a tab</span></span><span class="line"><span class="accent shimmer">for the group.</span></span></h1>
+    <p class="muted intro i3">No account needed. Open for 48 hours, then read-only for a day, then deleted.</p>
     <ul class="checks">
       <li>You're the admin</li>
       <li>Set the headcount, nobody gets in past it</li>
       <li>Optional password for everyone</li>
       <li>One link for the WhatsApp group</li>
     </ul>
+    <!-- Mirrors the form as you fill it in (new.js). Decoration, so screen readers skip it. -->
+    <div class="window terminal intro i5" aria-hidden="true">
+      <div class="window-bar"><span class="dots"><i></i><i></i><i></i></span><span class="window-url">~/quicktab</span></div>
+<pre class="code" id="term"><span class="c">$</span> quicktab open --admin <span class="s" id="t-admin">"you"</span> --people <span class="n" id="t-people">2</span> --password <span class="k" id="t-pw">off</span><span class="cursor" id="t-cursor"></span>
+<span class="c" id="t-hint">// press Open tab to run it</span></pre>
+    </div>
   </aside>
   <div>
 
-  <form id="create" class="card">
+  <form id="create" class="card glow-card">
     <label for="my-name">Your name <span class="badge">admin</span></label>
     <input type="text" id="my-name" maxlength="40" placeholder="Your name" required>
 
@@ -70,7 +76,8 @@
     <button class="primary block" type="submit">Open tab</button>
   </form>
 
-  <section id="created" class="card" hidden>
+  <section id="created" class="card glow-card" hidden>
+    <div class="success" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
     <p class="overline">Tab opened</p>
     <h2 class="created-title">Send this link to the group</h2>
     <div class="link-box" id="share-link"></div>

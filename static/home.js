@@ -57,15 +57,6 @@ const seen = new IntersectionObserver((entries) => {
 }, { threshold: 0.2, rootMargin: "0px 0px -40px" });
 document.querySelectorAll("[data-reveal]").forEach((n) => seen.observe(n));
 
-// Spotlight: every cell in a grid lights up around the cursor, so the glow crosses cell borders.
-document.querySelectorAll(".spot").forEach((grid) => grid.addEventListener("pointermove", (e) => {
-  for (const cell of grid.children) {
-    const r = cell.getBoundingClientRect();
-    cell.style.setProperty("--mx", `${e.clientX - r.left}px`);
-    cell.style.setProperty("--my", `${e.clientY - r.top}px`);
-  }
-}));
-
 // The New tab placeholder types out example names while the box is empty and not focused.
 if (!still) {
   const names = ["Riya", "Kabir", "Aman", "Your name"];
