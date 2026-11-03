@@ -77,7 +77,7 @@ export function Btn({ title, onPress, variant = "plain", small, disabled, busy, 
       accessibilityRole="button"
       onPress={onPress}
       disabled={disabled || busy}
-      className={`flex-row items-center justify-center gap-2.5 border ${small ? "h-10 px-3.5" : "h-[52px] px-5"} ${box} ${disabled ? "opacity-40" : ""} ${className}`}
+      className={`flex-row items-center justify-center gap-2.5 border ${/(^|\s)h-/.test(className) ? "" : small ? "h-10" : "h-[52px]"} ${small ? "px-3.5" : "px-5"} ${box} ${disabled ? "opacity-40" : ""} ${className}`}
     >
       {busy ? <ActivityIndicator color={spin} /> : icon}
       <T numberOfLines={1} className={`${small ? "text-[13px]" : "text-base"} font-semibold ${text}`}>{title}</T>

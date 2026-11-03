@@ -317,13 +317,16 @@ function UpiBox({ c }: { c: Ctx }) {
   };
   return (
     <View className="gap-2 border border-line bg-surface p-4">
-      <Label>Add your UPI ID so people can pay you</Label>
-      <View className="flex-row gap-2">
-        <Field className="flex-1" value={value} onChangeText={setValue} placeholder="name@bank" autoCapitalize="none" autoCorrect={false} maxLength={100} onSubmitEditing={save} />
-        <Btn variant="ink" title="Save" busy={busy} disabled={!value.trim()} onPress={save} />
+      <Label>{editing ? "Change your UPI ID" : "Add your UPI ID so people can pay you"}</Label>
+      {/* First time: input and Save on one row. Editing: the input gets the full width, Cancel and Save share a row. */}
+      <View className={editing ? "gap-2" : "flex-row gap-2"}>
+        <Field className={`h-12 ${editing ? "" : "min-w-0 flex-1"}`} value={value} onChangeText={setValue} placeholder="name@bank" autoCapitalize="none" autoCorrect={false} maxLength={100} onSubmitEditing={save} />
+        <View className="flex-row gap-2">
+          {editing && <Btn className="h-12 flex-1" title="Cancel" onPress={() => setEditing(false)} />}
+          <Btn variant="ink" className={`h-12 ${editing ? "flex-1" : ""}`} title="Save" busy={busy} disabled={!value.trim()} onPress={save} />
+        </View>
       </View>
       <Err>{error}</Err>
-      {editing && <Tap onPress={() => setEditing(false)}><T className="text-sm text-accent">Cancel</T></Tap>}
     </View>
   );
 }
