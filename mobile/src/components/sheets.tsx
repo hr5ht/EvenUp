@@ -4,9 +4,9 @@ import { File, Paths } from "expo-file-system";
 import { router } from "expo-router";
 import * as Sharing from "expo-sharing";
 import { useRef, useState, type ComponentRef } from "react";
-import { Alert, Linking, Platform, Share, View } from "react-native";
+import { Linking, Platform, Share, View } from "react-native";
 import { captureRef } from "react-native-view-shot";
-import { Tap, Btn, Err, Field, Label, Rows, Sheet, T, type ToastMsg } from "@/components/ui";
+import { Tap, Btn, Err, Field, Icon, Label, MenuRow, Rows, Sheet, T, useConfirm, type ToastMsg } from "@/components/ui";
 import {
   forgetTab, plainAmount, plural, rupees, tabUrl, toPaise, UPI_HINT,
   type Expense, type Identity, type Member, type Payment, type Tab,
@@ -92,7 +92,7 @@ export function ExpenseForm({ c, open, editing, onClose }: { c: Ctx; open: boole
 
   const paise = toPaise(amount);
   return (
-    <Sheet open={open} onClose={onClose} title={editing ? "Edit expense" : "Add expense"}
+    <Sheet open={open} onClose={onClose} kicker={editing ? "Edit" : "New expense"} title={editing ? "Edit expense" : "Add expense"}
       footer={<Btn variant="accent" className="flex-1" busy={busy} onPress={save}
         title={editing ? "Save changes" : paise ? `Add ${rupees(paise).replace(/\.00$/, "")} expense` : "Add expense"} />}>
       <T className="text-sm text-muted">Paid by {editing ? (editing.paidBy === identity.me ? "you" : c.nameOf(editing.paidBy)) : "you"}</T>
@@ -137,7 +137,7 @@ export function ExpenseForm({ c, open, editing, onClose }: { c: Ctx; open: boole
               <View key={m.id} className="flex-row items-center gap-3 bg-surface pl-4">
                 <T className="flex-1 text-[15px]" numberOfLines={1}>{m.name}</T>
                 <Field value={exact[m.id] ?? ""} onChangeText={(v) => setExact({ ...exact, [m.id]: v })} keyboardType="decimal-pad" placeholder="0"
-                  className="w-32 border-0 border-l text-right" style={{ fontFamily: MONO }} />
+                  className="w-32 border-0 border-l border-line text-right" style={{ fontFamily: MONO, borderLeftWidth: 1 }} />
               </View>
             ))}
           </Rows>
@@ -150,7 +150,11 @@ export function ExpenseForm({ c, open, editing, onClose }: { c: Ctx; open: boole
 
 // ---------- one expense ----------
 
-export function ExpenseDetail({ c, e, onClose, onEdit }: { c: Ctx; e: Expense | null; onClose: () => void; onEdit: (e: Expense) => void }) {
+export function ExpenseDetail({ c, e: next, onClose, onEdit }: { c: Ctx; e: Expense | null; onClose: () => void; onEdit: (e: Expense) => void }) {
+  // Keeps showing the last expense while the sheet slides away.
+  const [last, setLast] = useState(next);
+  if (next && next !== last) setLast(next);
+  const e = next ?? last;
   if (!e) return null;
   const payment = e.kind === "payment";
   const del = async () => {
@@ -159,7 +163,7 @@ export function ExpenseDetail({ c, e, onClose, onEdit }: { c: Ctx; e: Expense | 
     c.toast({ text: `Deleted ${payment ? "payment" : e.description}`, action: "Undo", onAction: undoFor(c, e.id) });
   };
   return (
-    <Sheet open onClose={onClose} title={payment ? "Settle-up" : e.description}
+    <Sheet open={!!next} onClose={onClose} kicker={payment ? "Payment" : "Expense"} title={payment ? "Settle-up" : e.description}
       footer={c.data.ended ? undefined : <>
         <Btn variant="danger" className="flex-1" title="Delete" onPress={del} />
         {!payment && <Btn variant="ink" className="flex-1" title="Edit" onPress={() => { onClose(); onEdit(e); }} />}
@@ -196,9 +200,16 @@ function upiLink(to: Member, paise: number, tabName: string, scheme = "upi://pay
   return `${scheme}?${Object.entries(params).map(([k, v]) => `${k}=${encodeURIComponent(v).replace(/%40/g, "@")}`).join("&")}`;
 }
 
-export function PaySheet({ c, p, onClose }: { c: Ctx; p: Payment | null; onClose: () => void }) {
+export function PaySheet({ c, p: next, onClose }: { c: Ctx; p: Payment | null; onClose: () => void }) {
   const [step, setStep] = useState<"choose" | "Cash" | "UPI">("choose");
   const [error, setError] = useState("");
+  const [last, setLast] = useState(next);
+  if (next && next !== last) {
+    setLast(next);
+    setStep("choose");
+    setError("");
+  }
+  const p = next ?? last;
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   if (!p) return null;
@@ -224,7 +235,7 @@ export function PaySheet({ c, p, onClose }: { c: Ctx; p: Payment | null; onClose
   const openApp = (url: string) => Linking.openURL(url).catch(() => setError("That app isn't on this phone. Try another, or pay by hand to the UPI ID."));
 
   return (
-    <Sheet open onClose={onClose} title={`Pay ${rupees(p.amount_paise)} to ${to.name}`}
+    <Sheet open={!!next} onClose={onClose} kicker={step === "choose" ? "Settle up" : step} title={`Pay ${rupees(p.amount_paise)} to ${to.name}`}
       footer={step === "choose" ? undefined : <>
         <Btn className="flex-1" title="Back" onPress={() => setStep("choose")} />
         <Btn variant={step === "Cash" ? "ink" : "plain"} className="flex-1" busy={busy} onPress={done} title={step === "Cash" ? "Mark as paid" : "I've paid"} />
@@ -232,10 +243,9 @@ export function PaySheet({ c, p, onClose }: { c: Ctx; p: Payment | null; onClose
       {step === "choose" && <>
         <T className="text-sm text-muted">How are you paying?</T>
         <Rows>
-          <Tap onPress={() => setStep("Cash")} className="h-14 justify-center bg-surface px-4"><T className="text-base font-medium">Cash</T></Tap>
-          <Tap disabled={!to.upi_id} onPress={() => setStep("UPI")} className={`h-14 justify-center bg-surface px-4 ${to.upi_id ? "" : "opacity-40"}`}>
-            <T className="text-base font-medium">UPI</T>
-          </Tap>
+          <MenuRow icon={Icon.Cash} title="Cash" sub="Paid in person, mark it here" onPress={() => setStep("Cash")} />
+          <MenuRow icon={Icon.Phone} title="UPI" sub={to.upi_id ? `Opens your UPI app with ${rupees(p.amount_paise)} filled in` : "No UPI ID yet"}
+            disabled={!to.upi_id} onPress={() => setStep("UPI")} />
         </Rows>
         {!to.upi_id && <T className="text-sm text-muted">{to.name} hasn't added a UPI ID yet, so it's cash for now.</T>}
       </>}
@@ -248,9 +258,8 @@ export function PaySheet({ c, p, onClose }: { c: Ctx; p: Payment | null; onClose
         {Platform.OS === "ios" ? (
           <Rows>
             {IOS_APPS.map(([name, scheme]) => (
-              <Tap key={name} onPress={() => openApp(upiLink(to, p.amount_paise, c.data.name, scheme))} className="h-14 flex-row items-center justify-between bg-surface px-4">
-                <T className="text-base font-medium">{name}</T><T className="text-muted">↗</T>
-              </Tap>
+              <MenuRow key={name} icon={Icon.Phone} title={name} sub={`Pay ${rupees(p.amount_paise)} to ${to.upi_id}`}
+                onPress={() => openApp(upiLink(to, p.amount_paise, c.data.name, scheme))} />
             ))}
           </Rows>
         ) : (
@@ -274,7 +283,7 @@ export function PaySheet({ c, p, onClose }: { c: Ctx; p: Payment | null; onClose
 export function BalancesSheet({ c, open, onClose }: { c: Ctx; open: boolean; onClose: () => void }) {
   const { data, identity } = c;
   return (
-    <Sheet open={open} onClose={onClose} title="Balances">
+    <Sheet open={open} onClose={onClose} kicker={`${c.data.members.length} people`} title="Balances">
       <T className="text-sm text-muted">Debts are simplified, so each line is one real payment.</T>
       <Rows>
         {data.members.map((m) => {
@@ -316,7 +325,7 @@ export function ActivitySheet({ c, open, onClose }: { c: Ctx; open: boolean; onC
   // New expenses are already in the expense list, so the log keeps payments and every other change.
   const shown = data.activity.filter((a) => !(a.action === "added" && kindOf(a.expense_id) === "expense"));
   return (
-    <Sheet open={open} onClose={onClose} title="Activity">
+    <Sheet open={open} onClose={onClose} kicker="History" title="Activity">
       {shown.length ? <Rows>
         {shown.map((a) => {
           const d = a.details;
@@ -359,26 +368,24 @@ export function AdminSheet({ c, open, onClose }: { c: Ctx; open: boolean; onClos
       return false;
     }
   };
-  const remove = (m: Member) => Alert.alert(`Remove ${m.name}?`, "They can join again from the link if they need to.", [
-    { text: "Cancel", style: "cancel" },
-    { text: "Remove", style: "destructive", onPress: () => run(() => c.adminApi("DELETE", `/members/${m.id}`)) },
-  ]);
-  const deleteTab = () => Alert.alert("Delete this tab?", "It's deleted for everyone, with all its expenses and payments. This can't be undone.", [
-    { text: "Cancel", style: "cancel" },
-    { text: "Delete tab", style: "destructive", onPress: async () => {
-      try {
-        await c.adminApi("DELETE", "");
-        await forgetTab(c.slug);
-        onClose();
-        router.replace("/");
-      } catch (err) {
-        setError((err as Error).message);
-      }
-    } },
-  ]);
+  const [confirmEl, ask] = useConfirm();
+  const remove = async (m: Member) => {
+    if (await ask(`Remove ${m.name}?`, "They can join again from the link if they need to.", "Remove")) run(() => c.adminApi("DELETE", `/members/${m.id}`));
+  };
+  const deleteTab = async () => {
+    if (!(await ask("Delete this tab?", "It's deleted for everyone, with all its expenses and payments. This can't be undone.", "Delete tab"))) return;
+    try {
+      await c.adminApi("DELETE", "");
+      await forgetTab(c.slug);
+      onClose();
+      router.replace("/");
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
 
   return (
-    <Sheet open={open} onClose={onClose} title="Admin">
+    <Sheet open={open} onClose={onClose} kicker="Admin only" title="Admin" overlay={confirmEl}>
       <Rows>
         {data.members.map((m) => (
           <View key={m.id} className="gap-2 bg-surface px-4 py-3">
@@ -422,22 +429,20 @@ export function ShareSheet({ c, open, onClose, onImage }: { c: Ctx; open: boolea
   const [copied, setCopied] = useState(false);
   const link = tabUrl(c.slug);
   return (
-    <Sheet open={open} onClose={onClose} title="Share">
+    <Sheet open={open} onClose={onClose} kicker="Send or save" title="Share">
       <Rows>
-        <MenuRow text={copied ? "Copied" : "Copy link to this tab"} onPress={async () => { await Clipboard.setStringAsync(link); setCopied(true); setTimeout(() => setCopied(false), 1500); }} />
-        <MenuRow text="Send link" onPress={() => Share.share({ message: `Add what you paid on QuickTab, we'll settle up with UPI. ${link}`, url: link }).catch(() => {})} />
-        <MenuRow text="Save summary image" onPress={() => { onClose(); onImage(); }} />
-        <MenuRow text="Export expenses (CSV)" onPress={() => shareCsv(c.data).catch((e) => Alert.alert("Couldn't export", String(e?.message || e)))} />
+        <MenuRow icon={copied ? Icon.Check : Icon.Link} title={copied ? "Copied" : "Copy link"} sub="Anyone with it can join and add expenses"
+          onPress={async () => { await Clipboard.setStringAsync(link); setCopied(true); setTimeout(() => setCopied(false), 1500); }} />
+        <MenuRow icon={Icon.Share} title="Send link" sub="WhatsApp, Telegram, anything on your phone"
+          onPress={() => Share.share({ message: `Add what you paid on QuickTab, we'll settle up with UPI. ${link}`, url: link }).catch(() => {})} />
+        <MenuRow icon={Icon.Image} title="Summary image" sub="Balances and payments as one picture" onPress={() => { onClose(); onImage(); }} />
+        <MenuRow icon={Icon.File} title="Export CSV" sub="Every expense and share, for a spreadsheet"
+          onPress={() => shareCsv(c.data).catch((e) => c.toast({ text: `Couldn't export: ${e?.message || e}`, error: true }))} />
       </Rows>
     </Sheet>
   );
 }
 
-const MenuRow = ({ text, onPress }: { text: string; onPress: () => void }) => (
-  <Tap accessibilityRole="button" onPress={onPress} className="h-14 justify-center bg-surface px-4">
-    <T className="text-base font-medium">{text}</T>
-  </Tap>
-);
 
 // One row per expense and payment with everyone's share, then the final balances. Same columns as the website's CSV.
 export async function shareCsv(data: Tab) {
@@ -464,6 +469,7 @@ const R = { bg: "#fafaf9", text: "#0d0d0c", muted: "#6b6963", line: "#d4d2ce", a
 export function SummarySheet({ data, open, onClose }: { data: Tab; open: boolean; onClose: () => void }) {
   const ref = useRef<ComponentRef<typeof View>>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   const nameOf = (id: number) => data.members.find((m) => m.id === id)?.name ?? "?";
   const money = (p: number) => rupees(p).replace(/\.00$/, "");
   const expenses = liveExpenses(data);
@@ -476,14 +482,14 @@ export function SummarySheet({ data, open, onClose }: { data: Tab; open: boolean
       const uri = await captureRef(ref, { format: "png", quality: 1 });
       await Sharing.shareAsync(uri, { mimeType: "image/png", dialogTitle: "QuickTab summary" });
     } catch (err) {
-      Alert.alert("Couldn't make the image", String((err as Error)?.message || err));
+      setError(`Couldn't make the image: ${(err as Error)?.message || err}`);
     } finally {
       setBusy(false);
     }
   };
   const t = (size: number, color = R.text, weight: "400" | "600" | "700" = "400") => ({ fontSize: size, color, fontWeight: weight });
   return (
-    <Sheet open={open} onClose={onClose} title="Summary image" footer={<Btn variant="accent" className="flex-1" busy={busy} title="Share image" onPress={share} />}>
+    <Sheet open={open} onClose={onClose} kicker="PNG" title="Summary image" footer={<Btn variant="accent" className="flex-1" busy={busy} title="Share image" onPress={share} />}>
       <View ref={ref} collapsable={false} style={{ backgroundColor: R.bg, padding: 24, borderWidth: 1, borderColor: R.line }}>
         <T style={t(24, R.text, "700")}>{data.name}</T>
         <T style={[t(12, R.muted), { marginTop: 6 }]}>
@@ -528,6 +534,7 @@ export function SummarySheet({ data, open, onClose }: { data: Tab; open: boolean
         <View style={{ height: 1, backgroundColor: R.line, marginVertical: 16 }} />
         <T style={t(11, R.muted)}>Split with QuickTab</T>
       </View>
+      <Err>{error}</Err>
     </Sheet>
   );
 }

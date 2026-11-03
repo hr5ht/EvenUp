@@ -88,7 +88,8 @@ def connect():
         import psycopg
         from psycopg.rows import dict_row
         return PgConnection(psycopg.connect(DATABASE_URL, row_factory=dict_row))
-    con = sqlite3.connect(DB_PATH)
+    # One connection per request, but FastAPI may open it on one worker thread and use it on another.
+    con = sqlite3.connect(DB_PATH, check_same_thread=False)
     con.row_factory = sqlite3.Row
     con.execute("PRAGMA foreign_keys = ON")
     return con

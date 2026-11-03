@@ -5,6 +5,9 @@ const token = (name) => `var(--${name})`;
 module.exports = {
   content: ["./src/**/*.{ts,tsx}"],
   presets: [require("nativewind/preset")],
+  // Light/dark comes from src/lib/theme.tsx, not dark: classes. "class" also stops NativeWind's web runtime throwing
+  // "Cannot manually set color scheme" when a stylesheet is added to <head> (as the dev server does).
+  darkMode: "class",
   theme: {
     extend: {
       colors: Object.fromEntries(

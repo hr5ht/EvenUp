@@ -1,7 +1,7 @@
 // One tab, opened from My tabs or straight from a link (quicktab://g/<slug> or https://quicktabapp.vercel.app/g/<slug>).
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, AppState, RefreshControl, ScrollView, View } from "react-native";
+import { AppState, RefreshControl, ScrollView, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -10,7 +10,7 @@ import {
 } from "@/components/sheets";
 import { Tap, Btn, Err, Field, Icon, Label, T, Tag, Toast, useCountUp, type ToastMsg } from "@/components/ui";
 import { Who } from "@/components/who";
-import { api, ApiError, lifeOf, loadIdentity, plural, rupees, saveIdentity, UPI_HINT, type Expense, type Identity, type Payment, type Tab } from "@/lib/api";
+import { api, ApiError, forgetTab, lifeOf, loadIdentity, plural, rupees, saveIdentity, UPI_HINT, type Expense, type Identity, type Payment, type Tab } from "@/lib/api";
 import { useTheme } from "@/lib/theme";
 
 type SheetName = "balances" | "share" | "activity" | "admin" | "form" | "summary" | null;
@@ -30,6 +30,7 @@ export default function TabScreen() {
   const [editing, setEditing] = useState<Editing>(null);
   const [toast, setToast] = useState<ToastMsg>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [formKey, setFormKey] = useState(0); // new key per opening: the form starts fresh
   const latest = useRef<Tab | null>(null);
   const idRef = useRef<Identity>({});
 
@@ -52,14 +53,16 @@ export default function TabScreen() {
     }
   }, [base]);
 
-  // Opening a link saves the tab on this phone straight away, so it's in My tabs even before you pick a name.
+  // Opening a link saves the tab on this phone once it loads, so it's in My tabs even before you pick a name.
+  // A link that doesn't exist is never saved (and dropped if it was).
   useEffect(() => {
-    loadIdentity(slug).then((i) => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on open; state is set after the request
+    Promise.all([loadIdentity(slug), load()]).then(([i, d]) => {
       idRef.current = i;
       setIdentityState(i);
-      saveIdentity(slug, i);
+      if (d) saveIdentity(slug, i);
+      else forgetTab(slug);
     });
-    load(); // eslint-disable-line react-hooks/set-state-in-effect -- fetch on open; state is set after the request
 
   }, [slug, load]);
 
@@ -72,16 +75,19 @@ export default function TabScreen() {
 
   if (loadError && !data) {
     return (
-      <SafeAreaView className="flex-1 gap-4 bg-bg px-5 pt-16">
-        <Tag>not found</Tag>
-        <T className="text-[30px] font-bold tracking-tight">Tab not found</T>
-        <T className="text-muted">{loadError}</T>
-        <Btn variant="ink" title="Back to my tabs" onPress={() => router.replace("/")} />
+      <SafeAreaView className="flex-1 bg-bg">
+        {/* Padding lives on an inner view: SafeAreaView sets its own and overrides className padding. */}
+        <Animated.View entering={FadeInDown.duration(450)} className="gap-4 px-5 pt-16">
+          <Tag>not found</Tag>
+          <T className="text-[30px] font-bold tracking-tight">Tab not found</T>
+          <T className="leading-6 text-muted">{loadError}</T>
+          <Btn variant="ink" title="Back to my tabs" onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))} />
+        </Animated.View>
       </SafeAreaView>
     );
   }
   if (!data || !identity) {
-    return <SafeAreaView className="flex-1 bg-bg px-5 pt-16"><T className="text-muted">Loading…</T></SafeAreaView>;
+    return <SafeAreaView className="flex-1 bg-bg"><View className="px-5 pt-16"><Tag live>loading</Tag></View></SafeAreaView>;
   }
 
   const member = (id: number) => data.members.find((m) => m.id === id);
@@ -123,7 +129,7 @@ export default function TabScreen() {
     try {
       await fn();
     } catch (err) {
-      Alert.alert("Couldn't do that", (err as Error).message);
+      setToast({ text: (err as Error).message, error: true });
     }
     await load();
   };
@@ -139,6 +145,7 @@ export default function TabScreen() {
   const { hours, pct: life } = lifeOf(data);
   const startEdit = (e: Expense) => {
     setEditing({ id: e.id, version: e.version, paidBy: e.paid_by, description: e.description, expense: e });
+    setFormKey((k) => k + 1);
     setSheet("form");
   };
 
@@ -176,8 +183,8 @@ export default function TabScreen() {
               It closed {when(data.expires_at)}, so nothing can be added. Save the summary before {when(data.deletes_at)}, when it's deleted for good.
             </T>
             <View className="flex-row gap-2.5">
-              <Btn className="flex-1" title="Summary image" onPress={() => setSheet("summary")} />
-              <Btn variant="ink" className="flex-1" title="Export CSV" onPress={() => shareCsv(data).catch((e) => Alert.alert("Couldn't export", String(e?.message || e)))} />
+              <Btn className="flex-1" title="Save image" onPress={() => setSheet("summary")} />
+              <Btn variant="ink" className="flex-1" title="Export CSV" onPress={() => shareCsv(data).catch((e) => setToast({ text: `Couldn't export: ${e?.message || e}`, error: true }))} />
             </View>
           </View>
         )}
@@ -224,7 +231,7 @@ export default function TabScreen() {
       </ScrollView>
 
       {!data.ended && (
-        <Tap accessibilityRole="button" onPress={() => { setEditing(null); setSheet("form"); }}
+        <Tap accessibilityRole="button" onPress={() => { setEditing(null); setFormKey((k) => k + 1); setSheet("form"); }}
           className="absolute right-5 h-[54px] flex-row items-center gap-2.5 bg-accent px-5"
           style={{ bottom: insets.bottom + 16, shadowColor: colors.accent, shadowOpacity: 0.3, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 6 }}>
           <Icon.Plus color={colors["accent-text"]} size={16} />
@@ -232,9 +239,9 @@ export default function TabScreen() {
         </Tap>
       )}
 
-      <ExpenseForm key={sheet === "form" ? `form-${editing?.id ?? "new"}` : "closed"} c={c} open={sheet === "form"} editing={editing} onClose={() => setSheet(null)} />
+      <ExpenseForm key={formKey} c={c} open={sheet === "form"} editing={editing} onClose={() => setSheet(null)} />
       <ExpenseDetail c={c} e={detail} onClose={() => setDetail(null)} onEdit={startEdit} />
-      <PaySheet key={paying ? `${paying.from}-${paying.to}-${paying.amount_paise}` : "none"} c={c} p={paying} onClose={() => setPaying(null)} />
+      <PaySheet c={c} p={paying} onClose={() => setPaying(null)} />
       <BalancesSheet c={c} open={sheet === "balances"} onClose={() => setSheet(null)} />
       <ActivitySheet c={c} open={sheet === "activity"} onClose={() => setSheet(null)} />
       <AdminSheet c={c} open={sheet === "admin"} onClose={() => setSheet(null)} />

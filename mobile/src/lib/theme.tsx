@@ -34,9 +34,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     AsyncStorage.getItem(KEY).then((v) => (v === "light" || v === "dark") && setChoice(v)).catch(() => {});
   }, []);
   const isDark = (choice ?? system) === "dark";
+  // Web only: sheets render in a portal outside the themed view, so the colours also go on :root. Through a <style>
+  // tag, not <html style>: NativeWind watches the html element and throws when its attributes change.
   useEffect(() => {
     if (Platform.OS !== "web") return;
-    for (const [k, v] of Object.entries(isDark ? dark : light)) document.documentElement.style.setProperty(`--${k}`, v);
+    let tag = document.getElementById("quicktab-theme");
+    if (!tag) {
+      tag = document.createElement("style");
+      tag.id = "quicktab-theme";
+      document.head.appendChild(tag);
+    }
+    tag.textContent = `:root{${Object.entries(isDark ? dark : light).map(([k, v]) => `--${k}:${v}`).join(";")}}`;
   }, [isDark]);
   const toggle = () => {
     const next = isDark ? "light" : "dark";

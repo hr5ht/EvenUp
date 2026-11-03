@@ -126,7 +126,7 @@ export default function NewTab() {
             </View>
           </Opt>
           <Opt title="Add names now" sub="Or everyone adds themselves from the link">
-            <Switch value={addNames} onValueChange={setAddNames} trackColor={{ true: colors.accent }} />
+            <Switch value={addNames} onValueChange={setAddNames} trackColor={{ false: colors["line-2"], true: colors.accent }} thumbColor="#ffffff" ios_backgroundColor={colors["line-2"]} />
           </Opt>
           {addNames && (
             <View className="gap-2 bg-surface px-4 pb-4">
@@ -137,7 +137,7 @@ export default function NewTab() {
             </View>
           )}
           <Opt title="Password protect" sub={protect ? "Everyone signs in with their own password" : "Off: anyone can pick any name"}>
-            <Switch value={protect} onValueChange={setProtect} trackColor={{ true: colors.accent }} />
+            <Switch value={protect} onValueChange={setProtect} trackColor={{ false: colors["line-2"], true: colors.accent }} thumbColor="#ffffff" ios_backgroundColor={colors["line-2"]} />
           </Opt>
           {protect && (
             <View className="gap-2 bg-surface px-4 pb-4">

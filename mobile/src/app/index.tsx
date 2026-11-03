@@ -1,11 +1,11 @@
 // My tabs: every tab this phone opened or created, with who you are in it. No account, so this list is the account.
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { Alert, RefreshControl, ScrollView, View } from "react-native";
+import { RefreshControl, ScrollView, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Tap, Btn, Err, Field, Icon, Label, Logo, T, Tag, ThemeButton } from "@/components/ui";
-import { api, ApiError, forgetTab, rupees, saveIdentity, savedTabs, slugFrom, tabTitle, lifeOf, type Identity, type Tab } from "@/lib/api";
+import { Tap, Btn, Err, Field, Icon, Label, Logo, T, Tag, ThemeButton, useConfirm } from "@/components/ui";
+import { api, ApiError, forgetTab, rupees, savedTabs, slugFrom, tabTitle, lifeOf, type Identity, type Tab } from "@/lib/api";
 import { useTheme } from "@/lib/theme";
 
 type Row = { slug: string; identity: Identity; data?: Tab; error?: string };
@@ -16,7 +16,6 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
   const [link, setLink] = useState("");
   const [error, setError] = useState("");
-  const [demoBusy, setDemoBusy] = useState(false);
 
   const load = useCallback(async () => {
     const saved = await savedTabs();
@@ -45,25 +44,12 @@ export default function Home() {
     router.push(`/g/${slug}`);
   };
 
-  const demo = async () => {
-    setDemoBusy(true);
-    setError("");
-    try {
-      const { slug, admin_token, admin_id } = await api("POST", "/api/demo");
-      await saveIdentity(slug, { me: admin_id, adminToken: admin_token });
-      router.push(`/g/${slug}`);
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setDemoBusy(false);
-    }
+  const [confirmEl, ask] = useConfirm();
+  const remove = async (slug: string) => {
+    if (!(await ask("Remove from this phone?", "The tab stays open for everyone else. You can open it again from the link.", "Remove"))) return;
+    await forgetTab(slug);
+    load();
   };
-
-  const remove = (slug: string) =>
-    Alert.alert("Remove from this phone?", "The tab stays open for everyone else. You can open it again from the link.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Remove", style: "destructive", onPress: async () => { await forgetTab(slug); load(); } },
-    ]);
 
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-bg">
@@ -119,10 +105,12 @@ export default function Home() {
         </View>
       </ScrollView>
 
-      <SafeAreaView edges={["bottom"]} className="gap-2.5 border-t border-line bg-bg px-5 pt-4">
-        <Btn variant="ink" title="Open a new tab" icon={<Icon.Plus color={colors["ink-text"]} size={16} />} onPress={() => router.push("/new")} />
-        <Btn title="Try a live demo" busy={demoBusy} onPress={demo} className="mb-2" />
+      <SafeAreaView edges={["bottom"]} className="border-t border-line bg-bg">
+        <View className="gap-2.5 px-5 pb-2 pt-4">
+          <Btn variant="ink" title="Open a new tab" icon={<Icon.Plus color={colors["ink-text"]} size={16} />} onPress={() => router.push("/new")} />
+        </View>
       </SafeAreaView>
+      {confirmEl}
     </SafeAreaView>
   );
 }
@@ -148,7 +136,7 @@ function TabCard({ row, onPress, onLongPress }: { row: Row; onPress: () => void;
       </View>
       <View className="flex-row items-baseline justify-between gap-3">
         <T className="flex-1 text-[13px] text-muted" numberOfLines={1}>
-          {me ? `You're ${me.name}${me.id === t.admin_id ? " · admin" : ""} · ${t.members.length} people` : "Pick your name to open it"}
+          {me ? `You're ${me.name}${me.id === t.admin_id ? " · admin" : ""}` : "Pick your name to open it"}
         </T>
         {me && (
           <T mono className={`text-[15px] ${b > 0 ? "text-owed" : b < 0 ? "text-owe" : "text-muted"}`}>
