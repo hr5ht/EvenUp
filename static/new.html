@@ -25,26 +25,34 @@
     <label for="my-name">Your name <span class="badge">admin</span></label>
     <input type="text" id="my-name" maxlength="40" placeholder="Your name" required>
 
-    <label for="size">How many people are splitting, including you?</label>
-    <p class="muted">Nobody past this number can join, not even added by you.</p>
-    <div class="row stepper">
-      <button type="button" id="size-down" aria-label="One less">−</button>
-      <input type="number" id="size" inputmode="numeric" min="2" max="50" value="2" required>
-      <button type="button" id="size-up" aria-label="One more">+</button>
-    </div>
+    <div class="opts">
+      <div class="opt">
+        <span class="opt-text"><strong>People</strong><span class="muted">Including you, the most allowed</span></span>
+        <span class="stepper" role="group" aria-label="People splitting">
+          <button type="button" id="size-down" aria-label="One less">−</button>
+          <output id="size" aria-live="polite">2</output>
+          <button type="button" id="size-up" aria-label="One more">+</button>
+        </span>
+      </div>
 
-    <label class="check"><input type="checkbox" id="add-names"> Add everyone's names now</label>
-    <div id="names-box" hidden>
-      <div id="members"></div>
-      <p class="muted">Leave any blank: they tap "I'm not on the list" when they open the link and add themselves.</p>
-    </div>
+      <label class="opt" for="add-names">
+        <span class="opt-text"><strong>Add names now</strong><span class="muted">Or everyone adds themselves from the link</span></span>
+        <input type="checkbox" class="switch" id="add-names">
+      </label>
+      <div id="names-box" class="opt-body" hidden>
+        <div id="members"></div>
+        <p class="muted">Leave any blank: they tap "I'm not on the list" and add themselves.</p>
+      </div>
 
-    <label class="check"><input type="checkbox" id="protect"> Protect with passwords</label>
-    <div id="protect-box" hidden>
-      <input type="password" id="admin-password" minlength="4" maxlength="100" autocomplete="new-password" placeholder="Your password, at least 4 characters">
-      <p class="muted">You need it to open the split as the admin, on this phone too. Everyone else creates their own the first time they pick their name, so nobody can act as someone else.</p>
+      <label class="opt" for="protect">
+        <span class="opt-text"><strong>Password protect</strong><span class="muted" id="protect-sub"></span></span>
+        <input type="checkbox" class="switch" id="protect">
+      </label>
+      <div id="protect-box" class="opt-body" hidden>
+        <input type="password" id="admin-password" minlength="4" maxlength="100" autocomplete="new-password" placeholder="Your password, at least 4 characters">
+        <p class="muted">You need it to open the split as the admin, on this phone too. Everyone else creates their own the first time they pick their name.</p>
+      </div>
     </div>
-    <p class="muted" id="open-note">No passwords: anyone with the link can pick any name, the admin's too.</p>
 
     <input type="text" name="website" id="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
 

@@ -1,5 +1,7 @@
 const $ = (id) => document.getElementById(id);
-const size = () => Math.min(50, Math.max(2, Math.floor(Number($("size").value)) || 2));
+const MIN = 2, MAX = 50; // same cap as the server
+let people = MIN;
+const size = () => people;
 
 // One name box per other person, kept in step with the headcount. Typed names survive resizing.
 function syncNames() {
@@ -11,17 +13,25 @@ function syncNames() {
   while (box.children.length > size() - 1) box.lastChild.remove();
 }
 
-$("size-down").onclick = () => { $("size").value = size() - 1; syncNames(); };
-$("size-up").onclick = () => { $("size").value = size() + 1; syncNames(); };
-$("size").oninput = syncNames;
+function setSize(n) {
+  people = Math.min(MAX, Math.max(MIN, n));
+  $("size").textContent = people;
+  $("size-down").disabled = people === MIN;
+  $("size-up").disabled = people === MAX;
+  syncNames();
+}
+$("size-down").onclick = () => setSize(people - 1);
+$("size-up").onclick = () => setSize(people + 1);
 $("add-names").onchange = (e) => { $("names-box").hidden = !e.target.checked; syncNames(); };
-$("protect").onchange = (e) => {
-  $("protect-box").hidden = !e.target.checked;
-  $("open-note").hidden = e.target.checked;
-  $("admin-password").required = e.target.checked;
-  if (e.target.checked) $("admin-password").focus();
-};
-syncNames();
+function showProtect() {
+  const on = $("protect").checked;
+  $("protect-box").hidden = !on;
+  $("admin-password").required = on;
+  $("protect-sub").textContent = on ? "Everyone signs in with their own password" : "Off: anyone can pick any name";
+}
+$("protect").onchange = () => { showProtect(); if ($("protect").checked) $("admin-password").focus(); };
+showProtect();
+setSize(MIN);
 
 $("create").onsubmit = async (e) => {
   e.preventDefault();
