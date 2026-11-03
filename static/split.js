@@ -166,9 +166,17 @@ function setIdentity(next) {
 }
 
 let upiEditing = false; // the saved UPI ID's Edit was tapped
+let upiFor; // whose UPI form is showing
 
 function renderYou() {
   const me = known() ? member(identity.me) : null;
+  // Switched to someone else: their form starts empty, not with the last person's typing.
+  if ((me && me.id) !== upiFor) {
+    upiFor = me && me.id;
+    upiEditing = false;
+    $("my-upi").value = "";
+    $("upi-error").textContent = "";
+  }
   $("you-text").textContent = me ? `${me.name}${isAdmin() ? " · admin" : ""} ▾` : "Who are you?";
   // Saved: one line with Edit. Not saved yet, or editing: the form.
   const saved = !!(me && me.upi_id);
