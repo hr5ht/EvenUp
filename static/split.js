@@ -86,8 +86,8 @@ async function load() {
   try {
     data = await api("GET", base);
   } catch (err) {
-    $("title").textContent = "Split not found";
-    $("load-error").textContent = "Splits are deleted a day after they end, or the link is wrong.";
+    $("title").textContent = "Tab not found";
+    $("load-error").textContent = "Tabs are deleted a day after they close, or the link is wrong.";
     $("content").hidden = true;
     $("fab").hidden = true;
     return;
@@ -118,7 +118,7 @@ function render() {
   $("tile-balances").textContent = `${data.members.length} of ${data.capacity} people`;
   // Full: nobody new until the admin removes someone. The server refuses anyway.
   $("join-open").disabled = full;
-  $("join-open").textContent = full ? `This split is full (${data.capacity} people)` : "I'm not on the list";
+  $("join-open").textContent = full ? `This tab is full (${data.capacity} people)` : "I'm not on the list";
   $("add-member").disabled = full;
   $("add-member").textContent = full ? "Full: remove someone first" : "Add person";
   renderBalances();
@@ -222,7 +222,7 @@ function openPicker() {
   $("who-dialog").classList.toggle("gate", !known());
   $("who-sub").textContent = data.protected && !data.ended
     ? "Pick your name. The first time, you create a password, so nobody else can use your name."
-    : "Pick your name to open the split.";
+    : "Pick your name to open the tab.";
   const people = data.members.map((m) => {
     const b = el("button", { type: "button", className: m.id === identity.me ? "current" : "" },
       el("span", { textContent: m.name }), m.id === data.admin_id ? el("span", { className: "badge", textContent: "admin" }) : null);
@@ -253,7 +253,7 @@ function pick(m) {
   const create = needsPassword && !m.has_password;
   $("pw-label").textContent = legacy ? "Admin password" : create ? "Create a password" : "Your password";
   $("pw-hint").textContent = legacy ? "This is the admin's name, so it needs the admin password."
-    : create ? `First time as ${m.name}. You'll need this password to open the split as ${m.name} on another phone.`
+    : create ? `First time as ${m.name}. You'll need this password to open the tab as ${m.name} on another phone.`
     : `Enter the password you created for ${m.name}.`;
   $("pw-submit").textContent = create ? "Create and continue" : "Unlock";
   $("admin-pw").placeholder = create ? "At least 4 characters" : "";
@@ -287,7 +287,7 @@ $("pw-back").onclick = openPicker;
 $("join-back").onclick = openPicker;
 
 $("join-open").onclick = () => {
-  showPickerStep("join", "Join this split");
+  showPickerStep("join", "Join this tab");
   $("join-pw-box").hidden = !data.protected;
   $("join-pw").required = data.protected;
   $("join-error").textContent = "";
@@ -660,7 +660,7 @@ async function act(fn) {
 // ---------- activity ----------
 
 const ACTIONS = {
-  created: "Split created",
+  created: "Tab opened",
   added: "Added",
   edited: "Edited",
   deleted: "Deleted",
@@ -746,7 +746,7 @@ $("add-member").onclick = async () => {
 };
 
 $("delete-split").onclick = async () => {
-  if (!(await askConfirm("Delete this split?", "It's deleted for everyone, with all its expenses and payments. This can't be undone.", "Delete split"))) return;
+  if (!(await askConfirm("Delete this tab?", "It's deleted for everyone, with all its expenses and payments. This can't be undone.", "Delete tab"))) return;
   try {
     await adminApi("DELETE", base);
     location.href = "/";
@@ -869,7 +869,7 @@ $("download-png").onclick = async (ev) => {
 };
 
 async function saveFile(blob, ext, type) {
-  const file = new File([blob], `${data.name.replace(/[^\w -]/g, "").trim() || "split"}.${ext}`, { type });
+  const file = new File([blob], `${data.name.replace(/[^\w -]/g, "").trim() || "quicktab"}.${ext}`, { type });
   // Phones get the share sheet (straight to WhatsApp). Laptops download, even where they could share (macOS).
   if (IS_PHONE && navigator.canShare && navigator.canShare({ files: [file] })) {
     await navigator.share({ files: [file], title: data.name }).catch(() => {});

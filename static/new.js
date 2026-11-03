@@ -60,7 +60,7 @@ $("create").onsubmit = async (e) => {
     $("share").onclick = async () => {
       const text = "Add what you paid on QuickTab, we'll settle up with UPI.";
       if (navigator.share) {
-        try { await navigator.share({ title: "Quick split", text, url: share }); } catch { /* closed the sheet */ }
+        try { await navigator.share({ title: "QuickTab", text, url: share }); } catch { /* closed the sheet */ }
       } else {
         window.open(`https://wa.me/?text=${encodeURIComponent(`${text} ${share}`)}`, "_blank", "noopener");
       }

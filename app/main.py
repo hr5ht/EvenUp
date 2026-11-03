@@ -183,9 +183,9 @@ def admin_token(split_id, pw_hash):
 def load_split(con, slug, ended_ok=False):
     s = con.execute("SELECT * FROM splits WHERE slug = ?", (slug,)).fetchone()
     if not s or s["expires_at"] + GRACE < now():
-        raise HTTPException(404, "Split not found or expired")
+        raise HTTPException(404, "Tab not found or expired")
     if not ended_ok and s["expires_at"] < now():
-        raise HTTPException(410, "This split has ended, so it can't be changed. Start a new one for new expenses.")
+        raise HTTPException(410, "This tab is closed, so it can't be changed. Open a new one for new expenses.")
     return s
 
 
@@ -213,7 +213,7 @@ def require_member(con, s, token):
 
 def unique_name(con, split_id, name):
     if name.strip().lower() in [r["name"].strip().lower() for r in con.execute("SELECT name FROM members WHERE split_id = ?", (split_id,))]:
-        raise HTTPException(400, "That name is already in this split. Pick it from the list instead.")
+        raise HTTPException(400, "That name is already in this tab. Pick it from the list instead.")
 
 
 def count(con, key):
@@ -267,7 +267,7 @@ def get_expense(con, split_id, expense_id):
     return e
 
 
-def create_split(con, body, name="Quick split"):
+def create_split(con, body, name="Quick tab"):
     slug = secrets.token_urlsafe(16)  # 128-bit, unguessable
     pw_hash = hash_password(body.admin_password) if body.admin_password else ""
     t = now()
@@ -309,7 +309,7 @@ def demo(con=Depends(db.get_db)):
     body = SplitIn(members=[
         MemberIn(name="Guest", upi_id="guest@quicktab"), MemberIn(name="Riya", upi_id="riya@quicktab"),
         MemberIn(name="Kabir", upi_id="kabir@quicktab"), MemberIn(name="Aman", upi_id="aman@quicktab")])
-    slug, token, sid, _ = create_split(con, body, "Quick split (demo)")
+    slug, token, sid, _ = create_split(con, body, "Quick tab (demo)")
     count(con, "demos")
     con.commit()
     everyone = me, riya, kabir, aman = member_ids(con, sid)
@@ -491,7 +491,7 @@ def add_member(slug: str, body: JoinIn, x_member_token: Optional[str] = Header(N
     # The headcount is a hard cap, for the admin too: someone has to be removed before anyone new comes in.
     cap = s["capacity"] or MAX_MEMBERS
     if len(member_ids(con, s["id"])) >= cap:
-        raise HTTPException(400, f"This split is full ({cap} people). The admin has to remove someone first.")
+        raise HTTPException(400, f"This tab is full ({cap} people). The admin has to remove someone first.")
     protected, who = member_auth(con, s, x_member_token)
     pw_hash = None
     if protected and who is None:
@@ -516,7 +516,7 @@ def enter(slug: str, member_id: int, body: EnterIn, con=Depends(db.get_db)):
     if rate_limited(("login", slug, member_id), *LOGIN_LIMIT):
         raise HTTPException(429, "Too many attempts. Try again in 15 minutes.")
     if not member_auth(con, s, None)[0]:
-        raise HTTPException(400, "This split has no passwords")
+        raise HTTPException(400, "This tab has no passwords")
     pw_hash = m["pw_hash"]
     if pw_hash and not check_password(body.password, pw_hash):
         raise HTTPException(401, "Wrong password")

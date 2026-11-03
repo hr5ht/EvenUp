@@ -226,7 +226,7 @@ def test_name_and_count():
         n = count()
         slug = c.post("/api/splits", json={"members": [{"name": "Admin"}]}).json()["slug"]
         assert count() == n + 1
-        assert c.get(f"/api/splits/{slug}").json()["name"] == "Quick split"
+        assert c.get(f"/api/splits/{slug}").json()["name"] == "Quick tab"
 
 
 def test_protected():

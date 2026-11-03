@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex">
   <meta name="theme-color" content="#000000">
-  <title>QuickTab split</title>
+  <title>QuickTab</title>
   <link rel="stylesheet" href="/static/style.css">
   <script src="/static/common.js" defer></script>
   <script src="/static/split.js" defer></script>
@@ -25,7 +25,7 @@
 
   <div id="content" class="stagger" hidden>
     <section class="card" id="ended-card" hidden>
-      <p class="overline">Split ended</p>
+      <p class="overline">Tab closed</p>
       <p class="muted" id="ended-text"></p>
       <div class="actions split2">
         <button type="button" id="ended-png">Download image</button>
@@ -59,7 +59,7 @@
       <button type="button" class="tile" data-open="balances-sheet"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M8 17v-4M13 17V9M18 17V5"/></svg></span><span class="tile-text"><strong>Balances</strong><span id="tile-balances"></span></span></button>
       <button type="button" class="tile" data-open="share-sheet"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v13"/></svg></span><span class="tile-text"><strong>Share</strong><span>Link, image</span></span></button>
       <button type="button" class="tile" data-open="activity-sheet"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="tile-text"><strong>Activity</strong><span>History</span></span></button>
-      <button type="button" class="tile tile-wide live-only" data-open="admin-sheet" id="admin-tile" hidden><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span><span class="tile-text"><strong>Admin</strong><span>Members, UPI IDs, delete split</span></span></button>
+      <button type="button" class="tile tile-wide live-only" data-open="admin-sheet" id="admin-tile" hidden><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span><span class="tile-text"><strong>Admin</strong><span>Members, UPI IDs, delete tab</span></span></button>
     </nav>
 
     <h2 class="section-title">Expenses</h2>
@@ -84,7 +84,7 @@
   <div class="sheet-head"><h2>Share</h2><button type="button" class="icon-btn" data-close aria-label="Close">✕</button></div>
   <div class="sheet-body">
     <div class="menu">
-      <button type="button" id="copy-link">Copy link to this split</button>
+      <button type="button" id="copy-link">Copy link to this tab</button>
       <button type="button" id="download-png">Save summary image</button>
       <button type="button" id="download-csv">Download expenses (CSV)</button>
     </div>
@@ -105,7 +105,7 @@
     <input type="text" id="new-member-upi" maxlength="100" placeholder="UPI ID (optional)" class="stack">
     <div class="actions"><button type="button" id="add-member" class="primary block">Add person</button></div>
     <p class="error" id="admin-error"></p>
-    <div class="danger-zone"><button type="button" id="delete-split" class="danger block">Delete this split now</button></div>
+    <div class="danger-zone"><button type="button" id="delete-split" class="danger block">Delete this tab now</button></div>
   </div>
 </dialog>
 
@@ -155,12 +155,12 @@
         <div id="join-pw-box" hidden>
           <label for="join-pw">Create a password</label>
           <input type="password" id="join-pw" minlength="4" maxlength="100" autocomplete="new-password" placeholder="At least 4 characters">
-          <p class="muted hint">You'll need it to open the split as you on another phone.</p>
+          <p class="muted hint">You'll need it to open the tab as you on another phone.</p>
         </div>
         <p class="muted hint" id="join-hint">You can add your UPI ID once you're in.</p>
         <p class="error" id="join-error"></p>
       </div>
-      <button class="primary block" type="submit">Join split</button>
+      <button class="primary block" type="submit">Join tab</button>
       <button type="button" id="join-back" class="link back-link">Back to the list</button>
     </form>
     <!-- After picking a name: create or enter your password (protected split, or an older split's admin). -->
