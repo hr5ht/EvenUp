@@ -219,3 +219,13 @@ def test_login_rate_limit():
         slug = c.post("/api/splits", json={"name": "x", "admin_password": "pass1", "members": [{"name": "A"}]}).json()["slug"]
         codes = [c.post(f"/api/splits/{slug}/admin-login", json={"password": "bad"}).status_code for _ in range(11)]
         assert codes[:10] == [401] * 10 and codes[10] == 429
+
+
+def test_demo():
+    with TestClient(app, client=("10.0.0.5", 1)) as c:
+        r = c.post("/api/demo").json()
+        g = c.get(f"/api/splits/{r['slug']}").json()
+        assert g["admin_id"] == r["admin_id"] == g["members"][0]["id"]
+        assert len(g["expenses"]) == 5 and sum(g["balances"].values()) == 0
+        assert all(m["upi_id"].endswith("@evenup") for m in g["members"])
+        assert c.delete(f"/api/splits/{r['slug']}", headers={"X-Admin-Token": r["admin_token"]}).status_code == 200

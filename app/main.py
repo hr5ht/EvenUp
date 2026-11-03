@@ -77,7 +77,7 @@ async def security_headers(request, call_next):
     # Behind Vercel the socket peer is Vercel's proxy; it sets x-real-ip to the visitor's address.
     ip = (os.environ.get("VERCEL") and request.headers.get("x-real-ip")) or (request.client.host if request.client else "?")
     if request.method != "GET" and request.url.path.startswith("/api/"):
-        creating = request.method == "POST" and request.url.path == "/api/splits"
+        creating = request.method == "POST" and request.url.path in ("/api/splits", "/api/demo")
         kind, limit = ("create", CREATE_LIMIT) if creating else ("write", WRITE_LIMIT)
         if rate_limited((kind, ip), *limit):
             resp = JSONResponse({"detail": "Too many requests. Wait a bit and try again."}, status_code=429)
@@ -256,6 +256,28 @@ def create(body: SplitIn, con=Depends(db.get_db)):
     slug, token, _, admin_id = create_split(con, body)
     con.commit()
     return {"slug": slug, "admin_token": token, "admin_id": admin_id}
+
+
+@app.post("/api/demo")
+def demo(con=Depends(db.get_db)):
+    """A fresh, filled-in split for someone who just wants to look around. Same lifetime as any split.
+    Guest ends up owing, so the Pay flow is there to try."""
+    # @evenup isn't a real UPI handle, so a demo Pay can never reach a real account.
+    body = SplitIn(name="Goa trip (demo)", admin_password=secrets.token_urlsafe(12), members=[
+        MemberIn(name="Guest", upi_id="guest@evenup"), MemberIn(name="Riya", upi_id="riya@evenup"),
+        MemberIn(name="Kabir", upi_id="kabir@evenup"), MemberIn(name="Aman", upi_id="aman@evenup")])
+    slug, token, sid, _ = create_split(con, body)
+    con.commit()
+    everyone = me, riya, kabir, aman = member_ids(con, sid)
+    for e in [
+        ExpenseIn(paid_by=riya, amount_paise=1200000, description="Villa, 2 nights", split="equal", participants=list(everyone)),
+        ExpenseIn(paid_by=me, amount_paise=320000, description="Dinner at the shack", split="equal", participants=list(everyone)),
+        ExpenseIn(paid_by=kabir, amount_paise=180000, description="Scooter rentals", split="equal", participants=[me, kabir, aman]),
+        ExpenseIn(paid_by=aman, amount_paise=600000, description="Scuba diving", split="exact", shares={riya: 300000, aman: 300000}),
+        ExpenseIn(paid_by=aman, amount_paise=100000, description="Aman paid Riya · Cash", split="exact", shares={riya: 100000}, kind="payment"),
+    ]:
+        add_expense(slug, e, con)
+    return {"slug": slug, "admin_token": token, "admin_id": me}
 
 
 @app.post("/api/splits/{slug}/admin-login")

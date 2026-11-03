@@ -7,6 +7,8 @@
   <title>EvenUp · Split bills, settle with UPI</title>
   <meta name="description" content="Split bills with friends and settle up with UPI in one tap. No account needed.">
   <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/common.js" defer></script>
+  <script src="/static/home.js" defer></script>
 </head>
 <body>
 <header class="topbar">
@@ -19,7 +21,9 @@
     <p class="lead">Add who paid what. EvenUp works out the fewest payments, and everyone pays in one tap with GPay, PhonePe or Paytm.</p>
     <div class="cta">
       <a class="button primary block" href="/new">Start a quick split</a>
+      <button type="button" class="block" id="demo">Try a live demo</button>
     </div>
+    <p class="error center" id="demo-error"></p>
     <p class="muted center">No sign-up. Each split is open for 48 hours, then read-only for a day so you can download the summary, then deleted.</p>
   </section>
 
