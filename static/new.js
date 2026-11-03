@@ -56,7 +56,15 @@ $("create").onsubmit = async (e) => {
       ? "Everyone opens the same link, picks their name and creates a password. Yours asks for the one you just set."
       : "Everyone opens the same link and picks their name.";
     $("copy-share").onclick = (ev) => copyText(share, ev.target);
-    $("open").href = share;
+    // The phone's share sheet (WhatsApp, Telegram…). Without one, as on most laptops: WhatsApp Web.
+    $("share").onclick = async () => {
+      const text = "Add what you paid on EvenUp, we'll settle up with UPI.";
+      if (navigator.share) {
+        try { await navigator.share({ title: "Quick split", text, url: share }); } catch { /* closed the sheet */ }
+      } else {
+        window.open(`https://wa.me/?text=${encodeURIComponent(`${text} ${share}`)}`, "_blank", "noopener");
+      }
+    };
     $("create").hidden = true;
     $("created").hidden = false;
   } catch (err) {
