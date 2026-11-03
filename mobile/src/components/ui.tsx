@@ -1,7 +1,7 @@
 // The website's design language in React Native: sharp corners, hairlines, mono uppercase labels, one blue accent.
 import { Children, Fragment, isValidElement, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
-  ActivityIndicator, KeyboardAvoidingView, Modal, PanResponder, Platform, Pressable, ScrollView, Text, TextInput, View,
+  ActivityIndicator, KeyboardAvoidingView, Modal, PanResponder, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
   useWindowDimensions,
   type PressableProps, type StyleProp, type TextInputProps, type TextProps, type ViewStyle,
 } from "react-native";
@@ -13,13 +13,14 @@ import Svg, { Circle, Path, Rect } from "react-native-svg";
 import { cssInterop } from "nativewind";
 import { MONO, useTheme } from "@/lib/theme";
 
-// Reanimated's views (entering animations) take className like any other view.
+// Reanimated's views (entering animations) take className like any other view. But never className AND style on
+// one: on Android the interop drops the style (backgrounds, animated transforms), so animated ones use style only.
 cssInterop(Reanimated.View, { className: "style" });
 
 // Text in the theme's text colour, unless the className gives it another one.
 const COLOR = /(^|\s)text-(text|muted|dim|accent|accent-text|ink-text|owe|owed)(\s|$)/;
 export function T({ mono, className = "", style, ...props }: TextProps & { mono?: boolean; className?: string }) {
-  return <Text className={`${COLOR.test(className) ? "" : "text-text "}${className}`} style={[mono && { fontFamily: MONO }, style]} {...props} />;
+  return <Text className={`${COLOR.test(className) ? "" : "text-text "}${className}`} style={mono ? [{ fontFamily: MONO }, style] : style} {...props} />;
 }
 
 // Pressable that dims while held. Plain styles only: a style function drops the className styles.
@@ -41,6 +42,7 @@ export const Label = ({ children, className = "" }: { children: ReactNode; class
 );
 
 export function Tag({ children, live, className = "" }: { children: ReactNode; live?: boolean; className?: string }) {
+  const { colors } = useTheme();
   const pulse = useSharedValue(1);
   useEffect(() => {
     if (live) pulse.value = withRepeat(withTiming(0.3, { duration: 900, easing: Easing.inOut(Easing.quad) }), -1, true);
@@ -49,7 +51,7 @@ export function Tag({ children, live, className = "" }: { children: ReactNode; l
   return (
     <View className={`flex-row items-center gap-1.5 ${className}`}>
       <T mono className="text-[11px] text-dim">[</T>
-      {live && <Reanimated.View className="h-1.5 w-1.5 bg-owed" style={dot} />}
+      {live && <Reanimated.View style={[{ width: 6, height: 6, backgroundColor: colors.owed }, dot]} />}
       <T mono className={`text-[11px] uppercase tracking-[1px] ${live ? "text-owed" : "text-muted"}`}>{children}</T>
       <T mono className="text-[11px] text-dim">]</T>
     </View>
@@ -157,10 +159,10 @@ export function Sheet({ open, onClose, title, kicker, children, footer, overlay 
   return (
     <Modal visible transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} className="flex-1 justify-end" style={vars}>
-        <Reanimated.View className="absolute inset-0" style={[{ backgroundColor: "rgba(5,5,4,0.55)" }, backdrop]}>
+        <Reanimated.View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(5,5,4,0.55)" }, backdrop]}>
           <Pressable accessibilityLabel="Close" onPress={onClose} className="flex-1" />
         </Reanimated.View>
-        <Reanimated.View className="max-h-[90%] border-t border-line-2 bg-bg" style={[{ paddingBottom: insets.bottom, backgroundColor: colors.bg }, panel]}>
+        <Reanimated.View style={[{ maxHeight: "90%", borderTopWidth: 1, borderColor: colors["line-2"], backgroundColor: colors.bg, paddingBottom: insets.bottom }, panel]}>
           <View {...pan.panHandlers}>
             <View className="items-center pt-2"><View className="h-1 w-9 bg-line-2" /></View>
             <View className="flex-row items-center justify-between border-b border-line pb-3 pl-5 pr-2 pt-1">
@@ -204,10 +206,10 @@ export function useConfirm() {
   const el = req && (
     <Modal visible transparent animationType="none" onRequestClose={() => done(false)} statusBarTranslucent>
       <View className="flex-1 items-center justify-center px-6" style={vars}>
-        <Reanimated.View entering={FadeIn.duration(200)} className="absolute inset-0" style={{ backgroundColor: "rgba(5,5,4,0.6)" }}>
+        <Reanimated.View entering={FadeIn.duration(200)} style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(5,5,4,0.6)" }]}>
           <Pressable accessibilityLabel="Cancel" onPress={() => done(false)} className="flex-1" />
         </Reanimated.View>
-        <Reanimated.View entering={popIn} className="w-full max-w-[400px] border border-line-2 bg-bg" style={{ backgroundColor: colors.bg }}>
+        <Reanimated.View entering={popIn} style={{ width: "100%", maxWidth: 400, borderWidth: 1, borderColor: colors["line-2"], backgroundColor: colors.bg }}>
           <View className="gap-2 p-5">
             <Label className="text-owe">[ Confirm ]</Label>
             <T className="text-xl font-bold tracking-tight">{req.title}</T>
@@ -241,8 +243,8 @@ export function Toast({ msg, onDone }: { msg: ToastMsg; onDone: () => void }) {
   return (
     <View pointerEvents="box-none" className="absolute left-4 right-4" style={{ bottom: insets.bottom + 88 }}>
       {msg && (
-        <Reanimated.View key={msg.text} entering={FadeInDown.springify().damping(18)} exiting={FadeOutDown.duration(200)} className="bg-ink"
-          style={{ shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 18, shadowOffset: { width: 0, height: 10 }, elevation: 8 }}>
+        <Reanimated.View key={msg.text} entering={FadeInDown.springify().damping(18)} exiting={FadeOutDown.duration(200)}
+          style={{ backgroundColor: colors.ink, shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 18, shadowOffset: { width: 0, height: 10 }, elevation: 8 }}>
           <View className="flex-row items-center gap-3 px-4 py-3.5">
             <View className={`h-5 w-5 items-center justify-center ${msg.error ? "bg-owe" : "bg-accent"}`}>
               {msg.error ? <T className="text-xs font-bold text-accent-text">!</T> : <Icon.Check color="#fff" size={14} />}
@@ -254,7 +256,7 @@ export function Toast({ msg, onDone }: { msg: ToastMsg; onDone: () => void }) {
               </Tap>
             )}
           </View>
-          <Reanimated.View className="h-0.5" style={[{ backgroundColor: msg.error ? colors.owe : colors.accent, transformOrigin: "left" }, bar]} />
+          <Reanimated.View style={[{ height: 2, backgroundColor: msg.error ? colors.owe : colors.accent, transformOrigin: "left" }, bar]} />
         </Reanimated.View>
       )}
     </View>
