@@ -132,7 +132,7 @@ export default function NewTab() {
             <Toggle label="Add names now" value={addNames} onChange={setAddNames} />
           </Opt>
           {addNames && (
-            <Anim entering={FadeInDown.duration(300)} className="gap-3 bg-surface px-4 pb-4">
+            <Anim entering={FadeInDown.duration(300)} className="gap-3 bg-surface p-4">
               {/* You're 01; the others are numbered after you, one hairline row each. */}
               <View className="border border-line-2 bg-bg">
                 <View className="h-11 flex-row items-center border-b border-line">
@@ -157,7 +157,7 @@ export default function NewTab() {
             <Toggle label="Password protect" value={protect} onChange={setProtect} />
           </Opt>
           {protect && (
-            <Anim entering={FadeInDown.duration(300)} className="gap-3 bg-surface px-4 pb-4">
+            <Anim entering={FadeInDown.duration(300)} className="gap-3 bg-surface p-4">
               <View className={`h-12 flex-row items-center border bg-bg ${pwFocus ? "border-text" : "border-line-2"}`}>
                 <View className="h-full w-12 items-center justify-center border-r border-line"><Icon.Lock color={colors.muted} size={16} /></View>
                 <Field value={password} onChangeText={setPassword} secureTextEntry={!showPw} autoComplete="new-password" maxLength={100}
