@@ -193,9 +193,8 @@ function openPicker() {
     ? "Pick your name. The first time, you create a password, so nobody else can use your name."
     : "Pick your name to open the split.";
   const people = data.members.map((m) => {
-    const tag = m.unnamed ? "open" : m.id === data.admin_id ? "admin" : null;
     const b = el("button", { type: "button", className: m.id === identity.me ? "current" : "" },
-      el("span", { textContent: m.name }), tag ? el("span", { className: "badge", textContent: tag }) : null);
+      el("span", { textContent: m.name }), m.id === data.admin_id ? el("span", { className: "badge", textContent: "admin" }) : null);
     b.onclick = () => pick(m);
     return b;
   });
@@ -210,19 +209,15 @@ function pick(m) {
   const admin = m.id === data.admin_id;
   const signedIn = m.id === identity.me && (!data.protected || identity.token);
   // An ended split can't be changed, so anyone can look as anyone, no password.
-  const needsName = m.unnamed && !data.ended;
   const needsPassword = data.protected && !data.ended && !signedIn;
   const legacy = admin && data.admin_login && !identity.adminToken && !data.ended;
-  if (!needsName && !needsPassword && !legacy) {
+  if (!needsPassword && !legacy) {
     // The admin token stays on this device whoever is picked: only the admin's name uses it.
     setIdentity({ me: m.id, adminToken: identity.adminToken, token: m.id === identity.me ? identity.token : null });
     $("who-dialog").close();
     return;
   }
   picking = { member: m, legacy };
-  $("enter-name-box").hidden = !needsName;
-  $("enter-name").value = "";
-  $("enter-pw-box").hidden = !(needsPassword || legacy);
   $("admin-pw").value = "";
   const create = needsPassword && !m.has_password;
   $("pw-label").textContent = legacy ? "This is the admin. Enter the admin password to continue."
@@ -230,8 +225,8 @@ function pick(m) {
     : "Enter your password";
   $("admin-pw").autocomplete = create ? "new-password" : "current-password";
   $("pw-error").textContent = "";
-  showPickerStep("enter", needsName ? "Join as yourself" : m.name);
-  (needsName ? $("enter-name") : $("admin-pw")).focus();
+  showPickerStep("enter", m.name);
+  $("admin-pw").focus();
 }
 
 $("pw-form").onsubmit = async (ev) => {
@@ -243,13 +238,8 @@ $("pw-form").onsubmit = async (ev) => {
       setIdentity({ me: m.id, adminToken: admin_token, token: null });
       toast("Admin unlocked");
     } else {
-      const r = await api("POST", `${base}/members/${m.id}/enter`, {
-        name: m.unnamed ? $("enter-name").value.trim() : null,
-        password: $("admin-pw").value,
-      });
-      identity = { me: m.id, token: r.token, adminToken: data.protected ? r.admin_token : identity.adminToken };
-      saveIdentity(slug, identity);
-      await load();
+      const r = await api("POST", `${base}/members/${m.id}/enter`, { password: $("admin-pw").value });
+      setIdentity({ me: m.id, token: r.token, adminToken: r.admin_token });
     }
     $("who-dialog").close();
   } catch (err) {
@@ -643,7 +633,6 @@ const ACTIONS = {
   deleted: "Deleted",
   restored: "Restored",
   member_added: "Member added:",
-  member_named: "Joined:",
   member_removed: "Member removed:",
   upi_set: "UPI ID updated for",
 };

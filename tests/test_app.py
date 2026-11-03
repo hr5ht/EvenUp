@@ -39,7 +39,7 @@ def test_settle():
 
 def test_flow():
     with TestClient(app) as c:
-        r = c.post("/api/splits", json={"name": "Dinner", "members": [
+        r = c.post("/api/splits", json={"admin_password": "pass1", "name": "Dinner", "members": [
             {"name": "A", "upi_id": "a@ybl"}, {"name": "B"}, {"name": "C"}]})
         assert r.status_code == 200
         slug, token = r.json()["slug"], r.json()["admin_token"]
@@ -87,8 +87,10 @@ def test_flow():
             "paid_by": 999999, "amount_paise": 100, "description": "x", "split": "equal", "participants": [a]})
         assert r.status_code == 400
 
-        # no password: nobody can log in as admin, the creating device's token is the only way
-        assert not g["protected"] and c.post(f"/api/splits/{slug}/admin-login", json={"password": ""}).status_code == 401
+        # admin login: wrong password, right password gives the same token create returned
+        assert not g["protected"] and g["admin_login"]
+        assert c.post(f"/api/splits/{slug}/admin-login", json={"password": "nope"}).status_code == 401
+        assert c.post(f"/api/splits/{slug}/admin-login", json={"password": "pass1"}).json()["admin_token"] == token
 
         # anyone can join; names stay unique
         assert c.post(f"/api/splits/{slug}/members", json={"name": "D"}).status_code == 200
@@ -117,17 +119,17 @@ def test_flow():
 
 def test_cross_split_access_and_guards():
     with TestClient(app) as c:
-        s1 = c.post("/api/splits", json={"name": "One", "members": [{"name": "A"}]}).json()["slug"]
-        s2 = c.post("/api/splits", json={"name": "Two", "members": [{"name": "B"}]}).json()["slug"]
+        s1 = c.post("/api/splits", json={"admin_password": "pass1", "name": "One", "members": [{"name": "A"}]}).json()["slug"]
+        s2 = c.post("/api/splits", json={"admin_password": "pass1", "name": "Two", "members": [{"name": "B"}]}).json()["slug"]
         a = c.get(f"/api/splits/{s1}").json()["members"][0]["id"]
         eid = c.post(f"/api/splits/{s1}/expenses", json={
             "paid_by": a, "amount_paise": 100, "description": "x", "split": "equal", "participants": [a]}).json()["id"]
         # expense of split 1 can't be touched through split 2
         assert c.delete(f"/api/splits/{s2}/expenses/{eid}").status_code == 404
         # honeypot, duplicate names, bad UPI
-        assert c.post("/api/splits", json={"name": "x", "members": [{"name": "A"}], "website": "spam"}).status_code == 400
-        assert c.post("/api/splits", json={"name": "x", "members": [{"name": "A"}, {"name": "a"}]}).status_code == 400
-        assert c.post("/api/splits", json={"name": "x", "members": [{"name": "A", "upi_id": "nope"}]}).status_code == 422
+        assert c.post("/api/splits", json={"admin_password": "pass1", "name": "x", "members": [{"name": "A"}], "website": "spam"}).status_code == 400
+        assert c.post("/api/splits", json={"admin_password": "pass1", "name": "x", "members": [{"name": "A"}, {"name": "a"}]}).status_code == 400
+        assert c.post("/api/splits", json={"admin_password": "pass1", "name": "x", "members": [{"name": "A", "upi_id": "nope"}]}).status_code == 422
         # cron needs the secret
         assert c.post("/cron/cleanup").status_code == 403
         assert c.post("/cron/cleanup", headers={"X-Cron-Secret": "s3cret"}).status_code == 200
@@ -138,7 +140,7 @@ def test_cross_split_access_and_guards():
 
 def test_settle_up_payment():
     with TestClient(app, client=("10.0.0.2", 1)) as c:
-        slug = c.post("/api/splits", json={"name": "P", "members": [{"name": "A"}, {"name": "B"}]}).json()["slug"]
+        slug = c.post("/api/splits", json={"admin_password": "pass1", "name": "P", "members": [{"name": "A"}, {"name": "B"}]}).json()["slug"]
         a, b = [m["id"] for m in c.get(f"/api/splits/{slug}").json()["members"]]
         c.post(f"/api/splits/{slug}/expenses", json={
             "paid_by": a, "amount_paise": 1000, "description": "Food", "split": "equal", "participants": [a, b]})
@@ -154,14 +156,14 @@ def test_settle_up_payment():
 
 def test_rate_limit():
     with TestClient(app, client=("10.0.0.1", 1)) as c:
-        codes = [c.post("/api/splits", json={"name": "x", "members": [{"name": "A"}]}).status_code for _ in range(11)]
+        codes = [c.post("/api/splits", json={"admin_password": "pass1", "name": "x", "members": [{"name": "A"}]}).status_code for _ in range(11)]
         assert codes[:10] == [200] * 10 and codes[10] == 429
 
 
 def test_upi_encrypted_at_rest():
     from app import db
     with TestClient(app) as c:
-        slug = c.post("/api/splits", json={"name": "x", "members": [{"name": "A", "upi_id": "secret@ybl"}]}).json()["slug"]
+        slug = c.post("/api/splits", json={"admin_password": "pass1", "name": "x", "members": [{"name": "A", "upi_id": "secret@ybl"}]}).json()["slug"]
         assert c.get(f"/api/splits/{slug}").json()["members"][0]["upi_id"] == "secret@ybl"
         con = db.connect()
         stored = con.execute("SELECT upi_id FROM members WHERE name = 'A' ORDER BY id DESC").fetchone()["upi_id"]
@@ -173,7 +175,7 @@ def test_qr():
     from app.main import upi_link
     assert upi_link("a@ybl", "Aman K", 12345, "Goa trip") == "upi://pay?pa=a@ybl&pn=Aman%20K&am=123.45&cu=INR&tn=Goa%20trip"
     with TestClient(app, client=("10.0.0.3", 1)) as c:
-        slug = c.post("/api/splits", json={"name": "Q", "members": [
+        slug = c.post("/api/splits", json={"admin_password": "pass1", "name": "Q", "members": [
             {"name": "Aman", "upi_id": "aman@okaxis"}, {"name": "Kabir"}]}).json()["slug"]
         aman, kabir = [m["id"] for m in c.get(f"/api/splits/{slug}").json()["members"]]
         r = c.get(f"/api/splits/{slug}/qr?to={aman}&amount=80000")
@@ -192,7 +194,7 @@ def test_lifetime():
         con.close()
 
     with TestClient(app, client=("10.0.0.4", 1)) as c:
-        slug = c.post("/api/splits", json={"name": "L", "members": [
+        slug = c.post("/api/splits", json={"admin_password": "pass1", "name": "L", "members": [
             {"name": "A", "upi_id": "a@ybl"}, {"name": "B"}]}).json()["slug"]
         a, b = [m["id"] for m in c.get(f"/api/splits/{slug}").json()["members"]]
         exp = {"paid_by": b, "amount_paise": 1000, "description": "x", "split": "equal", "participants": [a, b]}
@@ -230,34 +232,24 @@ def test_demo():
         assert c.delete(f"/api/splits/{r['slug']}", headers={"X-Admin-Token": r["admin_token"]}).status_code == 200
 
 
-def test_slots_and_count():
+def test_name_and_count():
     from app import db
     with TestClient(app, client=("10.0.0.6", 1)) as c:
-        before = lambda: db.connect().execute("SELECT value FROM stats WHERE key = 'splits'").fetchone()  # noqa: E731
-        n = (before() or {"value": 0})["value"]
-        r = c.post("/api/splits", json={"members": [{"name": "Admin"}], "size": 3}).json()
-        assert before()["value"] == n + 1
-        slug = r["slug"]
-        g = c.get(f"/api/splits/{slug}").json()
-        assert g["name"] == "Quick split"
-        assert [(m["name"], m["unnamed"]) for m in g["members"]] == [("Admin", False), ("Person 2", True), ("Person 3", True)]
-        p2 = g["members"][1]["id"]
-        enter = lambda m, **b: c.post(f"/api/splits/{slug}/members/{m}/enter", json=b)  # noqa: E731
-        assert enter(p2).status_code == 400  # needs a name
-        assert enter(p2, name="admin").status_code == 400  # taken
-        assert enter(p2, name="Riya").json() == {"token": None, "admin_token": None}  # unprotected: no session needed
-        assert [m["name"] for m in c.get(f"/api/splits/{slug}").json()["members"]][1] == "Riya"
-        assert c.post("/api/splits", json={"members": [{"name": "A"}, {"name": "B"}], "size": 1}).status_code == 400
+        count = lambda: (db.connect().execute("SELECT value FROM stats WHERE key = 'splits'").fetchone() or {"value": 0})["value"]  # noqa: E731
+        n = count()
+        slug = c.post("/api/splits", json={"admin_password": "pass1", "members": [{"name": "Admin"}]}).json()["slug"]
+        assert count() == n + 1
+        assert c.get(f"/api/splits/{slug}").json()["name"] == "Quick split"
 
 
 def test_protected():
     with TestClient(app, client=("10.0.0.7", 1)) as c:
-        r = c.post("/api/splits", json={"members": [{"name": "A"}, {"name": "B"}], "size": 3, "admin_password": "pass1"}).json()
+        r = c.post("/api/splits", json={"admin_password": "pass1", "protected": True, "members": [{"name": "A"}, {"name": "B"}]}).json()
         slug, admin = r["slug"], {"X-Member-Token": r["admin_token"], "X-Admin-Token": r["admin_token"]}
         g = c.get(f"/api/splits/{slug}").json()
         assert g["protected"] and not g["admin_login"]
-        assert [m["has_password"] for m in g["members"]] == [True, False, False]
-        a, b, p3 = [m["id"] for m in g["members"]]
+        assert [m["has_password"] for m in g["members"]] == [True, False]
+        a, b = [m["id"] for m in g["members"]]
         exp = {"paid_by": b, "amount_paise": 1000, "description": "x", "split": "equal", "participants": [a, b]}
         url = f"/api/splits/{slug}"
         enter = lambda m, **body: c.post(f"{url}/members/{m}/enter", json=body)  # noqa: E731
@@ -278,10 +270,6 @@ def test_protected():
 
         # the admin's password is their member password too
         assert enter(a, password="pass1").json()["admin_token"] == r["admin_token"]
-
-        # a "Person 3" slot is claimed with a name and a new password
-        assert enter(p3, name="C", password="cpass").json()["token"]
-        assert c.get(url).json()["members"][2]["name"] == "C"
 
         # UPI: only yourself or the admin
         assert c.put(f"{url}/members/{b}/upi", json={"upi_id": "b@ybl"}).status_code == 403

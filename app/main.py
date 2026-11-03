@@ -122,10 +122,9 @@ class MemberIn(BaseModel):
 
 
 class SplitIn(BaseModel):
-    members: List[MemberIn] = Field(min_length=1, max_length=50)  # the people named so far, the creator (admin) first
-    size: Optional[int] = Field(default=None, ge=1, le=50)  # everyone splitting. The unnamed rest are "Person 3" slots
-    # Set: the split is password protected and every member creates their own password. Unset: no passwords at all.
-    admin_password: Optional[str] = Field(default=None, min_length=4, max_length=100)
+    members: List[MemberIn] = Field(min_length=1, max_length=50)  # the creator (admin) first, the rest join from the link
+    admin_password: str = Field(min_length=4, max_length=100)  # opening the split as the admin always needs it
+    protected: bool = False  # everyone else creates their own password too
     website: str = ""  # honeypot, humans never see it
 
 
@@ -134,7 +133,6 @@ class JoinIn(MemberIn):
 
 
 class EnterIn(BaseModel):
-    name: Optional[str] = Field(default=None, min_length=1, max_length=40)  # claiming a "Person 3" slot
     password: str = Field(default="", max_length=100)
 
 
@@ -266,19 +264,16 @@ def get_expense(con, split_id, expense_id):
 
 def create_split(con, body, name="Quick split"):
     slug = secrets.token_urlsafe(16)  # 128-bit, unguessable
-    # No password: admin_pw_hash stays "", so only the creating device, holding the token, is admin.
-    pw_hash = hash_password(body.admin_password) if body.admin_password else ""
+    pw_hash = hash_password(body.admin_password)
     t = now()
     sid = con.execute(
         "INSERT INTO splits (slug, name, admin_pw_hash, last_activity_at, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING id",
         (slug, name, pw_hash, t, t + TTL, t),
     ).fetchone()["id"]
-    people = [(m.name, enc(m.upi_id), 0) for m in body.members]
-    people += [(f"Person {i}", None, 1) for i in range(len(people) + 1, (body.size or 0) + 1)]
-    ids = [con.execute("INSERT INTO members (split_id, name, upi_id, unnamed) VALUES (?, ?, ?, ?) RETURNING id",
-                       (sid, *p)).fetchone()["id"] for p in people]
-    # In a protected split the admin password is also the admin's own member password.
-    con.execute("UPDATE members SET pw_hash = ? WHERE id = ?", (pw_hash or None, ids[0]))
+    ids = [con.execute("INSERT INTO members (split_id, name, upi_id) VALUES (?, ?, ?) RETURNING id",
+                       (sid, m.name, enc(m.upi_id))).fetchone()["id"] for m in body.members]
+    if body.protected:  # the admin password is also the admin's own member password
+        con.execute("UPDATE members SET pw_hash = ? WHERE id = ?", (pw_hash, ids[0]))
     con.execute("UPDATE splits SET admin_member_id = ? WHERE id = ?", (ids[0], sid))
     log(con, sid, "created", None, {"name": name})
     return slug, admin_token(sid, pw_hash), sid, ids[0]
@@ -293,8 +288,6 @@ def create(body: SplitIn, con=Depends(db.get_db)):
     names = [m.name.strip().lower() for m in body.members]
     if len(set(names)) != len(names):
         raise HTTPException(400, "Member names must be unique")
-    if body.size and body.size < len(body.members):
-        raise HTTPException(400, "More names than people")
     slug, token, _, admin_id = create_split(con, body)
     count(con, "splits")
     con.commit()
@@ -306,7 +299,7 @@ def demo(con=Depends(db.get_db)):
     """A fresh, filled-in split for someone who just wants to look around. Same lifetime as any split.
     Guest ends up owing, so the Pay flow is there to try."""
     # @evenup isn't a real UPI handle, so a demo Pay can never reach a real account.
-    body = SplitIn(members=[
+    body = SplitIn(admin_password=secrets.token_urlsafe(12), members=[
         MemberIn(name="Guest", upi_id="guest@evenup"), MemberIn(name="Riya", upi_id="riya@evenup"),
         MemberIn(name="Kabir", upi_id="kabir@evenup"), MemberIn(name="Aman", upi_id="aman@evenup")])
     slug, token, sid, _ = create_split(con, body, "Quick split (demo)")
@@ -341,7 +334,7 @@ def read(slug: str, con=Depends(db.get_db)):
     # Nobody pays through an ended split, so its UPI IDs stop being shown.
     rows = con.execute("SELECT * FROM members WHERE split_id = ? ORDER BY id", (s["id"],)).fetchall()
     members = [{"id": r["id"], "name": r["name"], "upi_id": None if ended else dec(r["upi_id"]),
-                "has_password": r["pw_hash"] is not None, "unnamed": bool(r["unnamed"])} for r in rows]
+                "has_password": r["pw_hash"] is not None} for r in rows]
     protected = any(m["has_password"] for m in members if m["id"] == s["admin_member_id"])
     # Every share in the split in one query, not one query per expense.
     shares = defaultdict(dict)
@@ -363,8 +356,8 @@ def read(slug: str, con=Depends(db.get_db)):
         "ended": ended,
         "admin_id": s["admin_member_id"],
         "protected": protected,
-        # Splits from before per-member passwords: the admin still unlocks with the admin password.
-        "admin_login": not protected and bool(s["admin_pw_hash"]),
+        # Without per-member passwords the admin still unlocks their name with the admin password.
+        "admin_login": not protected,
         "members": members,
         "expenses": expenses,
         "balances": bal,
@@ -503,32 +496,26 @@ def add_member(slug: str, body: JoinIn, x_member_token: Optional[str] = Header(N
 
 @app.post("/api/splits/{slug}/members/{member_id}/enter")
 def enter(slug: str, member_id: int, body: EnterIn, con=Depends(db.get_db)):
-    """Picking your name at "Who are you?". Claims a "Person 3" slot with a real name. In a protected split,
-    the first pick creates your password and later picks check it. Returns a session token."""
+    """Picking your name at "Who are you?" in a protected split: the first pick creates your password,
+    later picks check it. Returns a session token."""
     s = load_split(con, slug)
     m = con.execute("SELECT * FROM members WHERE id = ? AND split_id = ?", (member_id, s["id"])).fetchone()
     if not m:
         raise HTTPException(404, "Member not found")
     if rate_limited(("login", slug, member_id), *LOGIN_LIMIT):
         raise HTTPException(429, "Too many attempts. Try again in 15 minutes.")
-    protected, _ = member_auth(con, s, None)
+    if not member_auth(con, s, None)[0]:
+        raise HTTPException(400, "This split has no passwords")
     pw_hash = m["pw_hash"]
-    if protected:
-        if pw_hash and not check_password(body.password, pw_hash):
-            raise HTTPException(401, "Wrong password")
-        if not pw_hash:
-            if len(body.password) < 4:
-                raise HTTPException(400, "Pick a password, at least 4 characters")
-            pw_hash = hash_password(body.password)
-            con.execute("UPDATE members SET pw_hash = ? WHERE id = ?", (pw_hash, member_id))
-    if m["unnamed"]:
-        if not body.name or not body.name.strip():
-            raise HTTPException(400, "Type your name")
-        unique_name(con, s["id"], body.name)
-        con.execute("UPDATE members SET name = ?, unnamed = 0 WHERE id = ?", (body.name.strip(), member_id))
-        log(con, s["id"], "member_named", None, {"name": body.name.strip(), "was": m["name"]})
-    con.commit()
-    token = pw_hash and admin_token(s["id"], pw_hash)
+    if pw_hash and not check_password(body.password, pw_hash):
+        raise HTTPException(401, "Wrong password")
+    if not pw_hash:
+        if len(body.password) < 4:
+            raise HTTPException(400, "Pick a password, at least 4 characters")
+        pw_hash = hash_password(body.password)
+        con.execute("UPDATE members SET pw_hash = ? WHERE id = ?", (pw_hash, member_id))
+        con.commit()
+    token = admin_token(s["id"], pw_hash)
     return {"token": token, "admin_token": token if member_id == s["admin_member_id"] else None}
 
 

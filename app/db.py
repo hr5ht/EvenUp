@@ -23,8 +23,7 @@ CREATE TABLE IF NOT EXISTS members (
     split_id INTEGER NOT NULL REFERENCES splits(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     upi_id TEXT,
-    pw_hash TEXT,  -- password protected splits only, set by the member the first time they pick their name
-    unnamed INTEGER NOT NULL DEFAULT 0  -- a "Person 3" slot nobody has claimed yet
+    pw_hash TEXT  -- password protected splits only, set by the member the first time they pick their name
 );
 CREATE TABLE IF NOT EXISTS expenses (
     id {pk},
@@ -61,7 +60,7 @@ CREATE TABLE IF NOT EXISTS stats (
 );
 """
 # Columns added after launch, for databases created before them.
-NEW_COLUMNS = {"members": [("pw_hash", "TEXT"), ("unnamed", "INTEGER NOT NULL DEFAULT 0")]}
+NEW_COLUMNS = {"members": [("pw_hash", "TEXT")]}
 
 
 class PgConnection:

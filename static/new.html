@@ -25,6 +25,10 @@
     <label for="my-name">Your name <span class="badge">admin</span></label>
     <input type="text" id="my-name" maxlength="40" placeholder="Your name" required>
 
+    <label for="admin-password">Admin password</label>
+    <input type="password" id="admin-password" minlength="4" maxlength="100" autocomplete="new-password" placeholder="At least 4 characters" required>
+    <p class="muted">Needed to open the split as you, the admin, on any device.</p>
+
     <label for="size">How many people are splitting, including you?</label>
     <div class="row stepper">
       <button type="button" id="size-down" aria-label="One less">−</button>
@@ -35,14 +39,11 @@
     <label class="check"><input type="checkbox" id="add-names"> Add everyone's names now</label>
     <div id="names-box" hidden>
       <div id="members"></div>
-      <p class="muted">Leave any blank: they type their own name when they open the link.</p>
+      <p class="muted">Leave any blank: they tap "I'm not on the list" when they open the link and add themselves.</p>
     </div>
 
-    <label class="check"><input type="checkbox" id="protect"> Protect with passwords</label>
-    <div id="protect-box" hidden>
-      <input type="password" id="admin-password" minlength="4" maxlength="100" autocomplete="new-password" placeholder="Your password, at least 4 characters">
-      <p class="muted">You use it to open the split as yourself on any device. Everyone else creates their own the first time they pick their name, so nobody can act as someone else.</p>
-    </div>
+    <label class="check"><input type="checkbox" id="protect"> Everyone else needs a password too</label>
+    <p class="muted" id="protect-note" hidden>Each person creates their own the first time they pick their name, so nobody can act as someone else.</p>
 
     <input type="text" name="website" id="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
 

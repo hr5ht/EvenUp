@@ -534,4 +534,4 @@ input[type="number"] {
 input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 label.check { display: flex; align-items: center; gap: var(--s3); margin-top: var(--s5); color: var(--text); font-size: 15px; cursor: pointer; }
 label.check input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); }
-#names-box, #protect-box { margin-top: var(--s3); }
+#names-box, #protect-note { margin-top: var(--s3); }
