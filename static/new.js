@@ -15,7 +15,12 @@ $("size-down").onclick = () => { $("size").value = size() - 1; syncNames(); };
 $("size-up").onclick = () => { $("size").value = size() + 1; syncNames(); };
 $("size").oninput = syncNames;
 $("add-names").onchange = (e) => { $("names-box").hidden = !e.target.checked; syncNames(); };
-$("protect").onchange = (e) => { $("protect-note").hidden = !e.target.checked; };
+$("protect").onchange = (e) => {
+  $("protect-box").hidden = !e.target.checked;
+  $("open-note").hidden = e.target.checked;
+  $("admin-password").required = e.target.checked;
+  if (e.target.checked) $("admin-password").focus();
+};
 syncNames();
 
 $("create").onsubmit = async (e) => {
@@ -29,17 +34,16 @@ $("create").onsubmit = async (e) => {
   try {
     const { slug, admin_token, admin_id } = await api("POST", "/api/splits", {
       members: [{ name: $("my-name").value.trim() }, ...others.map((name) => ({ name }))],
-      admin_password: $("admin-password").value,
-      protected: protect,
+      admin_password: protect ? $("admin-password").value : null,
       website: $("website").value,
     });
-    // This device opens the split as you, the admin. In a protected split the same token is your member session.
-    saveIdentity(slug, { me: admin_id, adminToken: admin_token, token: protect ? admin_token : null });
+    // No passwords: this device opens the split as you. Protected: you sign in with your password like everyone.
+    if (!protect) saveIdentity(slug, { me: admin_id, adminToken: admin_token });
     const share = `${location.origin}/g/${slug}`;
     $("share-link").textContent = share;
     $("created-note").textContent = protect
-      ? "Everyone opens the same link, picks their name and creates a password."
-      : "Everyone opens the same link and picks their name. Yours asks for the admin password.";
+      ? "Everyone opens the same link, picks their name and creates a password. Yours asks for the one you just set."
+      : "Everyone opens the same link and picks their name.";
     $("copy-share").onclick = (ev) => copyText(share, ev.target);
     $("open").href = share;
     $("create").hidden = true;

@@ -13,7 +13,7 @@ const nameOf = (id) => (member(id) || {}).name || "?";
 const label = (id) => (id === identity.me ? "You" : nameOf(id));
 // In a protected split you're only in once your password gave this device a session.
 const known = () => !!member(identity.me) && (!data.protected || data.ended || !!identity.token);
-const isAdmin = () => !!identity.adminToken && identity.me === data.admin_id;
+const isAdmin = () => identity.me === data.admin_id && (!!identity.adminToken || data.open_admin);
 const splitType = () => document.querySelector("input[name=split]:checked").value;
 // Expenses and settle-up payments share one table; payments don't count as spending.
 const liveExpenses = () => data.expenses.filter((e) => !e.deleted && e.kind === "expense");
