@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
 import { FadeInDown } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Anim, Tap, Btn, Err, Field, Icon, Label, Logo, T, Tag, ThemeButton, useConfirm } from "@/components/ui";
+import { Anim, Tap, Btn, Err, Field, Icon, Label, Logo, T, Tag, useConfirm } from "@/components/ui";
 import { api, ApiError, forgetTab, rupees, savedTabs, slugFrom, tabTitle, lifeOf, type Identity, type Tab } from "@/lib/api";
 import { useTheme } from "@/lib/theme";
 
@@ -55,7 +55,6 @@ export default function Home() {
     <SafeAreaView edges={["top"]} className="flex-1 bg-bg">
       <View className="flex-row items-center justify-between border-b border-line px-5 py-3">
         <Logo />
-        <ThemeButton />
       </View>
 
       <ScrollView

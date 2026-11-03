@@ -10,10 +10,10 @@ import { ThemeProvider, useTheme } from "@/lib/theme";
 LogBox.ignoreLogs(["ImageBackground is deprecated"]);
 
 function Screens() {
-  const { colors, dark } = useTheme();
+  const { colors } = useTheme();
   return (
     <>
-      <StatusBar style={dark ? "light" : "dark"} />
+      <StatusBar style="light" />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg }, animation: "slide_from_right" }} />
     </>
   );

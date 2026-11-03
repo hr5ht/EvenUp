@@ -232,7 +232,7 @@ export function useConfirm() {
 export type ToastMsg = { text: string; action?: string; onAction?: () => void; error?: boolean } | null;
 export function Toast({ msg, onDone }: { msg: ToastMsg; onDone: () => void }) {
   const insets = useSafeAreaInsets();
-  const { colors, dark } = useTheme();
+  const { colors } = useTheme();
   const left = useSharedValue(1);
   useEffect(() => {
     if (!msg) return;
@@ -254,7 +254,7 @@ export function Toast({ msg, onDone }: { msg: ToastMsg; onDone: () => void }) {
             <T className="flex-1 text-sm text-ink-text">{msg.text}</T>
             {msg.action && (
               <Tap accessibilityRole="button" onPress={() => { onDone(); msg.onAction?.(); }} hitSlop={10}>
-                <T className="text-sm font-semibold" style={{ color: dark ? "#2b4bff" : "#8fa2ff" }}>{msg.action}</T>
+                <T className="text-sm font-semibold" style={{ color: "#2b4bff" }}>{msg.action}</T>
               </Tap>
             )}
           </View>
@@ -312,8 +312,6 @@ export const Icon = {
   Share: svg((p) => <Path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v13" {...p} />),
   Clock: svg((p) => <><Circle cx={12} cy={12} r={9} {...p} /><Path d="M12 7v5l3 2" {...p} /></>),
   Shield: svg((p) => <Path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" {...p} />),
-  Moon: svg((p) => <Path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" {...p} />),
-  Sun: svg((p) => <><Circle cx={12} cy={12} r={4} {...p} /><Path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" {...p} /></>),
   Link: svg((p) => <Path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" {...p} />),
   Image: svg((p) => <><Rect x={3} y={4} width={18} height={16} {...p} /><Circle cx={9} cy={10} r={1.6} {...p} /><Path d="M21 16l-5-5-9 9" {...p} /></>),
   File: svg((p) => <Path d="M14 3H6v18h12V7zM14 3v4h4M9 13h6M9 17h6" {...p} />),
@@ -321,16 +319,6 @@ export const Icon = {
   Phone: svg((p) => <><Rect x={6} y={2} width={12} height={20} {...p} /><Path d="M11 18h2" {...p} /></>),
   Lock: svg((p) => <><Rect x={5} y={11} width={14} height={10} {...p} /><Path d="M8 11V8a4 4 0 0 1 8 0v3" {...p} /></>),
 };
-
-export function ThemeButton() {
-  const { colors, dark, toggle } = useTheme();
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel="Switch light or dark theme" onPress={toggle}
-      className="h-10 w-10 items-center justify-center border border-line-2 bg-surface">
-      {dark ? <Icon.Sun color={colors.text} size={18} /> : <Icon.Moon color={colors.text} size={18} />}
-    </Pressable>
-  );
-}
 
 // Rolls a number to its new value instead of jumping, like the site's countUp. A new key (another person) starts from 0.
 export function useCountUp(value: number, key: unknown, ms = 700) {

@@ -6,8 +6,8 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "automatic",
-    "backgroundColor": "#fafaf9",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0b0b0a",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.quicktab.mobile",
