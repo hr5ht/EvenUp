@@ -182,7 +182,8 @@ export default function TabScreen() {
           </View>
         )}
 
-        {!data.ended && <UpiBox key={me.id} c={c} />} {/* another person: their form starts empty */}
+        {/* keyed by person: another person's form starts empty */}
+        {!data.ended && <UpiBox key={me.id} c={c} />}
 
         <Animated.View entering={FadeInDown.delay(80).duration(450)}><Hero c={c} onSettle={setPaying} /></Animated.View>
 

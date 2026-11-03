@@ -322,7 +322,7 @@ export function ActivitySheet({ c, open, onClose }: { c: Ctx; open: boolean; onC
           const d = a.details;
           const what = d.description ? `${d.description} (${rupees(d.amount_paise)})` : d.name || "";
           // Only the latest change to each expense can be undone; the server checks this too.
-          const canUndo = !data.ended && a.expense_id && data.activity.find((x) => x.expense_id === a.expense_id) === a;
+          const canUndo = !data.ended && !!a.expense_id && data.activity.find((x) => x.expense_id === a.expense_id) === a;
           return (
             <View key={a.id} className="flex-row items-center gap-3 bg-surface px-4 py-3">
               <View className="flex-1 gap-0.5">
