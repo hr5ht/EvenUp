@@ -3,7 +3,7 @@ import * as Clipboard from "expo-clipboard";
 import { File, Paths } from "expo-file-system";
 import { router } from "expo-router";
 import * as Sharing from "expo-sharing";
-import { useRef, useState } from "react";
+import { useRef, useState, type ComponentRef } from "react";
 import { Alert, Linking, Platform, Share, View } from "react-native";
 import { captureRef } from "react-native-view-shot";
 import { Tap, Btn, Err, Field, Label, Rows, Sheet, T, type ToastMsg } from "@/components/ui";
@@ -462,7 +462,7 @@ export async function shareCsv(data: Tab) {
 const R = { bg: "#fafaf9", text: "#0d0d0c", muted: "#6b6963", line: "#d4d2ce", accent: "#2b4bff" };
 
 export function SummarySheet({ data, open, onClose }: { data: Tab; open: boolean; onClose: () => void }) {
-  const ref = useRef<View>(null);
+  const ref = useRef<ComponentRef<typeof View>>(null);
   const [busy, setBusy] = useState(false);
   const nameOf = (id: number) => data.members.find((m) => m.id === id)?.name ?? "?";
   const money = (p: number) => rupees(p).replace(/\.00$/, "");

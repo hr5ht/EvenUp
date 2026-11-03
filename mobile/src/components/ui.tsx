@@ -1,5 +1,5 @@
 // The website's design language in React Native: sharp corners, hairlines, mono uppercase labels, one blue accent.
-import { forwardRef, useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ActivityIndicator, Animated, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, View,
   type PressableProps, type StyleProp, type TextInputProps, type TextProps, type ViewStyle,
@@ -83,12 +83,11 @@ export function Btn({ title, onPress, variant = "plain", small, disabled, busy, 
   );
 }
 
-export const Field = forwardRef<TextInput, TextInputProps & { className?: string }>(function Field({ className = "", ...props }, ref) {
+export function Field({ className = "", ...props }: TextInputProps & { className?: string }) {
   const { colors } = useTheme();
   const [focus, setFocus] = useState(false);
   return (
     <TextInput
-      ref={ref}
       placeholderTextColor={colors.dim}
       onFocus={() => setFocus(true)}
       onBlur={() => setFocus(false)}
@@ -96,7 +95,7 @@ export const Field = forwardRef<TextInput, TextInputProps & { className?: string
       {...props}
     />
   );
-});
+}
 
 export const Err = ({ children }: { children?: string }) => (children ? <T className="text-sm text-owe">{children}</T> : null);
 
