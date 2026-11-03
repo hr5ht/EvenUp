@@ -251,9 +251,12 @@ function pick(m) {
   picking = { member: m, legacy };
   $("admin-pw").value = "";
   const create = needsPassword && !m.has_password;
-  $("pw-label").textContent = legacy ? "This is the admin. Enter the admin password to continue."
-    : create ? "Create a password. You'll need it to open the split as you on another device."
-    : "Enter your password";
+  $("pw-label").textContent = legacy ? "Admin password" : create ? "Create a password" : "Your password";
+  $("pw-hint").textContent = legacy ? "This is the admin's name, so it needs the admin password."
+    : create ? `First time as ${m.name}. You'll need this password to open the split as ${m.name} on another phone.`
+    : `Enter the password you created for ${m.name}.`;
+  $("pw-submit").textContent = create ? "Create and continue" : "Unlock";
+  $("admin-pw").placeholder = create ? "At least 4 characters" : "";
   $("admin-pw").autocomplete = create ? "new-password" : "current-password";
   $("pw-error").textContent = "";
   showPickerStep("enter", m.name);
@@ -298,7 +301,6 @@ $("join-form").onsubmit = async (ev) => {
     // Plain api(), not call(): this is a new person, not a member adding a friend.
     const { id, token } = await api("POST", `${base}/members`, {
       name: $("join-name").value.trim(),
-      upi_id: $("join-upi").value.trim() || null,
       password: data.protected ? $("join-pw").value : null,
     });
     $("join-form").reset();

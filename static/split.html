@@ -143,35 +143,36 @@
 </dialog>
 
 <dialog class="sheet fullscreen" id="who-dialog">
-  <div class="sheet-head"><h2 id="who-title">Who are you?</h2><button type="button" class="icon-btn" data-close aria-label="Close">✕</button></div>
+  <div class="sheet-head"><h2 id="who-title" tabindex="-1" autofocus>Who are you?</h2><button type="button" class="icon-btn" data-close aria-label="Close">✕</button></div>
   <div class="sheet-body">
     <p class="muted" id="who-sub"></p>
     <div id="who-list" class="menu who-list"></div>
-    <button type="button" id="join-open" class="link join-open live-only">I'm not on the list</button>
-    <form id="join-form" hidden>
-      <label for="join-name">Your name</label>
-      <input type="text" id="join-name" maxlength="40" required>
-      <label for="join-upi">UPI ID <span class="muted">(optional, so people can pay you)</span></label>
-      <input type="text" id="join-upi" maxlength="100" placeholder="name@bank">
-      <div id="join-pw-box" hidden>
-        <label for="join-pw">Create a password</label>
-        <input type="password" id="join-pw" minlength="4" maxlength="100" autocomplete="new-password" placeholder="At least 4 characters">
+    <button type="button" id="join-open" class="join-open live-only">I'm not on the list</button>
+    <form id="join-form" class="who-form" hidden>
+      <div class="card">
+        <label for="join-name">Your name</label>
+        <input type="text" id="join-name" maxlength="40" placeholder="As your friends know you" autocomplete="given-name" required>
+        <div id="join-pw-box" hidden>
+          <label for="join-pw">Create a password</label>
+          <input type="password" id="join-pw" minlength="4" maxlength="100" autocomplete="new-password" placeholder="At least 4 characters">
+          <p class="muted hint">You'll need it to open the split as you on another phone.</p>
+        </div>
+        <p class="muted hint" id="join-hint">You can add your UPI ID once you're in.</p>
+        <p class="error" id="join-error"></p>
       </div>
-      <p class="error" id="join-error"></p>
-      <div class="actions">
-        <button class="primary" type="submit">Join</button>
-        <button type="button" id="join-back" class="link">Back</button>
-      </div>
+      <button class="primary block" type="submit">Join split</button>
+      <button type="button" id="join-back" class="link back-link">Back to the list</button>
     </form>
     <!-- After picking a name: create or enter your password (protected split, or an older split's admin). -->
-    <form id="pw-form" hidden>
-      <label for="admin-pw" id="pw-label"></label>
-      <input type="password" id="admin-pw" maxlength="100" required>
-      <p class="error" id="pw-error"></p>
-      <div class="actions">
-        <button class="primary" type="submit">Continue</button>
-        <button type="button" id="pw-back" class="link">Back</button>
+    <form id="pw-form" class="who-form" hidden>
+      <div class="card">
+        <label for="admin-pw" id="pw-label"></label>
+        <input type="password" id="admin-pw" maxlength="100" required>
+        <p class="muted hint" id="pw-hint"></p>
+        <p class="error" id="pw-error"></p>
       </div>
+      <button class="primary block" type="submit" id="pw-submit"></button>
+      <button type="button" id="pw-back" class="link back-link">Not you? Back to the list</button>
     </form>
   </div>
 </dialog>

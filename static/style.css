@@ -518,7 +518,18 @@ dialog.sheet.fullscreen::backdrop { background: var(--bg); }
 .who-list button.current::after { display: block; content: "✓"; font-size: 16px; color: var(--accent); }
 .who-list .badge { margin-left: auto; }
 .who-list button:has(.badge)::after { margin-left: var(--s3); }
-.join-open { margin-top: var(--s4); }
+.join-open { width: 100%; min-height: 52px; margin-top: var(--s3); border: 1px dashed var(--line-2); border-radius: var(--r); background: none; color: var(--muted); font-weight: 500; }
+.join-open:not(:disabled)::before { content: "+ "; color: var(--accent); }
+#join-pw-box label { margin-top: var(--s4); }
+/* Inside a list the ring is drawn inward, since the rounded list clips anything outside. */
+.menu button:focus-visible, .menu a:focus-visible { outline-offset: -2px; }
+[tabindex="-1"]:focus { outline: none; }
+
+/* "Who are you?" steps after the list: join, password */
+.who-form { display: grid; gap: var(--s4); margin-top: var(--s2); }
+.who-form .card { padding: var(--s4); }
+.who-form .hint { margin: var(--s2) 0 0; font-size: 13px; }
+.back-link { justify-self: center; padding: var(--s2) !important; color: var(--muted) !important; font-weight: 500; text-decoration: none !important; }
 
 /* QR stays black on white so scanners can read it */
 .qr { display: block; max-width: 100%; height: auto; margin: 0 auto var(--s4); padding: var(--s2); border-radius: var(--r); background: #fff; }
