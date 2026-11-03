@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex">
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#fafaf9">
   <title>Open a tab · QuickTab</title>
   <link rel="stylesheet" href="/static/style.css">
   <script src="/static/common.js" defer></script>
@@ -15,11 +15,19 @@
   <a href="/" class="logo">QuickTab</a>
 </header>
 
-<main class="stagger">
-  <header class="page-head">
-    <h1>New tab</h1>
+<main class="two-col stagger">
+  <aside>
+    <span class="tag">new tab</span>
+    <h1>Open a tab for the group.</h1>
     <p class="muted">No account needed. Open for 48 hours, then read-only for a day, then deleted.</p>
-  </header>
+    <ul class="checks">
+      <li>You're the admin</li>
+      <li>Set the headcount, nobody gets in past it</li>
+      <li>Optional password for everyone</li>
+      <li>One link for the WhatsApp group</li>
+    </ul>
+  </aside>
+  <div>
 
   <form id="create" class="card">
     <label for="my-name">Your name <span class="badge">admin</span></label>
@@ -70,6 +78,7 @@
       <button type="button" id="share" class="primary">Share link</button>
     </div>
   </section>
+  </div>
 </main>
 </body>
 </html>

@@ -32,6 +32,7 @@ function showProtect() {
 $("protect").onchange = () => { showProtect(); if ($("protect").checked) $("admin-password").focus(); };
 showProtect();
 setSize(MIN);
+$("my-name").value = new URLSearchParams(location.search).get("name") || ""; // from the landing command bar
 
 $("create").onsubmit = async (e) => {
   e.preventDefault();

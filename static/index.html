@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#fafaf9">
   <title>QuickTab · Split bills, settle with UPI</title>
   <meta name="description" content="Split bills with friends and settle up with UPI in one tap. No account needed.">
   <link rel="stylesheet" href="/static/style.css">
@@ -13,70 +13,130 @@
 <body>
 <header class="topbar">
   <a href="/" class="logo">QuickTab</a>
+  <nav class="nav"><a href="#features">Features</a><a href="#how">How it works</a><a href="#preview">Preview</a></nav>
+  <div class="row">
+    <button type="button" class="small" id="demo">Live demo</button>
+    <a class="button small primary" href="/new">Open a tab</a>
+  </div>
 </header>
 
-<main class="stagger">
-  <section class="intro">
+<main>
+  <section class="hero-block stagger">
+    <span class="tag">48h tabs · no sign-up · UPI</span>
     <h1 class="display">Split the bill.<br><span class="accent">Settle with UPI.</span></h1>
     <p class="lead">Add who paid what. QuickTab works out the fewest payments, and everyone pays in one tap with GPay, PhonePe or Paytm.</p>
-    <div class="cta">
-      <a class="button primary block" href="/new">Open a tab</a>
-      <button type="button" class="block" id="demo">Try a live demo</button>
+
+    <form class="command" id="command" autocomplete="off">
+      <div class="command-input">
+        <span class="prompt" aria-hidden="true">&gt;</span>
+        <input type="text" id="cmd" maxlength="200" aria-label="Your name" placeholder="Your name, to open a tab">
+        <button type="submit" class="go" aria-label="Go">→</button>
+      </div>
+      <div class="command-modes" role="radiogroup" aria-label="What to do">
+        <label><input type="radio" name="mode" value="new" checked><span>New tab</span></label>
+        <label><input type="radio" name="mode" value="join"><span>Join tab</span></label>
+        <label><input type="radio" name="mode" value="demo"><span>Demo</span></label>
+        <span class="hint">↵ enter</span>
+      </div>
+    </form>
+    <p class="error" id="demo-error"></p>
+    <p class="hero-note">// money never passes through QuickTab. it only does the maths.</p>
+  </section>
+
+  <section class="rule section" id="preview">
+    <div class="window">
+      <div class="window-bar">
+        <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="window-url">quicktabapp.vercel.app/g/goa-dinner</span>
+        <span class="tag">live</span>
+      </div>
+      <div class="window-body">
+        <div class="pane">
+          <div class="pane-head"><span class="overline">What your friends see</span><span class="badge">3 people</span></div>
+          <p class="hero-label">You get back</p>
+          <p class="hero-amount owed">₹1,000.00</p>
+          <p class="muted">Goa dinner · ₹4,500.00 spent · 3 expenses</p>
+          <ul class="list" id="my-payments">
+            <li class="pay-row"><div class="pay-main"><span class="grow">Kabir → You</span><strong class="amount">₹800.00</strong></div><span class="badge">UPI</span></li>
+            <li class="pay-row"><div class="pay-main"><span class="grow">Riya → You</span><strong class="amount">₹200.00</strong></div><span class="badge">UPI</span></li>
+          </ul>
+        </div>
+        <div class="pane">
+          <div class="pane-head"><span class="overline">settlement.json</span><span class="tag">2 payments</span></div>
+<pre class="code"><span class="ln">1</span>{
+<span class="ln">2</span>  <span class="k">"spent"</span>: <span class="n">4500</span>,
+<span class="ln">3</span>  <span class="k">"payments"</span>: [
+<span class="ln">4</span>    { <span class="k">"from"</span>: <span class="s">"Kabir"</span>, <span class="k">"to"</span>: <span class="s">"You"</span>, <span class="k">"amount"</span>: <span class="n">800</span> },
+<span class="ln">5</span>    { <span class="k">"from"</span>: <span class="s">"Riya"</span>,  <span class="k">"to"</span>: <span class="s">"You"</span>, <span class="k">"amount"</span>: <span class="n">200</span> }
+<span class="ln">6</span>  ],
+<span class="ln">7</span>  <span class="k">"pay"</span>: <span class="s">"upi://pay?pa=you@okaxis&amp;am=800.00"</span>
+<span class="ln">8</span>}
+<span class="ln">9</span><span class="c">// 3 people, at most 2 payments</span><span class="cursor"></span></pre>
+        </div>
+      </div>
     </div>
-    <p class="error center" id="demo-error"></p>
-    <p class="muted center">No sign-up. Each tab is open for 48 hours, then read-only for a day so you can download the summary, then deleted.</p>
   </section>
 
-  <section class="section">
-    <p class="overline">What your friends see</p>
-    <div class="card hero">
-      <p class="hero-label">You get back</p>
-      <p class="hero-amount owed">₹1,000.00</p>
-      <p class="muted">Goa dinner · ₹3,800.00 spent · 3 expenses</p>
-      <ul class="list" id="my-payments">
-        <li class="pay-row">
-          <div class="pay-main"><span class="grow">Kabir → You</span><strong class="amount">₹800.00</strong></div>
-        </li>
-        <li class="pay-row">
-          <div class="pay-main"><span class="grow">Riya → You</span><strong class="amount">₹200.00</strong></div>
-        </li>
-      </ul>
+  <section class="rule section" id="features">
+    <div class="section-head">
+      <span class="tag">01 / why QuickTab</span>
+      <h2>Everything a group trip needs. Nothing it doesn't.</h2>
     </div>
-  </section>
-
-  <section class="section">
-    <p class="overline">Why QuickTab</p>
-    <div class="tiles">
-      <div class="tile">
-        <span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>
-        <span class="tile-text"><strong>No sign-up</strong><span>Share one link on WhatsApp.</span></span>
+    <div class="cells">
+      <div class="cell">
+        <div class="cell-top"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span><span class="cell-num">01</span></div>
+        <strong>No sign-up</strong><p>One link in the WhatsApp group. Everyone picks their name and they're in.</p>
       </div>
-      <div class="tile">
-        <span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg></span>
-        <span class="tile-text"><strong>UPI-native</strong><span>Pay button and QR, amount filled in.</span></span>
+      <div class="cell">
+        <div class="cell-top"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="2" width="14" height="20"/><path d="M12 18h.01"/></svg></span><span class="cell-num">02</span></div>
+        <strong>UPI-native</strong><p>A Pay button and a QR code with the amount already filled in.</p>
       </div>
-      <div class="tile">
-        <span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg></span>
-        <span class="tile-text"><strong>Fewest payments</strong><span>n people, at most n − 1 payments.</span></span>
+      <div class="cell">
+        <div class="cell-top"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></svg></span><span class="cell-num">03</span></div>
+        <strong>Fewest payments</strong><p>Debts are simplified: n people settle in at most n − 1 payments.</p>
       </div>
-      <div class="tile">
-        <span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
-        <span class="tile-text"><strong>Private</strong><span>Encrypted UPI IDs. Data deletes itself.</span></span>
+      <div class="cell">
+        <div class="cell-top"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><span class="cell-num">04</span></div>
+        <strong>Private</strong><p>UPI IDs are encrypted. Optional passwords, one per person.</p>
+      </div>
+      <div class="cell">
+        <div class="cell-top"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="cell-num">05</span></div>
+        <strong>Self-destructing</strong><p>Open for 48 hours, read-only for a day, then deleted for good.</p>
+      </div>
+      <div class="cell">
+        <div class="cell-top"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12v7h16v-7M16 6l-4-4-4 4M12 2v13"/></svg></span><span class="cell-num">06</span></div>
+        <strong>Share the receipt</strong><p>Download a summary image or a CSV of every expense.</p>
       </div>
     </div>
   </section>
 
-  <section class="section">
-    <p class="overline">How it works</p>
-    <ol class="list group steps">
-      <li><span class="num">1</span><div><strong>Open a tab</strong><p class="muted">Add your name and everyone in the group.</p></div></li>
-      <li><span class="num">2</span><div><strong>Share the link</strong><p class="muted">Everyone adds what they paid and their UPI ID.</p></div></li>
-      <li><span class="num">3</span><div><strong>Settle up</strong><p class="muted">Tap Pay or scan the QR, then share a summary.</p></div></li>
-    </ol>
+  <section class="rule section" id="how">
+    <div class="section-head">
+      <span class="tag">02 / how it works</span>
+      <h2>Three steps. About a minute.</h2>
+    </div>
+    <div class="cells">
+      <div class="cell"><span class="step-num">01</span><strong>Open a tab</strong><p>Your name, how many people, and an optional password.</p></div>
+      <div class="cell"><span class="step-num">02</span><strong>Share the link</strong><p>Everyone adds what they paid and their UPI ID.</p></div>
+      <div class="cell"><span class="step-num">03</span><strong>Settle up</strong><p>Tap Pay or scan the QR, then share the summary.</p></div>
+    </div>
   </section>
 
+  <section class="rule section cta-band">
+    <div class="section-head">
+      <span class="tag">03 / start</span>
+      <h2>Your next trip, settled before the cab home.</h2>
+    </div>
+    <div class="row">
+      <a class="button primary" href="/new">Open a tab →</a>
+      <button type="button" id="demo-2">Try the live demo</button>
+    </div>
+  </section>
 </main>
 
-<footer class="muted footer">Money never passes through QuickTab. It only does the maths.</footer>
+<footer class="rule footer">
+  <span>© QuickTab</span>
+  <span>no accounts · no ads · data deletes itself</span>
+</footer>
 </body>
 </html>

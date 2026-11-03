@@ -486,6 +486,7 @@ function renderBalances() {
 
 function renderExpenses() {
   const live = data.expenses.filter((e) => !e.deleted);
+  $("exp-count").textContent = live.length ? String(live.length).padStart(2, "0") : "";
   if (!live.length) {
     $("expenses").replaceChildren(el("li", { className: "muted empty", textContent: "No expenses yet. Tap + Add expense." }));
     return;
@@ -591,6 +592,13 @@ $("fab").onclick = () => {
   openSheet("form-sheet");
   $("amount").focus();
 };
+// Desktop shortcut: N adds an expense, unless you're typing or a sheet is open.
+document.addEventListener("keydown", (ev) => {
+  if (ev.key.toLowerCase() !== "n" || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+  if (ev.target.closest("input, textarea, select") || document.querySelector("dialog[open]") || $("fab").hidden || data.ended) return;
+  ev.preventDefault();
+  $("fab").click();
+});
 
 $("expense-form").onsubmit = async (ev) => {
   ev.preventDefault();
@@ -773,7 +781,7 @@ $("download-png").onclick = async (ev) => {
     // A compact receipt: white and grey on black, the app's one accent only for money coming back.
     // Balances only, plus every recorded payment so anyone can check it.
     const W = 600, PAD = 32;
-    const C = { text: "#f5f5f7", muted: "#8e8e93", line: "#333336", accent: "#c6ff3d" };
+    const C = { bg: "#fafaf9", text: "#0d0d0c", muted: "#6b6963", line: "#d4d2ce", accent: "#2b4bff" };
     const money = (p) => rupees(p).replace(/\.00$/, ""); // ₹650, not ₹650.00
     const expenses = liveExpenses();
     const total = expenses.reduce((a, e) => a + e.amount_paise, 0);
@@ -802,7 +810,7 @@ $("download-png").onclick = async (ev) => {
       const heading = (str) => { y += 30; text(str, PAD, y, C.muted, 12, 600); y += 2; };
       const R = W - PAD;
 
-      ctx.fillStyle = "#000";
+      ctx.fillStyle = C.bg;
       ctx.fillRect(0, 0, W, H);
 
       let y = PAD + 26;

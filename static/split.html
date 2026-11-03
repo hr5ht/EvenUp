@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex">
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#fafaf9">
   <title>QuickTab</title>
   <link rel="stylesheet" href="/static/style.css">
   <script src="/static/common.js" defer></script>
@@ -18,12 +18,14 @@
 
 <main class="app">
   <header class="page-head">
+    <span class="tag">tab</span>
     <h1 id="title">Loading…</h1>
     <p class="muted" id="expiry" hidden></p>
     <p class="error" id="load-error"></p>
   </header>
 
   <div id="content" class="stagger" hidden>
+    <div class="side">
     <section class="card" id="ended-card" hidden>
       <p class="overline">Tab closed</p>
       <p class="muted" id="ended-text"></p>
@@ -61,13 +63,16 @@
       <button type="button" class="tile" data-open="activity-sheet"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="tile-text"><strong>Activity</strong><span>History</span></span></button>
       <button type="button" class="tile tile-wide live-only" data-open="admin-sheet" id="admin-tile" hidden><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span><span class="tile-text"><strong>Admin</strong><span>Members, UPI IDs, delete tab</span></span></button>
     </nav>
+    </div>
 
-    <h2 class="section-title">Expenses</h2>
-    <ul class="list group card-list" id="expenses"></ul>
+    <div class="main">
+      <div class="main-head"><h2 class="section-title">Expenses</h2><span class="tag" id="exp-count"></span></div>
+      <ul class="list group card-list" id="expenses"></ul>
+    </div>
   </div>
 </main>
 
-<button type="button" class="fab primary live-only" id="fab" hidden>+ Add expense</button>
+<button type="button" class="fab primary live-only" id="fab" hidden>+ Add expense <kbd>N</kbd></button>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <!-- ---------- sheets ---------- -->
