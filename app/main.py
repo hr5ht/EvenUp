@@ -29,6 +29,7 @@ UPI_RE = r"^[a-zA-Z0-9._-]{1,256}@[a-zA-Z]{2,64}$"
 # (limit, window seconds) per client IP
 CREATE_LIMIT = (10, 3600)
 WRITE_LIMIT = (60, 60)
+MAX_MEMBERS = 50
 LOGIN_LIMIT = (10, 900)  # per split, so guessing the admin password is slow from any number of IPs
 
 # UPI IDs are encrypted at rest. Set UPI_KEY in production (Fernet.generate_key()).
@@ -122,7 +123,8 @@ class MemberIn(BaseModel):
 
 
 class SplitIn(BaseModel):
-    members: List[MemberIn] = Field(min_length=1, max_length=50)  # the creator (admin) first, the rest join from the link
+    members: List[MemberIn] = Field(min_length=1, max_length=MAX_MEMBERS)  # the creator (admin) first, the rest join from the link
+    size: Optional[int] = Field(default=None, ge=1, le=MAX_MEMBERS)  # headcount: the split never holds more people
     # Set: password protected, the admin uses this and everyone else creates their own.
     # Unset: no passwords at all, and whoever picks the admin's name is the admin.
     admin_password: Optional[str] = Field(default=None, min_length=4, max_length=100)
@@ -270,8 +272,8 @@ def create_split(con, body, name="Quick split"):
     pw_hash = hash_password(body.admin_password) if body.admin_password else ""
     t = now()
     sid = con.execute(
-        "INSERT INTO splits (slug, name, admin_pw_hash, last_activity_at, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?) RETURNING id",
-        (slug, name, pw_hash, t, t + TTL, t),
+        "INSERT INTO splits (slug, name, admin_pw_hash, last_activity_at, expires_at, created_at, capacity) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
+        (slug, name, pw_hash, t, t + TTL, t, body.size),
     ).fetchone()["id"]
     ids = [con.execute("INSERT INTO members (split_id, name, upi_id) VALUES (?, ?, ?) RETURNING id",
                        (sid, m.name, enc(m.upi_id))).fetchone()["id"] for m in body.members]
@@ -291,6 +293,8 @@ def create(body: SplitIn, con=Depends(db.get_db)):
     names = [m.name.strip().lower() for m in body.members]
     if len(set(names)) != len(names):
         raise HTTPException(400, "Member names must be unique")
+    if body.size and body.size < len(body.members):
+        raise HTTPException(400, "More names than people")
     slug, token, _, admin_id = create_split(con, body)
     count(con, "splits")
     con.commit()
@@ -361,7 +365,8 @@ def read(slug: str, con=Depends(db.get_db)):
         "protected": protected,
         # Splits from before per-member passwords: the admin still unlocks with the admin password.
         "admin_login": not protected and bool(s["admin_pw_hash"]),
-        "open_admin": not s["admin_pw_hash"],  # no passwords: picking the admin's name makes you the admin
+        "open_admin": not s["admin_pw_hash"],
+        "capacity": s["capacity"] or MAX_MEMBERS,  # no passwords: picking the admin's name makes you the admin
         "members": members,
         "expenses": expenses,
         "balances": bal,
@@ -483,8 +488,10 @@ def add_member(slug: str, body: JoinIn, x_member_token: Optional[str] = Header(N
     the friend creates theirs when they first pick their name."""
     s = load_split(con, slug)
     unique_name(con, s["id"], body.name)
-    if len(member_ids(con, s["id"])) >= 50:
-        raise HTTPException(400, "This split is full (50 members)")
+    # The headcount is a hard cap, for the admin too: someone has to be removed before anyone new comes in.
+    cap = s["capacity"] or MAX_MEMBERS
+    if len(member_ids(con, s["id"])) >= cap:
+        raise HTTPException(400, f"This split is full ({cap} people). The admin has to remove someone first.")
     protected, who = member_auth(con, s, x_member_token)
     pw_hash = None
     if protected and who is None:

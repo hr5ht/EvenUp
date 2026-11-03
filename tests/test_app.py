@@ -273,3 +273,20 @@ def test_protected():
         assert c.delete(url, headers={"X-Admin-Token": tb["token"]}).status_code == 403
         assert c.post(f"{url}/admin-login", json={"password": "pass1"}).json()["admin_token"] == r["admin_token"]
         assert c.delete(url, headers=admin).status_code == 200
+
+
+def test_capacity():
+    with TestClient(app, client=("10.0.0.8", 1)) as c:
+        assert c.post("/api/splits", json={"members": [{"name": "A"}, {"name": "B"}], "size": 1}).status_code == 400
+        r = c.post("/api/splits", json={"members": [{"name": "A"}], "size": 3}).json()
+        url = f"/api/splits/{r['slug']}"
+        assert c.get(url).json()["capacity"] == 3
+        assert c.post(f"{url}/members", json={"name": "B"}).status_code == 200
+        c_id = c.post(f"{url}/members", json={"name": "C"}).json()["id"]
+        # full: nobody joins, the admin can't add either
+        full = c.post(f"{url}/members", json={"name": "D"})
+        assert full.status_code == 400 and "full" in full.json()["detail"]
+        assert c.post(f"{url}/members", json={"name": "D"}, headers={"X-Admin-Token": r["admin_token"]}).status_code == 400
+        # remove someone, then there's room again
+        assert c.delete(f"{url}/members/{c_id}", headers={"X-Admin-Token": r["admin_token"]}).status_code == 200
+        assert c.post(f"{url}/members", json={"name": "D"}).status_code == 200

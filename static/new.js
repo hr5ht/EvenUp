@@ -34,6 +34,7 @@ $("create").onsubmit = async (e) => {
   try {
     const { slug, admin_token, admin_id } = await api("POST", "/api/splits", {
       members: [{ name: $("my-name").value.trim() }, ...others.map((name) => ({ name }))],
+      size: size(),
       admin_password: protect ? $("admin-password").value : null,
       website: $("website").value,
     });

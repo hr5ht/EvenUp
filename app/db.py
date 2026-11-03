@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS splits (
     admin_member_id INTEGER,  -- the creator, always a member of the group
     last_activity_at BIGINT NOT NULL,  -- unused since the lifetime became fixed, kept so existing databases match
     expires_at BIGINT NOT NULL,  -- end of the open phase, then read-only for a day, then deleted
-    created_at BIGINT NOT NULL
+    created_at BIGINT NOT NULL,
+    capacity INTEGER  -- most members allowed, the headcount given at creation. NULL is the default 50
 );
 CREATE TABLE IF NOT EXISTS members (
     id {pk},
@@ -60,7 +61,7 @@ CREATE TABLE IF NOT EXISTS stats (
 );
 """
 # Columns added after launch, for databases created before them.
-NEW_COLUMNS = {"members": [("pw_hash", "TEXT")]}
+NEW_COLUMNS = {"splits": [("capacity", "INTEGER")], "members": [("pw_hash", "TEXT")]}
 
 
 class PgConnection:
