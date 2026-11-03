@@ -2,10 +2,10 @@
 import * as Clipboard from "expo-clipboard";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { ScrollView, Share, Switch, View } from "react-native";
+import { ScrollView, Share, View } from "react-native";
 import { FadeInDown, ZoomIn } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Anim, Tap, Btn, Err, Field, Icon, Label, T } from "@/components/ui";
+import { Anim, Tap, Btn, Err, Field, Icon, Label, T, Toggle } from "@/components/ui";
 import { api, saveIdentity, tabUrl } from "@/lib/api";
 import { useTheme } from "@/lib/theme";
 
@@ -20,6 +20,8 @@ export default function NewTab() {
   const [names, setNames] = useState<string[]>([]);
   const [protect, setProtect] = useState(false);
   const [password, setPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [pwFocus, setPwFocus] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [created, setCreated] = useState<string | null>(null); // slug
@@ -112,39 +114,68 @@ export default function NewTab() {
         </View>
 
         <View className="gap-px border border-line bg-line">
-          <Opt title="People" sub="Including you, the most allowed">
-            <View className="flex-row items-center border border-line-2">
+          <Opt title="People" sub={`Including you, up to ${MAX}`}>
+            <View className="h-10 flex-row border border-line-2 bg-bg">
               <Tap accessibilityLabel="One less" disabled={people === MIN} onPress={() => setPeople(people - 1)}
-                className={`h-10 w-10 items-center justify-center ${people === MIN ? "opacity-30" : ""}`}>
+                className={`w-10 items-center justify-center border-r border-line-2 ${people === MIN ? "opacity-30" : ""}`}>
                 <T className="text-lg">−</T>
               </Tap>
-              <T mono className="w-9 text-center text-base">{people}</T>
+              <View className="w-11 items-center justify-center"><T mono className="text-base">{String(people).padStart(2, "0")}</T></View>
               <Tap accessibilityLabel="One more" disabled={people === MAX} onPress={() => setPeople(people + 1)}
-                className={`h-10 w-10 items-center justify-center ${people === MAX ? "opacity-30" : ""}`}>
+                className={`w-10 items-center justify-center border-l border-line-2 ${people === MAX ? "opacity-30" : ""}`}>
                 <T className="text-lg">+</T>
               </Tap>
             </View>
           </Opt>
+
           <Opt title="Add names now" sub="Or everyone adds themselves from the link">
-            <Switch value={addNames} onValueChange={setAddNames} trackColor={{ false: colors["line-2"], true: colors.accent }} thumbColor="#ffffff" ios_backgroundColor={colors["line-2"]} />
+            <Toggle label="Add names now" value={addNames} onChange={setAddNames} />
           </Opt>
           {addNames && (
-            <View className="gap-2 bg-surface px-4 pb-4">
-              {Array.from({ length: people - 1 }, (_, i) => (
-                <Field key={i} value={names[i] ?? ""} onChangeText={(v) => setName_i(i, v)} placeholder="Name" maxLength={40} autoCapitalize="words" />
-              ))}
+            <Anim entering={FadeInDown.duration(300)} className="gap-3 bg-surface px-4 pb-4">
+              {/* You're 01; the others are numbered after you, one hairline row each. */}
+              <View className="border border-line-2 bg-bg">
+                <View className="h-11 flex-row items-center border-b border-line">
+                  <View className="h-full w-12 items-center justify-center border-r border-line"><T mono className="text-xs text-accent">01</T></View>
+                  <T className="flex-1 px-3.5 text-[15px] text-muted" numberOfLines={1}>{name.trim() || "You"} · admin</T>
+                </View>
+                {Array.from({ length: people - 1 }, (_, i) => (
+                  <View key={i} className={`h-11 flex-row items-center ${i < people - 2 ? "border-b border-line" : ""}`}>
+                    <View className="h-full w-12 items-center justify-center border-r border-line">
+                      <T mono className="text-xs text-muted">{String(i + 2).padStart(2, "0")}</T>
+                    </View>
+                    <Field value={names[i] ?? ""} onChangeText={(v) => setName_i(i, v)} placeholder="Name" maxLength={40} autoCapitalize="words"
+                      className="h-11 flex-1 border-0 bg-transparent" style={{ borderWidth: 0 }} />
+                  </View>
+                ))}
+              </View>
               <T className="text-xs leading-4 text-muted">Leave any blank: they tap "I'm not on the list" and add themselves.</T>
-            </View>
+            </Anim>
           )}
+
           <Opt title="Password protect" sub={protect ? "Everyone signs in with their own password" : "Off: anyone can pick any name"}>
-            <Switch value={protect} onValueChange={setProtect} trackColor={{ false: colors["line-2"], true: colors.accent }} thumbColor="#ffffff" ios_backgroundColor={colors["line-2"]} />
+            <Toggle label="Password protect" value={protect} onChange={setProtect} />
           </Opt>
           {protect && (
-            <View className="gap-2 bg-surface px-4 pb-4">
-              <Field value={password} onChangeText={setPassword} secureTextEntry autoComplete="new-password" maxLength={100}
-                placeholder="Your password, at least 4 characters" />
+            <Anim entering={FadeInDown.duration(300)} className="gap-3 bg-surface px-4 pb-4">
+              <View className={`h-12 flex-row items-center border bg-bg ${pwFocus ? "border-text" : "border-line-2"}`}>
+                <View className="h-full w-12 items-center justify-center border-r border-line"><Icon.Lock color={colors.muted} size={16} /></View>
+                <Field value={password} onChangeText={setPassword} secureTextEntry={!showPw} autoComplete="new-password" maxLength={100}
+                  placeholder="Your password" onFocus={() => setPwFocus(true)} onBlur={() => setPwFocus(false)}
+                  className="h-12 min-w-0 flex-1 border-0 bg-transparent" style={{ borderWidth: 0 }} />
+                <Tap accessibilityRole="button" accessibilityLabel={showPw ? "Hide password" : "Show password"} onPress={() => setShowPw(!showPw)}
+                  className="h-full justify-center border-l border-line px-3.5">
+                  <T mono className="text-[11px] uppercase tracking-[1px] text-muted">{showPw ? "Hide" : "Show"}</T>
+                </Tap>
+              </View>
+              <View className="flex-row items-center gap-2">
+                <View className={`h-4 w-4 items-center justify-center border ${password.length >= 4 ? "border-owed bg-owed" : "border-line-2"}`}>
+                  {password.length >= 4 && <Icon.Check color={colors.bg} size={12} />}
+                </View>
+                <T className={`text-xs ${password.length >= 4 ? "text-owed" : "text-muted"}`}>At least 4 characters</T>
+              </View>
               <T className="text-xs leading-4 text-muted">You need it to open the tab as the admin, on this phone too. Everyone else creates their own the first time they pick their name.</T>
-            </View>
+            </Anim>
           )}
         </View>
         <Err>{error}</Err>

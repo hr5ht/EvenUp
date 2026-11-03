@@ -105,6 +105,20 @@ export function Field({ className = "", ...props }: TextInputProps & { className
   );
 }
 
+// The site's square switch: a box with a square knob that slides across, blue when on.
+export function Toggle({ value, onChange, label }: { value: boolean; onChange: (v: boolean) => void; label: string }) {
+  const { colors } = useTheme();
+  const x = useSharedValue(value ? 1 : 0);
+  useEffect(() => { x.value = withTiming(value ? 1 : 0, { duration: 220, easing: EASE }); }, [value, x]);
+  const knob = useAnimatedStyle(() => ({ transform: [{ translateX: x.value * 20 }] }));
+  return (
+    <Tap accessibilityRole="switch" accessibilityLabel={label} accessibilityState={{ checked: value }} onPress={() => onChange(!value)} hitSlop={8}
+      style={{ width: 48, height: 28, padding: 3, borderWidth: 1, borderColor: value ? colors.accent : colors["line-2"], backgroundColor: value ? colors.accent : colors["surface-3"] }}>
+      <Reanimated.View style={[{ width: 20, height: 20, backgroundColor: value ? "#ffffff" : colors.muted }, knob]} />
+    </Tap>
+  );
+}
+
 export const Err = ({ children }: { children?: string }) => (children ? <T className="text-sm text-owe">{children}</T> : null);
 
 // Hairline-joined rows: 1px gaps over the line colour, like the site's .cells grids.
