@@ -1,4 +1,4 @@
-/* EvenUp: AMOLED black, one lime accent, a phone-width column on every screen.
+/* QuickTab: AMOLED black, one lime accent, a phone-width column on every screen.
    Spacing is a 4px scale (--s1..--s7); corners are --r-sm / --r / --r-lg only. */
 :root {
   color-scheme: dark;

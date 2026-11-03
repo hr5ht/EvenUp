@@ -97,7 +97,7 @@ async function load() {
 
 function render() {
   $("title").textContent = data.name;
-  document.title = `${data.name} · EvenUp`;
+  document.title = `${data.name} · QuickTab`;
   // Nothing of the split shows until you've said who you are.
   $("content").hidden = !known();
   $("fab").hidden = !known();
@@ -850,7 +850,7 @@ $("download-png").onclick = async (ev) => {
 
       rule();
       y += 24;
-      text("Split with EvenUp", PAD, y, C.muted, 12);
+      text("Split with QuickTab", PAD, y, C.muted, 12);
       return y + PAD - 8;
     };
     const H = draw(el("canvas").getContext("2d"), 0);

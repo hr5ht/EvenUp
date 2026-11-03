@@ -58,7 +58,7 @@ $("create").onsubmit = async (e) => {
     $("copy-share").onclick = (ev) => copyText(share, ev.target);
     // The phone's share sheet (WhatsApp, Telegram…). Without one, as on most laptops: WhatsApp Web.
     $("share").onclick = async () => {
-      const text = "Add what you paid on EvenUp, we'll settle up with UPI.";
+      const text = "Add what you paid on QuickTab, we'll settle up with UPI.";
       if (navigator.share) {
         try { await navigator.share({ title: "Quick split", text, url: share }); } catch { /* closed the sheet */ }
       } else {

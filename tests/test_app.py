@@ -215,7 +215,7 @@ def test_demo():
         g = c.get(f"/api/splits/{r['slug']}").json()
         assert g["admin_id"] == r["admin_id"] == g["members"][0]["id"]
         assert len(g["expenses"]) == 5 and sum(g["balances"].values()) == 0
-        assert all(m["upi_id"].endswith("@evenup") for m in g["members"])
+        assert all(m["upi_id"].endswith("@quicktab") for m in g["members"])
         assert c.delete(f"/api/splits/{r['slug']}", headers={"X-Admin-Token": r["admin_token"]}).status_code == 200
 
 

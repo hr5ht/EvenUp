@@ -305,10 +305,10 @@ def create(body: SplitIn, con=Depends(db.get_db)):
 def demo(con=Depends(db.get_db)):
     """A fresh, filled-in split for someone who just wants to look around. Same lifetime as any split.
     Guest ends up owing, so the Pay flow is there to try."""
-    # @evenup isn't a real UPI handle, so a demo Pay can never reach a real account.
+    # @quicktab isn't a real UPI handle, so a demo Pay can never reach a real account.
     body = SplitIn(members=[
-        MemberIn(name="Guest", upi_id="guest@evenup"), MemberIn(name="Riya", upi_id="riya@evenup"),
-        MemberIn(name="Kabir", upi_id="kabir@evenup"), MemberIn(name="Aman", upi_id="aman@evenup")])
+        MemberIn(name="Guest", upi_id="guest@quicktab"), MemberIn(name="Riya", upi_id="riya@quicktab"),
+        MemberIn(name="Kabir", upi_id="kabir@quicktab"), MemberIn(name="Aman", upi_id="aman@quicktab")])
     slug, token, sid, _ = create_split(con, body, "Quick split (demo)")
     count(con, "demos")
     con.commit()
