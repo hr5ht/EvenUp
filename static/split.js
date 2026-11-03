@@ -244,8 +244,9 @@ function pick(m) {
   const legacy = admin && data.admin_login && !identity.adminToken && !data.ended;
   if (!needsPassword && !legacy) {
     // The admin token stays on this device whoever is picked: only the admin's name uses it.
-    setIdentity({ me: m.id, adminToken: identity.adminToken, token: m.id === identity.me ? identity.token : null });
+    // Close first: if rendering the split ever throws, you're still not stuck on this screen.
     $("who-dialog").close();
+    setIdentity({ me: m.id, adminToken: identity.adminToken, token: m.id === identity.me ? identity.token : null });
     return;
   }
   picking = { member: m, legacy };

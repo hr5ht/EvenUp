@@ -93,6 +93,9 @@ async def security_headers(request, call_next):
         "Referrer-Policy": "no-referrer",
         "Strict-Transport-Security": "max-age=31536000",
     })
+    # Pages and scripts revalidate every load (a cheap 304 when unchanged): a cached old common.js next to a
+    # new split.js threw on picking a name and left "Who are you?" stuck.
+    resp.headers.setdefault("Cache-Control", "no-cache")
     if request.url.path not in ("/", "/static/style.css"):  # only the landing page is indexable
         resp.headers["X-Robots-Tag"] = "noindex"
     return resp
