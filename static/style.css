@@ -1,5 +1,5 @@
 /* QuickTab: light paper, ink, one electric-blue accent. Sharp corners everywhere,
-   hairline grid rails like a blueprint, mono labels for the dev feel.
+   fading hairlines and a grid behind the hero, mono labels for the dev feel.
    Spacing is a 4px scale (--s1..--s8). No web fonts: system sans + system mono. */
 :root {
   color-scheme: light;
@@ -91,15 +91,7 @@
 * { box-sizing: border-box; border-radius: 0; }
 ::selection { background: var(--accent); color: var(--accent-text); }
 
-/* Outside the frame: a faint cell grid. Inside: plain paper between two rails. */
-html {
-  background-color: var(--surface-2);
-  background-image:
-    linear-gradient(var(--line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--line) 1px, transparent 1px);
-  background-size: 64px 64px;
-  background-position: center top;
-}
+html { background: var(--bg); }
 body {
   max-width: var(--frame);
   min-height: 100vh;
@@ -110,7 +102,6 @@ body {
   font: 15px/1.5 var(--sans);
   -webkit-font-smoothing: antialiased;
 }
-@media (min-width: 1232px) { body { border-inline: 1px solid var(--line-2); } }
 
 main { padding: 0 var(--s4) var(--s7); }
 @media (min-width: 900px) { main { padding: 0 var(--s7) var(--s8); } }
@@ -214,22 +205,10 @@ kbd {
 
 .page-head { display: grid; gap: var(--s2); padding: var(--s6) 0 var(--s5); }
 
-/* A full-bleed hairline across the frame with + marks where it meets the rails. */
-.rule { position: relative; border-top: 1px solid var(--line); margin-inline: calc(-1 * var(--s4)); padding-inline: var(--s4); }
+/* A hairline across the page that fades out at both ends, so it blends into the background. */
+.rule, .topbar { border-image: linear-gradient(90deg, transparent, var(--line-2) 15%, var(--line-2) 85%, transparent) 1; }
+.rule { position: relative; border-top: 1px solid; margin-inline: calc(-1 * var(--s4)); padding-inline: var(--s4); }
 @media (min-width: 900px) { .rule { margin-inline: calc(-1 * var(--s7)); padding-inline: var(--s7); } }
-.rule::before, .rule::after {
-  content: "";
-  position: absolute;
-  top: -6px;
-  width: 11px;
-  height: 11px;
-  background:
-    linear-gradient(var(--dim), var(--dim)) center / 1px 100% no-repeat,
-    linear-gradient(var(--dim), var(--dim)) center / 100% 1px no-repeat;
-}
-@media (max-width: 1231px) { .rule::before, .rule::after { display: none; } } /* only where the rails are drawn */
-.rule::before { left: -6px; }
-.rule::after { right: -6px; }
 
 /* ---------- surfaces ---------- */
 .card {
