@@ -132,8 +132,13 @@ function render() {
   if (!known() && !$("who-dialog").open) openPicker();
 }
 
+let heroFor; // whose numbers the hero shows; a new person counts up from 0, not from the last figure
 function renderHero() {
   const live = liveExpenses();
+  if (heroFor !== identity.me) {
+    heroFor = identity.me;
+    $("hero-amount").dataset.value = 0;
+  }
   const total = live.reduce((a, e) => a + e.amount_paise, 0);
   const me = member(identity.me);
   $("hero-sub").textContent = `${rupees(total)} spent · ${plural(live.length, "expense")}`;

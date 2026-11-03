@@ -1123,11 +1123,6 @@ dialog.sheet.fullscreen { isolation: isolate; }
 .life { width: 100%; max-width: 420px; height: 3px; margin-top: var(--s1); background: var(--line); overflow: hidden; }
 .life span { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 40%, var(--owed))); transform-origin: left; transition: width 0.6s var(--ease); }
 .loaded .life span { animation: grow 1.2s var(--ease) 0.3s both; }
-.side > * { animation: rise 0.6s var(--ease) both; }
-.side > :nth-child(2) { animation-delay: 0.06s; }
-.side > :nth-child(3) { animation-delay: 0.12s; }
-.side > :nth-child(4) { animation-delay: 0.18s; }
-.side > :nth-child(5) { animation-delay: 0.24s; }
 .hero-amount { transition: color 0.3s; }
 #expenses.fresh > li { animation: rise 0.5s var(--ease) both; }
 #expenses.fresh > li:nth-child(2) { animation-delay: 0.05s; }
@@ -1162,3 +1157,5 @@ dialog.sheet:not(.fullscreen)[open] .sheet-body > :nth-child(n + 4) { animation-
 .who-list button:hover:not(:disabled) { padding-left: calc(var(--s4) + 6px); }
 .who-list button::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--accent); transform: scaleY(0); transition: transform 0.25s var(--ease); }
 .who-list button:hover::before { transform: scaleY(1); }
+/* The join and password steps rise in each time they replace the list. */
+#who-dialog .who-form { animation: rise 0.45s var(--ease) both; }
