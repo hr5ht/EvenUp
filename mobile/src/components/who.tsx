@@ -1,9 +1,9 @@
 // "Who are you?": the website's picker. Pick your name (and enter or create a password on a protected tab), or join.
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import { FadeInDown } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Tap, Btn, Err, Field, Icon, Label, T } from "@/components/ui";
+import { Anim, Tap, Btn, Err, Field, Icon, Label, T } from "@/components/ui";
 import { api, UPI_HINT, type Identity, type Member, type Tab } from "@/lib/api";
 import { useTheme } from "@/lib/theme";
 
@@ -93,7 +93,7 @@ export function Who({ slug, data, identity, known, setIdentity, reload, onClose 
         )}
       </View>
       <ScrollView contentContainerClassName="gap-5 px-5 pb-10" keyboardShouldPersistTaps="handled">
-        <Animated.View key={step} entering={FadeInDown.duration(400)} className="gap-3">
+        <Anim key={step} entering={FadeInDown.duration(400)} className="gap-3">
           <View className="flex-row items-center gap-2">
             <Icon.Link color={colors.muted} size={14} />
             <Label>{data.ended ? "Closed tab" : "Live tab"}</Label>
@@ -106,7 +106,7 @@ export function Who({ slug, data, identity, known, setIdentity, reload, onClose 
                 : "Pick your name to open the tab."} This phone remembers it.
             </T>
           )}
-        </Animated.View>
+        </Anim>
 
         {step === "list" && (
           <>
@@ -114,7 +114,7 @@ export function Who({ slug, data, identity, known, setIdentity, reload, onClose 
               {data.members.map((m, i) => {
                 const current = m.id === identity.me && known;
                 return (
-                  <Animated.View key={m.id} entering={FadeInDown.delay(80 + Math.min(i, 5) * 50).duration(400)}>
+                  <Anim key={m.id} entering={FadeInDown.delay(80 + Math.min(i, 5) * 50).duration(400)}>
                     <Tap accessibilityRole="button" onPress={() => pick(m)}
                       className={`h-[60px] flex-row items-center gap-3 bg-surface px-4 ${current ? "border-l-2 border-accent" : ""}`}>
                       <View className={`h-8 w-8 items-center justify-center ${current ? "bg-accent" : m.id === data.admin_id ? "bg-ink" : "bg-surface-3"}`}>
@@ -126,7 +126,7 @@ export function Who({ slug, data, identity, known, setIdentity, reload, onClose 
                       {m.id === data.admin_id && <T mono className="border border-line-2 px-2 py-0.5 text-[11px] uppercase text-muted">admin</T>}
                       {current && <Icon.Check color={colors.accent} size={18} />}
                     </Tap>
-                  </Animated.View>
+                  </Anim>
                 );
               })}
             </View>
@@ -144,7 +144,7 @@ export function Who({ slug, data, identity, known, setIdentity, reload, onClose 
         )}
 
         {step === "join" && (
-          <Animated.View entering={FadeInDown.duration(400)} className="gap-4">
+          <Anim entering={FadeInDown.duration(400)} className="gap-4">
             <View className="gap-2 border border-line bg-surface p-5">
               <Label>Your name</Label>
               <Field value={joinName} onChangeText={setJoinName} maxLength={40} placeholder="As your friends know you" autoComplete="given-name" autoCapitalize="words" autoFocus />
@@ -160,11 +160,11 @@ export function Who({ slug, data, identity, known, setIdentity, reload, onClose 
             </View>
             <Btn variant="ink" title="Join tab" busy={busy} disabled={!joinName.trim()} onPress={join} />
             <Btn variant="dashed" title="Back to the list" onPress={back} />
-          </Animated.View>
+          </Anim>
         )}
 
         {step === "enter" && picking && (
-          <Animated.View entering={FadeInDown.duration(400)} className="gap-4">
+          <Anim entering={FadeInDown.duration(400)} className="gap-4">
             <View className="gap-2 border border-line bg-surface p-5">
               <Label>{picking.legacy ? "Admin password" : create ? "Create a password" : "Your password"}</Label>
               <Field value={pw} onChangeText={setPw} secureTextEntry maxLength={100} autoFocus onSubmitEditing={enter}
@@ -178,7 +178,7 @@ export function Who({ slug, data, identity, known, setIdentity, reload, onClose 
             </View>
             <Btn variant="ink" title={create ? "Create and continue" : "Unlock"} busy={busy} disabled={!pw} onPress={enter} />
             <Btn variant="dashed" title="Not you? Back to the list" onPress={back} />
-          </Animated.View>
+          </Anim>
         )}
       </ScrollView>
     </SafeAreaView>

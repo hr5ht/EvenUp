@@ -1,5 +1,5 @@
 // The website's design language in React Native: sharp corners, hairlines, mono uppercase labels, one blue accent.
-import { Children, Fragment, isValidElement, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Children, Fragment, isValidElement, type ComponentProps, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ActivityIndicator, KeyboardAvoidingView, Modal, PanResponder, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
   useWindowDimensions,
@@ -10,12 +10,14 @@ import Reanimated, {
   Easing, FadeIn, FadeInDown, FadeOutDown, Keyframe, useAnimatedStyle, useSharedValue, withRepeat, withSpring, withTiming,
 } from "react-native-reanimated";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
-import { cssInterop } from "nativewind";
 import { MONO, useTheme } from "@/lib/theme";
 
-// Reanimated's views (entering animations) take className like any other view. But never className AND style on
-// one: on Android the interop drops the style (backgrounds, animated transforms), so animated ones use style only.
-cssInterop(Reanimated.View, { className: "style" });
+// Entering animation around classed content. Reanimated's view is never registered with NativeWind: on Android the
+// interop dropped its style (see-through sheets, no backdrop). So the animated view only animates, and the classes
+// sit on a plain View inside it.
+export function Anim({ className, children, ...props }: Omit<ComponentProps<typeof Reanimated.View>, "children"> & { className?: string; children?: ReactNode }) {
+  return <Reanimated.View {...props}>{className ? <View className={className}>{children}</View> : children}</Reanimated.View>;
+}
 
 // Text in the theme's text colour, unless the className gives it another one.
 const COLOR = /(^|\s)text-(text|muted|dim|accent|accent-text|ink-text|owe|owed)(\s|$)/;
@@ -181,7 +183,7 @@ export function Sheet({ open, onClose, title, kicker, children, footer, overlay 
             ))}
           </ScrollView>
           {footer && (
-            <Reanimated.View entering={FadeIn.delay(200).duration(300)} className="flex-row gap-2.5 border-t border-line px-5 py-3">{footer}</Reanimated.View>
+            <Anim entering={FadeIn.delay(200).duration(300)} className="flex-row gap-2.5 border-t border-line px-5 py-3">{footer}</Anim>
           )}
         </Reanimated.View>
         {overlay}

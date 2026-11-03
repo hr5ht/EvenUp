@@ -3,9 +3,9 @@ import * as Clipboard from "expo-clipboard";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { ScrollView, Share, Switch, View } from "react-native";
-import Animated, { FadeInDown, ZoomIn } from "react-native-reanimated";
+import { FadeInDown, ZoomIn } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Tap, Btn, Err, Field, Icon, Label, T } from "@/components/ui";
+import { Anim, Tap, Btn, Err, Field, Icon, Label, T } from "@/components/ui";
 import { api, saveIdentity, tabUrl } from "@/lib/api";
 import { useTheme } from "@/lib/theme";
 
@@ -55,21 +55,21 @@ export default function NewTab() {
     return (
       <SafeAreaView className="flex-1 bg-bg">
         <ScrollView contentContainerClassName="gap-6 px-5 pt-20">
-          <Animated.View entering={ZoomIn.duration(400)} className="h-16 w-16 items-center justify-center border border-accent">
+          <Anim entering={ZoomIn.duration(400)} className="h-16 w-16 items-center justify-center border border-accent">
             <Icon.Check color={colors.accent} size={30} />
-          </Animated.View>
-          <Animated.View entering={FadeInDown.delay(100).duration(400)} className="gap-2.5">
+          </Anim>
+          <Anim entering={FadeInDown.delay(100).duration(400)} className="gap-2.5">
             <T mono className="text-[11px] uppercase tracking-[1px] text-owed">[ Tab opened ]</T>
             <T className="text-[32px] font-bold leading-9 tracking-tight">Send this link to the group</T>
-          </Animated.View>
-          <Animated.View entering={FadeInDown.delay(180).duration(400)} className="flex-row items-center gap-2 border border-text bg-surface py-1.5 pl-3.5 pr-1.5">
+          </Anim>
+          <Anim entering={FadeInDown.delay(180).duration(400)} className="flex-row items-center gap-2 border border-text bg-surface py-1.5 pl-3.5 pr-1.5">
             <T mono className="flex-1 text-sm" numberOfLines={1}>{link.replace(/^https?:\/\//, "")}</T>
             <Btn small title={copied ? "Copied" : "Copy"} onPress={async () => {
               await Clipboard.setStringAsync(link);
               setCopied(true);
               setTimeout(() => setCopied(false), 1500);
             }} />
-          </Animated.View>
+          </Anim>
           <T className="text-[15px] leading-6 text-muted">
             {protect
               ? "Everyone opens the same link, picks their name and creates a password. Yours asks for the one you just set."

@@ -2,9 +2,9 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import { FadeInDown } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Tap, Btn, Err, Field, Icon, Label, Logo, T, Tag, ThemeButton, useConfirm } from "@/components/ui";
+import { Anim, Tap, Btn, Err, Field, Icon, Label, Logo, T, Tag, ThemeButton, useConfirm } from "@/components/ui";
 import { api, ApiError, forgetTab, rupees, savedTabs, slugFrom, tabTitle, lifeOf, type Identity, type Tab } from "@/lib/api";
 import { useTheme } from "@/lib/theme";
 
@@ -95,9 +95,9 @@ export default function Home() {
           ) : (
             <View className="gap-px border border-line bg-line">
               {rows.map((r, i) => (
-                <Animated.View key={r.slug} entering={FadeInDown.delay(i * 50).duration(350)}>
+                <Anim key={r.slug} entering={FadeInDown.delay(i * 50).duration(350)}>
                   <TabCard row={r} onPress={() => router.push(`/g/${r.slug}`)} onLongPress={() => remove(r.slug)} />
-                </Animated.View>
+                </Anim>
               ))}
             </View>
           )}

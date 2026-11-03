@@ -2,13 +2,13 @@
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, RefreshControl, ScrollView, View } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import { FadeInDown } from "react-native-reanimated";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ActivitySheet, AdminSheet, BalancesSheet, ExpenseDetail, ExpenseForm, liveExpenses, PaySheet, payee, payMethod,
   shareCsv, ShareSheet, SummarySheet, type Ctx, type Editing,
 } from "@/components/sheets";
-import { Tap, Btn, Err, Field, Icon, Label, T, Tag, Toast, useCountUp, type ToastMsg } from "@/components/ui";
+import { Anim, Tap, Btn, Err, Field, Icon, Label, T, Tag, Toast, useCountUp, type ToastMsg } from "@/components/ui";
 import { Who } from "@/components/who";
 import { api, ApiError, forgetTab, lifeOf, loadIdentity, plural, rupees, saveIdentity, UPI_HINT, type Expense, type Identity, type Payment, type Tab } from "@/lib/api";
 import { useTheme } from "@/lib/theme";
@@ -77,12 +77,12 @@ export default function TabScreen() {
     return (
       <SafeAreaView className="flex-1 bg-bg">
         {/* Padding lives on an inner view: SafeAreaView sets its own and overrides className padding. */}
-        <Animated.View entering={FadeInDown.duration(450)} className="gap-4 px-5 pt-16">
+        <Anim entering={FadeInDown.duration(450)} className="gap-4 px-5 pt-16">
           <Tag>not found</Tag>
           <T className="text-[30px] font-bold tracking-tight">Tab not found</T>
           <T className="leading-6 text-muted">{loadError}</T>
           <Btn variant="ink" title="Back to my tabs" onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))} />
-        </Animated.View>
+        </Anim>
       </SafeAreaView>
     );
   }
@@ -167,14 +167,14 @@ export default function TabScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.muted}
           onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
       >
-        <Animated.View entering={FadeInDown.duration(450)} className="gap-2 pb-2">
+        <Anim entering={FadeInDown.duration(450)} className="gap-2 pb-2">
           {data.ended ? <Tag>closed</Tag> : <Tag live>live tab</Tag>}
           <T className="text-[30px] font-bold tracking-tight">{data.name}</T>
           {!data.ended && <>
             <T className="text-sm text-muted">Open until {when(data.expires_at)} ({hours}h left), then read-only for a day.</T>
             <View className="h-0.5 bg-surface-3"><View className="h-0.5 bg-accent" style={{ width: `${life}%` }} /></View>
           </>}
-        </Animated.View>
+        </Anim>
 
         {data.ended && (
           <View className="gap-3 border border-line bg-surface p-4">
@@ -192,18 +192,18 @@ export default function TabScreen() {
         {/* keyed by person: another person's form starts empty */}
         {!data.ended && <UpiBox key={me.id} c={c} />}
 
-        <Animated.View entering={FadeInDown.delay(80).duration(450)}><Hero c={c} onSettle={setPaying} /></Animated.View>
+        <Anim entering={FadeInDown.delay(80).duration(450)}><Hero c={c} onSettle={setPaying} /></Anim>
 
-        <Animated.View entering={FadeInDown.delay(140).duration(450)} className="flex-row flex-wrap gap-px border border-line bg-line">
+        <Anim entering={FadeInDown.delay(140).duration(450)} className="flex-row flex-wrap gap-px border border-line bg-line">
           <Tile icon={<Icon.Chart color={colors.text} size={18} />} title="Balances" sub={`${data.members.length} of ${data.capacity} people`} onPress={() => setSheet("balances")} />
           <Tile icon={<Icon.Share color={colors.text} size={18} />} title="Share" sub="Link, image" onPress={() => setSheet("share")} />
           <Tile icon={<Icon.Clock color={colors.text} size={18} />} title="Activity" sub="History" onPress={() => setSheet("activity")} />
           {isAdmin && !data.ended && (
             <Tile wide icon={<Icon.Shield color={colors.text} size={18} />} title="Admin" sub="Members, UPI IDs, delete tab" onPress={() => setSheet("admin")} />
           )}
-        </Animated.View>
+        </Anim>
 
-        <Animated.View entering={FadeInDown.delay(200).duration(450)} className="mt-2 border border-line bg-surface">
+        <Anim entering={FadeInDown.delay(200).duration(450)} className="mt-2 border border-line bg-surface">
           <View className="h-11 flex-row items-center justify-between border-b border-line px-4">
             <Label>Expenses</Label>
             {!!shown.length && <T mono className="text-[11px] text-muted">[ {String(shown.length).padStart(2, "0")} ]</T>}
@@ -226,7 +226,7 @@ export default function TabScreen() {
               </Tap>
             );
           })}
-        </Animated.View>
+        </Anim>
         <T className="text-center text-xs text-dim">{plural(live.length, "expense")} · updates every few seconds</T>
       </ScrollView>
 
