@@ -21,8 +21,9 @@ export const MONO = Platform.select({ ios: "Menlo", android: "monospace", defaul
 const asVars = (c: Colors) => vars(Object.fromEntries(Object.entries(c).map(([k, v]) => [`--${k}`, v])));
 const VARS = { light: asVars(light), dark: asVars(dark) };
 
-type Ctx = { colors: Colors; dark: boolean; toggle: () => void };
-const ThemeContext = createContext<Ctx>({ colors: light, dark: false, toggle: () => {} });
+// vars: the colour variables as a style, for roots outside the app's view (pop-ups render in their own native window).
+type Ctx = { colors: Colors; dark: boolean; toggle: () => void; vars: object };
+const ThemeContext = createContext<Ctx>({ colors: light, dark: false, toggle: () => {}, vars: VARS.light });
 export const useTheme = () => useContext(ThemeContext);
 
 const KEY = "quicktab:theme";
@@ -52,7 +53,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     AsyncStorage.setItem(KEY, next).catch(() => {});
   };
   return (
-    <ThemeContext.Provider value={{ colors: isDark ? dark : light, dark: isDark, toggle }}>
+    <ThemeContext.Provider value={{ colors: isDark ? dark : light, dark: isDark, toggle, vars: VARS[isDark ? "dark" : "light"] }}>
       <View style={[{ flex: 1 }, VARS[isDark ? "dark" : "light"]]}>{children}</View>
     </ThemeContext.Provider>
   );

@@ -123,7 +123,7 @@ export function Sheet({ open, onClose, title, kicker, children, footer, overlay 
   overlay?: ReactNode; // another pop-up shown over this one (a confirm), nested so it stacks on every platform
 }) {
   const insets = useSafeAreaInsets();
-  const { colors } = useTheme();
+  const { colors, vars } = useTheme();
   const { height } = useWindowDimensions();
   const [mounted, setMounted] = useState(open);
   if (open && !mounted) setMounted(true); // opening mounts at once; closing waits for the slide out
@@ -156,11 +156,11 @@ export function Sheet({ open, onClose, title, kicker, children, footer, overlay 
   if (!mounted) return null;
   return (
     <Modal visible transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} className="flex-1 justify-end">
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} className="flex-1 justify-end" style={vars}>
         <Reanimated.View className="absolute inset-0" style={[{ backgroundColor: "rgba(5,5,4,0.55)" }, backdrop]}>
           <Pressable accessibilityLabel="Close" onPress={onClose} className="flex-1" />
         </Reanimated.View>
-        <Reanimated.View className="max-h-[90%] border-t border-line-2 bg-bg" style={[{ paddingBottom: insets.bottom }, panel]}>
+        <Reanimated.View className="max-h-[90%] border-t border-line-2 bg-bg" style={[{ paddingBottom: insets.bottom, backgroundColor: colors.bg }, panel]}>
           <View {...pan.panHandlers}>
             <View className="items-center pt-2"><View className="h-1 w-9 bg-line-2" /></View>
             <View className="flex-row items-center justify-between border-b border-line pb-3 pl-5 pr-2 pt-1">
@@ -197,16 +197,17 @@ const popIn = new Keyframe({
 }).duration(260);
 
 export function useConfirm() {
+  const { vars, colors } = useTheme();
   const [req, setReq] = useState<Ask | null>(null);
   const ask = (title: string, text: string, ok: string) => new Promise<boolean>((resolve) => setReq({ title, text, ok, resolve }));
   const done = (v: boolean) => { req?.resolve(v); setReq(null); };
   const el = req && (
     <Modal visible transparent animationType="none" onRequestClose={() => done(false)} statusBarTranslucent>
-      <View className="flex-1 items-center justify-center px-6">
+      <View className="flex-1 items-center justify-center px-6" style={vars}>
         <Reanimated.View entering={FadeIn.duration(200)} className="absolute inset-0" style={{ backgroundColor: "rgba(5,5,4,0.6)" }}>
           <Pressable accessibilityLabel="Cancel" onPress={() => done(false)} className="flex-1" />
         </Reanimated.View>
-        <Reanimated.View entering={popIn} className="w-full max-w-[400px] border border-line-2 bg-bg">
+        <Reanimated.View entering={popIn} className="w-full max-w-[400px] border border-line-2 bg-bg" style={{ backgroundColor: colors.bg }}>
           <View className="gap-2 p-5">
             <Label className="text-owe">[ Confirm ]</Label>
             <T className="text-xl font-bold tracking-tight">{req.title}</T>
