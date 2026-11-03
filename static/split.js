@@ -23,22 +23,6 @@ const UPI_HINT = "That doesn't look like a UPI ID (name@bank).";
 const paymentsOf = (id) => data.settlement.filter((p) => p.from === id || p.to === id);
 
 // Roll the big number to its new value. Polling re-renders with the same value, which skips the animation.
-function countUp(node, paise) {
-  const from = Number(node.dataset.value || 0);
-  node.dataset.value = paise;
-  if (from === paise || matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    node.textContent = rupees(paise);
-    return;
-  }
-  const start = performance.now();
-  const step = (t) => {
-    const k = Math.min(1, (t - start) / 700);
-    node.textContent = rupees(Math.round(from + (paise - from) * (1 - (1 - k) ** 3)));
-    if (k < 1) requestAnimationFrame(step);
-  };
-  requestAnimationFrame(step);
-}
-
 // ---------- sheets ----------
 
 function openSheet(id) {

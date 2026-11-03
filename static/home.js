@@ -41,3 +41,46 @@ $("command").onsubmit = (e) => {
   if (!slug) return ($("demo-error").textContent = "Paste the link your friend shared.");
   location.href = `/g/${encodeURIComponent(slug)}`;
 };
+
+// ---------- motion ----------
+const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// Reveal blocks as they scroll into view, once. Count-ups run when their block appears.
+const seen = new IntersectionObserver((entries) => {
+  for (const e of entries) {
+    if (!e.isIntersecting) continue;
+    e.target.classList.add("in");
+    seen.unobserve(e.target);
+    e.target.querySelectorAll("[data-count]").forEach((n) => { n.dataset.value = 0; countUp(n, Number(n.dataset.count), String, 1200); });
+    e.target.querySelectorAll("[data-count-paise]").forEach((n) => { n.dataset.value = 0; countUp(n, Number(n.dataset.countPaise), rupees, 1400); });
+  }
+}, { threshold: 0.2, rootMargin: "0px 0px -40px" });
+document.querySelectorAll("[data-reveal]").forEach((n) => seen.observe(n));
+
+// Spotlight: every cell in a grid lights up around the cursor, so the glow crosses cell borders.
+document.querySelectorAll(".spot").forEach((grid) => grid.addEventListener("pointermove", (e) => {
+  for (const cell of grid.children) {
+    const r = cell.getBoundingClientRect();
+    cell.style.setProperty("--mx", `${e.clientX - r.left}px`);
+    cell.style.setProperty("--my", `${e.clientY - r.top}px`);
+  }
+}));
+
+// The New tab placeholder types out example names while the box is empty and not focused.
+if (!still) {
+  const names = ["Riya", "Kabir", "Aman", "Your name"];
+  let i = 0, n = 0, back = false;
+  const tick = () => {
+    if (mode() === "new" && !cmd.value && document.activeElement !== cmd) {
+      const word = names[i % names.length];
+      n += back ? -1 : 1;
+      cmd.placeholder = `${word.slice(0, n)}▍`;
+      if (n === word.length) { back = true; return setTimeout(tick, 1600); }
+      if (n === 0) { back = false; i++; }
+    } else if (mode() === "new") {
+      cmd.placeholder = MODES.new[0];
+    }
+    setTimeout(tick, back ? 45 : 95);
+  };
+  setTimeout(tick, 1800);
+}

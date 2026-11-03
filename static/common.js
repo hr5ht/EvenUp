@@ -68,3 +68,20 @@ async function copyText(text, button) {
     prompt("Copy this:", text);
   }
 }
+
+// Rolls a number up to its new value (paise by default) instead of jumping. Still under reduced motion.
+function countUp(node, value, fmt = rupees, ms = 700) {
+  const from = Number(node.dataset.value || 0);
+  node.dataset.value = value;
+  if (from === value || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    node.textContent = fmt(value);
+    return;
+  }
+  const start = performance.now();
+  const step = (t) => {
+    const k = Math.min(1, (t - start) / ms);
+    node.textContent = fmt(Math.round(from + (value - from) * (1 - (1 - k) ** 3)));
+    if (k < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
