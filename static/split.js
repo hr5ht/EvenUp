@@ -2,7 +2,8 @@ const slug = location.pathname.split("/")[2];
 const base = `/api/splits/${slug}`;
 const $ = (id) => document.getElementById(id);
 
-let identity = loadIdentity(slug); // {me: member_id, adminToken: only when me is the admin}
+// {me: member_id, adminToken: only on the admin's device, token: the member's session in a protected split}
+let identity = loadIdentity(slug);
 let data = null;
 let membersKey = "";
 let editing = null; // {id, version, paidBy, description} while editing an expense
@@ -10,6 +11,8 @@ let editing = null; // {id, version, paidBy, description} while editing an expen
 const member = (id) => data.members.find((m) => m.id === id);
 const nameOf = (id) => (member(id) || {}).name || "?";
 const label = (id) => (id === identity.me ? "You" : nameOf(id));
+// In a protected split you're only in once your password gave this device a session.
+const known = () => !!member(identity.me) && (!data.protected || data.ended || !!identity.token);
 const isAdmin = () => !!identity.adminToken && identity.me === data.admin_id;
 const splitType = () => document.querySelector("input[name=split]:checked").value;
 // Expenses and settle-up payments share one table; payments don't count as spending.
@@ -96,9 +99,8 @@ function render() {
   $("title").textContent = data.name;
   document.title = `${data.name} · EvenUp`;
   // Nothing of the split shows until you've said who you are.
-  const known = !!member(identity.me);
-  $("content").hidden = !known;
-  $("fab").hidden = !known;
+  $("content").hidden = !known();
+  $("fab").hidden = !known();
   $("admin-tile").hidden = !isAdmin();
 
   // Open 48h from creation, then read-only for a day (the server decides which), then deleted.
@@ -126,7 +128,7 @@ function render() {
   }
 
   // New visitor (or their member was removed): "Who are you?" comes first, full screen.
-  if (!known && !$("who-dialog").open) openPicker();
+  if (!known() && !$("who-dialog").open) openPicker();
 }
 
 function renderHero() {
@@ -158,7 +160,7 @@ function setIdentity(next) {
 }
 
 function renderYou() {
-  const me = member(identity.me);
+  const me = known() ? member(identity.me) : null;
   $("you-text").textContent = me ? `${me.name}${isAdmin() ? " · admin" : ""} ▾` : "Who are you?";
   $("upi-form").hidden = !me || !!me.upi_id;
 }
@@ -167,7 +169,7 @@ $("upi-form").onsubmit = async (ev) => {
   ev.preventDefault();
   $("upi-error").textContent = "";
   try {
-    await api("PUT", `${base}/members/${identity.me}/upi`, { upi_id: $("my-upi").value.trim() });
+    await call("PUT", `${base}/members/${identity.me}/upi`, { upi_id: $("my-upi").value.trim() });
     await load();
     toast("UPI ID saved");
   } catch (err) {
@@ -177,33 +179,24 @@ $("upi-form").onsubmit = async (ev) => {
 
 function showPickerStep(step, title) {
   $("who-title").textContent = title;
+  $("who-sub").hidden = step !== "list";
   $("who-list").hidden = step !== "list";
   $("join-open").hidden = step !== "list";
   $("join-form").hidden = step !== "join";
-  $("pw-form").hidden = step !== "admin";
+  $("pw-form").hidden = step !== "enter";
 }
 
 function openPicker() {
   // Same full screen every time; only someone who picked a name before gets a ✕ back to the split.
-  $("who-dialog").classList.toggle("gate", !member(identity.me));
-  $("who-sub").textContent = `Pick your name to open ${data.name}.`;
+  $("who-dialog").classList.toggle("gate", !known());
+  $("who-sub").textContent = data.protected && !data.ended
+    ? "Pick your name. The first time, you create a password, so nobody else can use your name."
+    : "Pick your name to open the split.";
   const people = data.members.map((m) => {
-    const admin = m.id === data.admin_id;
+    const tag = m.unnamed ? "open" : m.id === data.admin_id ? "admin" : null;
     const b = el("button", { type: "button", className: m.id === identity.me ? "current" : "" },
-      el("span", { textContent: m.name }), admin ? el("span", { className: "badge", textContent: "admin" }) : null);
-    b.onclick = () => {
-      // An ended split can't be changed, so its admin needs no password just to look.
-      if (admin && !isAdmin() && !data.ended) {
-        showPickerStep("admin", m.name);
-        $("pw-error").textContent = "";
-        $("admin-pw").value = "";
-        $("admin-pw").focus();
-        return;
-      }
-      // Any other name drops the admin token, so a friend using this phone isn't the admin.
-      setIdentity({ me: m.id, adminToken: admin ? identity.adminToken : null });
-      $("who-dialog").close();
-    };
+      el("span", { textContent: m.name }), tag ? el("span", { className: "badge", textContent: tag }) : null);
+    b.onclick = () => pick(m);
     return b;
   });
   $("who-list").replaceChildren(...people);
@@ -211,25 +204,68 @@ function openPicker() {
   openSheet("who-dialog");
 }
 
+let picking = null; // {member, legacy: true for an old split's admin password}
+
+function pick(m) {
+  const admin = m.id === data.admin_id;
+  const signedIn = m.id === identity.me && (!data.protected || identity.token);
+  // An ended split can't be changed, so anyone can look as anyone, no password.
+  const needsName = m.unnamed && !data.ended;
+  const needsPassword = data.protected && !data.ended && !signedIn;
+  const legacy = admin && data.admin_login && !identity.adminToken && !data.ended;
+  if (!needsName && !needsPassword && !legacy) {
+    // The admin token stays on this device whoever is picked: only the admin's name uses it.
+    setIdentity({ me: m.id, adminToken: identity.adminToken, token: m.id === identity.me ? identity.token : null });
+    $("who-dialog").close();
+    return;
+  }
+  picking = { member: m, legacy };
+  $("enter-name-box").hidden = !needsName;
+  $("enter-name").value = "";
+  $("enter-pw-box").hidden = !(needsPassword || legacy);
+  $("admin-pw").value = "";
+  const create = needsPassword && !m.has_password;
+  $("pw-label").textContent = legacy ? "This is the admin. Enter the admin password to continue."
+    : create ? "Create a password. You'll need it to open the split as you on another device."
+    : "Enter your password";
+  $("admin-pw").autocomplete = create ? "new-password" : "current-password";
+  $("pw-error").textContent = "";
+  showPickerStep("enter", needsName ? "Join as yourself" : m.name);
+  (needsName ? $("enter-name") : $("admin-pw")).focus();
+}
+
 $("pw-form").onsubmit = async (ev) => {
   ev.preventDefault();
+  const m = picking.member;
   try {
-    const { admin_token } = await api("POST", `${base}/admin-login`, { password: $("admin-pw").value });
-    setIdentity({ me: data.admin_id, adminToken: admin_token });
+    if (picking.legacy) {
+      const { admin_token } = await api("POST", `${base}/admin-login`, { password: $("admin-pw").value });
+      setIdentity({ me: m.id, adminToken: admin_token, token: null });
+      toast("Admin unlocked");
+    } else {
+      const r = await api("POST", `${base}/members/${m.id}/enter`, {
+        name: m.unnamed ? $("enter-name").value.trim() : null,
+        password: $("admin-pw").value,
+      });
+      identity = { me: m.id, token: r.token, adminToken: data.protected ? r.admin_token : identity.adminToken };
+      saveIdentity(slug, identity);
+      await load();
+    }
     $("who-dialog").close();
-    toast("Admin unlocked");
   } catch (err) {
     $("pw-error").textContent = err.message;
   }
 };
 $("switch").onclick = openPicker;
 // Escape on the full-screen picker can't skip it: no name, no split.
-$("who-dialog").addEventListener("close", () => { if (!member(identity.me)) openPicker(); });
+$("who-dialog").addEventListener("close", () => { if (!known()) openPicker(); });
 $("pw-back").onclick = openPicker;
 $("join-back").onclick = openPicker;
 
 $("join-open").onclick = () => {
   showPickerStep("join", "Join this split");
+  $("join-pw-box").hidden = !data.protected;
+  $("join-pw").required = data.protected;
   $("join-error").textContent = "";
   $("join-name").focus();
 };
@@ -238,12 +274,14 @@ $("join-form").onsubmit = async (ev) => {
   ev.preventDefault();
   $("join-error").textContent = "";
   try {
-    const { id } = await api("POST", `${base}/members`, {
+    // Plain api(), not call(): this is a new person, not a member adding a friend.
+    const { id, token } = await api("POST", `${base}/members`, {
       name: $("join-name").value.trim(),
       upi_id: $("join-upi").value.trim() || null,
+      password: data.protected ? $("join-pw").value : null,
     });
     $("join-form").reset();
-    identity = { me: id, adminToken: null };
+    identity = { me: id, adminToken: identity.adminToken, token };
     saveIdentity(slug, identity);
     await load();
     $("who-dialog").close();
@@ -252,9 +290,22 @@ $("join-form").onsubmit = async (ev) => {
   }
 };
 
+// Every change carries this device's sessions: the member one (protected splits) and the admin one.
+async function call(method, url, body) {
+  const headers = {};
+  if (identity.token) headers["X-Member-Token"] = identity.token;
+  if (identity.adminToken) headers["X-Admin-Token"] = identity.adminToken;
+  try {
+    return await api(method, url, body, headers);
+  } catch (err) {
+    if (err.status === 401) setIdentity({}); // session no longer valid: back to "Who are you?"
+    throw err;
+  }
+}
+
 async function adminApi(method, url, body) {
   try {
-    return await api(method, url, body, { "X-Admin-Token": identity.adminToken });
+    return await call(method, url, body);
   } catch (err) {
     if (err.status === 403) {
       setIdentity({ me: identity.me, adminToken: null });
@@ -347,7 +398,7 @@ $("pay-done").onclick = async (ev) => {
   const p = paying;
   ev.currentTarget.disabled = true;
   try {
-    const { id } = await api("POST", `${base}/expenses`, {
+    const { id } = await call("POST", `${base}/expenses`, {
       kind: "payment",
       paid_by: p.from,
       amount_paise: p.amount_paise,
@@ -360,7 +411,7 @@ $("pay-done").onclick = async (ev) => {
     await load();
     toast(`Paid ${nameOf(p.to)} ${rupees(p.amount_paise)}`, "Undo", () => act(() => {
       const a = data.activity.find((x) => x.expense_id === id);
-      return api("POST", `${base}/activity/${a.id}/undo`);
+      return call("POST", `${base}/activity/${a.id}/undo`);
     }));
   } catch (err) {
     $("pay-error").textContent = err.message;
@@ -459,10 +510,10 @@ function openExpense(e) {
   };
   $("exp-delete").onclick = async () => {
     $("expense-sheet").close();
-    await act(() => api("DELETE", `${base}/expenses/${e.id}`));
+    await act(() => call("DELETE", `${base}/expenses/${e.id}`));
     toast(`Deleted ${payment ? "payment" : e.description}`, "Undo", () => act(() => {
       const a = data.activity.find((x) => x.expense_id === e.id);
-      return api("POST", `${base}/activity/${a.id}/undo`);
+      return call("POST", `${base}/activity/${a.id}/undo`);
     }));
   };
   openSheet("expense-sheet");
@@ -561,8 +612,8 @@ $("expense-form").onsubmit = async (ev) => {
   $("save").disabled = true;
   try {
     const wasEditing = editing;
-    if (editing) await api("PUT", `${base}/expenses/${editing.id}`, { ...body, version: editing.version });
-    else await api("POST", `${base}/expenses`, body);
+    if (editing) await call("PUT", `${base}/expenses/${editing.id}`, { ...body, version: editing.version });
+    else await call("POST", `${base}/expenses`, body);
     $("form-sheet").close();
     resetForm();
     await load();
@@ -592,6 +643,7 @@ const ACTIONS = {
   deleted: "Deleted",
   restored: "Restored",
   member_added: "Member added:",
+  member_named: "Joined:",
   member_removed: "Member removed:",
   upi_set: "UPI ID updated for",
 };
@@ -609,7 +661,7 @@ function renderActivity() {
     // Only the latest change to each expense can be undone; the server checks this too.
     if (a.expense_id && data.activity.find((x) => x.expense_id === a.expense_id) === a) {
       undo = el("button", { type: "button", className: "small live-only", textContent: "Undo" });
-      undo.onclick = () => act(() => api("POST", `${base}/activity/${a.id}/undo`));
+      undo.onclick = () => act(() => call("POST", `${base}/activity/${a.id}/undo`));
     }
     return el("li", {},
       el("span", { className: "grow" },

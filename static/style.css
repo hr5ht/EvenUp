@@ -522,3 +522,16 @@ dialog.sheet.fullscreen::backdrop { background: var(--bg); }
 
 /* QR stays black on white so scanners can read it */
 .qr { display: block; max-width: 100%; height: auto; margin: 0 auto var(--s4); padding: var(--s2); border-radius: var(--r); background: #fff; }
+
+/* ---------- new split: headcount and options ---------- */
+.stepper { gap: var(--s2); }
+.stepper button { min-width: 48px; min-height: 48px; font-size: 20px; }
+.stepper input { text-align: center; }
+input[type="number"] {
+  width: 100%; min-height: 48px; padding: 0 var(--s3); border: 1px solid var(--line-2); border-radius: var(--r);
+  background: var(--bg); font-size: 16px; -moz-appearance: textfield;
+}
+input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+label.check { display: flex; align-items: center; gap: var(--s3); margin-top: var(--s5); color: var(--text); font-size: 15px; cursor: pointer; }
+label.check input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); }
+#names-box, #protect-box { margin-top: var(--s3); }

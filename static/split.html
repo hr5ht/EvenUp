@@ -147,18 +147,29 @@
       <input type="text" id="join-name" maxlength="40" required>
       <label for="join-upi">UPI ID <span class="muted">(optional, so people can pay you)</span></label>
       <input type="text" id="join-upi" maxlength="100" placeholder="name@bank">
+      <div id="join-pw-box" hidden>
+        <label for="join-pw">Create a password</label>
+        <input type="password" id="join-pw" minlength="4" maxlength="100" autocomplete="new-password" placeholder="At least 4 characters">
+      </div>
       <p class="error" id="join-error"></p>
       <div class="actions">
         <button class="primary" type="submit">Join</button>
         <button type="button" id="join-back" class="link">Back</button>
       </div>
     </form>
+    <!-- After picking a name: type it (a "Person 3" slot), and/or create or enter a password (protected split). -->
     <form id="pw-form" hidden>
-      <label for="admin-pw">This is the admin. Enter the admin password to continue.</label>
-      <input type="password" id="admin-pw" maxlength="100" autocomplete="current-password" required>
+      <div id="enter-name-box">
+        <label for="enter-name">Your name</label>
+        <input type="text" id="enter-name" maxlength="40">
+      </div>
+      <div id="enter-pw-box">
+        <label for="admin-pw" id="pw-label"></label>
+        <input type="password" id="admin-pw" maxlength="100">
+      </div>
       <p class="error" id="pw-error"></p>
       <div class="actions">
-        <button class="primary" type="submit">Unlock</button>
+        <button class="primary" type="submit">Continue</button>
         <button type="button" id="pw-back" class="link">Back</button>
       </div>
     </form>

@@ -22,7 +22,9 @@ CREATE TABLE IF NOT EXISTS members (
     id {pk},
     split_id INTEGER NOT NULL REFERENCES splits(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
-    upi_id TEXT
+    upi_id TEXT,
+    pw_hash TEXT,  -- password protected splits only, set by the member the first time they pick their name
+    unnamed INTEGER NOT NULL DEFAULT 0  -- a "Person 3" slot nobody has claimed yet
 );
 CREATE TABLE IF NOT EXISTS expenses (
     id {pk},
@@ -53,7 +55,13 @@ CREATE TABLE IF NOT EXISTS activity (
     details TEXT NOT NULL,
     created_at BIGINT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS stats (
+    key TEXT PRIMARY KEY,  -- splits, demos: how many were ever created, since splits delete themselves
+    value BIGINT NOT NULL
+);
 """
+# Columns added after launch, for databases created before them.
+NEW_COLUMNS = {"members": [("pw_hash", "TEXT"), ("unnamed", "INTEGER NOT NULL DEFAULT 0")]}
 
 
 class PgConnection:
@@ -92,6 +100,11 @@ def init():
     for statement in schema.split(";"):
         if statement.strip():
             con.execute(statement)
+    for table, cols in NEW_COLUMNS.items():
+        have = [d[0] for d in con.execute(f"SELECT * FROM {table} LIMIT 0").description]
+        for col, kind in cols:
+            if col not in have:
+                con.execute(f"ALTER TABLE {table} ADD COLUMN {col} {kind}")
     con.commit()
     con.close()
 

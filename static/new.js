@@ -1,42 +1,55 @@
-const membersBox = document.getElementById("members");
+const $ = (id) => document.getElementById(id);
+const size = () => Math.min(50, Math.max(2, Math.floor(Number($("size").value)) || 2));
 
-function addMemberRow() {
-  const input = el("input", { type: "text", placeholder: "Name", maxLength: 40, className: "m-name" });
-  membersBox.append(el("div", { className: "row" }, input));
-  return input;
+// One name box per other person, kept in step with the headcount. Typed names survive resizing.
+function syncNames() {
+  const box = $("members");
+  while (box.children.length < size() - 1) {
+    box.append(el("div", { className: "row" },
+      el("input", { type: "text", placeholder: `Person ${box.children.length + 2}`, maxLength: 40, className: "m-name" })));
+  }
+  while (box.children.length > size() - 1) box.lastChild.remove();
 }
 
-addMemberRow();
-addMemberRow();
-document.getElementById("add-member").onclick = () => addMemberRow().focus();
+$("size-down").onclick = () => { $("size").value = size() - 1; syncNames(); };
+$("size-up").onclick = () => { $("size").value = size() + 1; syncNames(); };
+$("size").oninput = syncNames;
+$("add-names").onchange = (e) => { $("names-box").hidden = !e.target.checked; syncNames(); };
+$("protect").onchange = (e) => {
+  $("protect-box").hidden = !e.target.checked;
+  $("admin-password").required = e.target.checked;
+  if (e.target.checked) $("admin-password").focus();
+};
+syncNames();
 
-document.getElementById("create").onsubmit = async (e) => {
+$("create").onsubmit = async (e) => {
   e.preventDefault();
-  const error = document.getElementById("error");
-  error.textContent = "";
-  // You go first: the server makes the first member the admin.
-  const members = [document.getElementById("my-name"), ...membersBox.querySelectorAll(".m-name")]
-    .map((input) => ({ name: input.value.trim() }))
-    .filter((m) => m.name);
+  $("error").textContent = "";
+  // You go first: the server makes the first member the admin. Blank names become "Person 3" slots.
+  const others = $("add-names").checked ? [...document.querySelectorAll(".m-name")].map((i) => i.value.trim()).filter(Boolean) : [];
+  const protect = $("protect").checked;
   const button = e.submitter;
   button.disabled = true;
   try {
     const { slug, admin_token, admin_id } = await api("POST", "/api/splits", {
-      name: document.getElementById("name").value.trim(),
-      members,
-      admin_password: document.getElementById("admin-password").value,
-      website: document.getElementById("website").value,
+      members: [{ name: $("my-name").value.trim() }, ...others.map((name) => ({ name }))],
+      size: size(),
+      admin_password: protect ? $("admin-password").value : null,
+      website: $("website").value,
     });
-    // This device opens the split as you, the admin.
-    saveIdentity(slug, { me: admin_id, adminToken: admin_token });
+    // This device opens the split as you, the admin. In a protected split the same token is your member session.
+    saveIdentity(slug, { me: admin_id, adminToken: admin_token, token: protect ? admin_token : null });
     const share = `${location.origin}/g/${slug}`;
-    document.getElementById("share-link").textContent = share;
-    document.getElementById("copy-share").onclick = (ev) => copyText(share, ev.target);
-    document.getElementById("open").href = share;
-    document.getElementById("create").hidden = true;
-    document.getElementById("created").hidden = false;
+    $("share-link").textContent = share;
+    $("created-note").textContent = protect
+      ? "Everyone opens the same link, picks their name and creates a password."
+      : "Everyone opens the same link and picks their name. Only this device can manage the split.";
+    $("copy-share").onclick = (ev) => copyText(share, ev.target);
+    $("open").href = share;
+    $("create").hidden = true;
+    $("created").hidden = false;
   } catch (err) {
-    error.textContent = err.message;
+    $("error").textContent = err.message;
     button.disabled = false;
   }
 };

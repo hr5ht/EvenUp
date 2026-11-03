@@ -22,19 +22,27 @@
   </header>
 
   <form id="create" class="card">
-    <label for="name">Split name</label>
-    <input type="text" id="name" maxlength="60" placeholder="Friday dinner" required>
-
     <label for="my-name">Your name <span class="badge">admin</span></label>
     <input type="text" id="my-name" maxlength="40" placeholder="Your name" required>
 
-    <label>Others in the group</label>
-    <div id="members"></div>
-    <button type="button" id="add-member" class="small">+ Add person</button>
+    <label for="size">How many people are splitting, including you?</label>
+    <div class="row stepper">
+      <button type="button" id="size-down" aria-label="One less">−</button>
+      <input type="number" id="size" inputmode="numeric" min="2" max="50" value="2" required>
+      <button type="button" id="size-up" aria-label="One more">+</button>
+    </div>
 
-    <label for="admin-password">Admin password</label>
-    <input type="password" id="admin-password" minlength="4" maxlength="100" autocomplete="new-password" required>
-    <p class="muted">To manage the split from any device, pick your name and type this. Everyone else adds their own UPI ID when they open the link.</p>
+    <label class="check"><input type="checkbox" id="add-names"> Add everyone's names now</label>
+    <div id="names-box" hidden>
+      <div id="members"></div>
+      <p class="muted">Leave any blank: they type their own name when they open the link.</p>
+    </div>
+
+    <label class="check"><input type="checkbox" id="protect"> Protect with passwords</label>
+    <div id="protect-box" hidden>
+      <input type="password" id="admin-password" minlength="4" maxlength="100" autocomplete="new-password" placeholder="Your password, at least 4 characters">
+      <p class="muted">You use it to open the split as yourself on any device. Everyone else creates their own the first time they pick their name, so nobody can act as someone else.</p>
+    </div>
 
     <input type="text" name="website" id="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
 
@@ -46,7 +54,7 @@
     <p class="overline">Split created</p>
     <h2 class="created-title">Send this link to the group</h2>
     <div class="link-box" id="share-link"></div>
-    <p class="muted">Everyone opens the same link and picks their name. Yours asks for the admin password.</p>
+    <p class="muted" id="created-note"></p>
     <div class="actions split2">
       <button type="button" id="copy-share">Copy link</button>
       <a id="open" class="button primary" href="#">Open split</a>
