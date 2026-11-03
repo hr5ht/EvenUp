@@ -201,12 +201,15 @@ function upiLink(to: Member, paise: number, tabName: string, scheme = "upi://pay
 }
 
 export function PaySheet({ c, p: next, onClose }: { c: Ctx; p: Payment | null; onClose: () => void }) {
-  const [step, setStep] = useState<"choose" | "Cash" | "UPI">("choose");
+  // Two pop-ups: "How are you paying?", then Cash or UPI on its own sheet. Picking one slides the first down and the
+  // next up (one after the other: iOS can't present two sheets at once); Back does the reverse.
+  const [step, setStep] = useState<"Cash" | "UPI">("Cash");
+  const [shown, setShown] = useState<"choose" | "method" | null>("choose");
   const [error, setError] = useState("");
   const [last, setLast] = useState(next);
   if (next && next !== last) {
     setLast(next);
-    setStep("choose");
+    setShown("choose");
     setError("");
   }
   const p = next ?? last;
@@ -215,6 +218,14 @@ export function PaySheet({ c, p: next, onClose }: { c: Ctx; p: Payment | null; o
   if (!p) return null;
   const to = c.member(p.to)!;
 
+  const swap = (to: "choose" | "method", method?: "Cash" | "UPI") => {
+    setShown(null);
+    setError("");
+    setTimeout(() => {
+      if (method) setStep(method);
+      setShown(to);
+    }, 260);
+  };
   const done = async () => {
     setBusy(true);
     try {
@@ -233,48 +244,51 @@ export function PaySheet({ c, p: next, onClose }: { c: Ctx; p: Payment | null; o
     }
   };
   const openApp = (url: string) => Linking.openURL(url).catch(() => setError("That app isn't on this phone. Try another, or pay by hand to the UPI ID."));
+  const title = `Pay ${rupees(p.amount_paise)} to ${to.name}`;
 
   return (
-    <Sheet open={!!next} onClose={onClose} kicker={step === "choose" ? "Settle up" : step} title={`Pay ${rupees(p.amount_paise)} to ${to.name}`}
-      footer={step === "choose" ? undefined : <>
-        <Btn className="flex-1" title="Back" onPress={() => setStep("choose")} />
-        <Btn variant={step === "Cash" ? "ink" : "plain"} className="flex-1" busy={busy} onPress={done} title={step === "Cash" ? "Mark as paid" : "I've paid"} />
-      </>}>
-      {step === "choose" && <>
+    <>
+      <Sheet open={!!next && shown === "choose"} onClose={onClose} kicker="Settle up" title={title}>
         <T className="text-sm text-muted">How are you paying?</T>
         <Rows>
-          <MenuRow icon={Icon.Cash} title="Cash" sub="Paid in person, mark it here" onPress={() => setStep("Cash")} />
+          <MenuRow icon={Icon.Cash} title="Cash" sub="Paid in person, mark it here" onPress={() => swap("method", "Cash")} />
           <MenuRow icon={Icon.Phone} title="UPI" sub={to.upi_id ? `Opens your UPI app with ${rupees(p.amount_paise)} filled in` : "No UPI ID yet"}
-            disabled={!to.upi_id} onPress={() => setStep("UPI")} />
+            disabled={!to.upi_id} onPress={() => swap("method", "UPI")} />
         </Rows>
         {!to.upi_id && <T className="text-sm text-muted">{to.name} hasn't added a UPI ID yet, so it's cash for now.</T>}
-      </>}
-      {step === "Cash" && <>
-        <T className="text-lg font-semibold">Did you pay {to.name} {rupees(p.amount_paise)} in cash?</T>
-        <T className="text-sm text-muted">Marking it paid updates balances for everyone.</T>
-      </>}
-      {step === "UPI" && <>
-        <T className="text-sm leading-5 text-muted">The amount is filled in. Pay in your UPI app, then come back and tap I've paid.</T>
-        {Platform.OS === "ios" ? (
-          <Rows>
-            {IOS_APPS.map(([name, scheme]) => (
-              <MenuRow key={name} icon={Icon.Phone} title={name} sub={`Pay ${rupees(p.amount_paise)} to ${to.upi_id}`}
-                onPress={() => openApp(upiLink(to, p.amount_paise, c.data.name, scheme))} />
-            ))}
-          </Rows>
-        ) : (
-          <Btn variant="accent" title="Pay now" onPress={() => openApp(upiLink(to, p.amount_paise, c.data.name))} />
-        )}
-        <View className="gap-1.5">
-          <T className="text-sm text-muted">Or pay by hand to this UPI ID</T>
-          <View className="flex-row items-center gap-2 border border-line-2 bg-surface py-1.5 pl-3.5 pr-1.5">
-            <T mono className="flex-1 text-sm" numberOfLines={1}>{to.upi_id}</T>
-            <Btn small title={copied ? "Copied" : "Copy"} onPress={async () => { await Clipboard.setStringAsync(to.upi_id!); setCopied(true); setTimeout(() => setCopied(false), 1500); }} />
+      </Sheet>
+
+      <Sheet open={!!next && shown === "method"} onClose={onClose} kicker={step} title={title}
+        footer={<>
+          <Btn className="flex-1" title="Back" onPress={() => swap("choose")} />
+          <Btn variant={step === "Cash" ? "ink" : "plain"} className="flex-1" busy={busy} onPress={done} title={step === "Cash" ? "Mark as paid" : "I've paid"} />
+        </>}>
+        {step === "Cash" ? <>
+          <T className="text-lg font-semibold">Did you pay {to.name} {rupees(p.amount_paise)} in cash?</T>
+          <T className="text-sm text-muted">Marking it paid updates balances for everyone.</T>
+        </> : <>
+          <T className="text-sm leading-5 text-muted">The amount is filled in. Pay in your UPI app, then come back and tap I've paid.</T>
+          {Platform.OS === "ios" ? (
+            <Rows>
+              {IOS_APPS.map(([name, scheme]) => (
+                <MenuRow key={name} icon={Icon.Phone} title={name} sub={`Pay ${rupees(p.amount_paise)} to ${to.upi_id}`}
+                  onPress={() => openApp(upiLink(to, p.amount_paise, c.data.name, scheme))} />
+              ))}
+            </Rows>
+          ) : (
+            <Btn variant="accent" title="Pay now" onPress={() => openApp(upiLink(to, p.amount_paise, c.data.name))} />
+          )}
+          <View className="gap-1.5">
+            <T className="text-sm text-muted">Or pay by hand to this UPI ID</T>
+            <View className="flex-row items-center gap-2 border border-line-2 bg-surface py-1.5 pl-3.5 pr-1.5">
+              <T mono className="flex-1 text-sm" numberOfLines={1}>{to.upi_id}</T>
+              <Btn small title={copied ? "Copied" : "Copy"} onPress={async () => { await Clipboard.setStringAsync(to.upi_id!); setCopied(true); setTimeout(() => setCopied(false), 1500); }} />
+            </View>
           </View>
-        </View>
-      </>}
-      <Err>{error}</Err>
-    </Sheet>
+        </>}
+        <Err>{error}</Err>
+      </Sheet>
+    </>
   );
 }
 
