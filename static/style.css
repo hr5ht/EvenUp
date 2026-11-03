@@ -535,3 +535,9 @@ input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-o
 label.check { display: flex; align-items: center; gap: var(--s3); margin-top: var(--s5); color: var(--text); font-size: 15px; cursor: pointer; }
 label.check input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); }
 #names-box, #protect-box, #open-note { margin-top: var(--s3); }
+
+/* Your saved UPI ID, one line above the hero card */
+.upi-line { display: flex; align-items: center; gap: var(--s2); min-height: 40px; padding: 0 var(--s1); font-size: 14px; }
+#upi-line-id { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.upi-line .small { margin-left: auto; flex-shrink: 0; min-height: 30px; }
+#upi-cancel { margin-top: var(--s3); }

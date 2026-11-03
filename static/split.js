@@ -165,17 +165,34 @@ function setIdentity(next) {
   render();
 }
 
+let upiEditing = false; // the saved UPI ID's Edit was tapped
+
 function renderYou() {
   const me = known() ? member(identity.me) : null;
   $("you-text").textContent = me ? `${me.name}${isAdmin() ? " · admin" : ""} ▾` : "Who are you?";
-  $("upi-form").hidden = !me || !!me.upi_id;
+  // Saved: one line with Edit. Not saved yet, or editing: the form.
+  const saved = !!(me && me.upi_id);
+  $("upi-line").hidden = !saved || upiEditing;
+  $("upi-line-id").textContent = saved ? me.upi_id : "";
+  $("upi-form").hidden = !me || (saved && !upiEditing);
+  $("upi-cancel").hidden = !upiEditing;
 }
+
+$("upi-edit").onclick = () => {
+  upiEditing = true;
+  $("my-upi").value = member(identity.me).upi_id;
+  $("upi-error").textContent = "";
+  renderYou();
+  $("my-upi").focus();
+};
+$("upi-cancel").onclick = () => { upiEditing = false; renderYou(); };
 
 $("upi-form").onsubmit = async (ev) => {
   ev.preventDefault();
   $("upi-error").textContent = "";
   try {
     await call("PUT", `${base}/members/${identity.me}/upi`, { upi_id: $("my-upi").value.trim() });
+    upiEditing = false;
     await load();
     toast("UPI ID saved");
   } catch (err) {

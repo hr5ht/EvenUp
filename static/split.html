@@ -33,6 +33,11 @@
       </div>
     </section>
 
+    <div class="upi-line live-only" id="upi-line" hidden>
+      <span class="muted">UPI ID:</span><span id="upi-line-id"></span>
+      <button type="button" class="small" id="upi-edit">Edit</button>
+    </div>
+
     <form class="card live-only" id="upi-form" hidden>
       <label for="my-upi">Add your UPI ID so people can pay you</label>
       <div class="row">
@@ -40,6 +45,7 @@
         <button class="primary" type="submit">Save</button>
       </div>
       <p class="error" id="upi-error"></p>
+      <button type="button" class="link" id="upi-cancel" hidden>Cancel</button>
     </form>
 
     <section class="card hero">
