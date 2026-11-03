@@ -3,12 +3,13 @@ import * as Clipboard from "expo-clipboard";
 import { File, Paths } from "expo-file-system";
 import { router } from "expo-router";
 import * as Sharing from "expo-sharing";
-import { useRef, useState, type ComponentRef } from "react";
-import { Linking, Platform, Share, View } from "react-native";
+import { useEffect, useRef, useState, type ComponentRef } from "react";
+import { ActivityIndicator, Linking, Platform, Share, View } from "react-native";
+import { SvgXml } from "react-native-svg";
 import { captureRef } from "react-native-view-shot";
 import { Tap, Btn, Err, Field, Icon, Label, MenuRow, Rows, Sheet, T, useConfirm, type ToastMsg } from "@/components/ui";
 import {
-  forgetTab, plainAmount, plural, rupees, tabUrl, toPaise, UPI_HINT,
+  BASE, forgetTab, plainAmount, plural, rupees, tabUrl, toPaise, UPI_HINT,
   type Expense, type Identity, type Member, type Payment, type Tab,
 } from "@/lib/api";
 import { MONO } from "@/lib/theme";
@@ -267,7 +268,8 @@ export function PaySheet({ c, p: next, onClose }: { c: Ctx; p: Payment | null; o
           <T className="text-lg font-semibold">Did you pay {to.name} {rupees(p.amount_paise)} in cash?</T>
           <T className="text-sm text-muted">Marking it paid updates balances for everyone.</T>
         </> : <>
-          <T className="text-sm leading-5 text-muted">The amount is filled in. Pay in your UPI app, then come back and tap I've paid.</T>
+          <UpiQr path={`/api/splits/${c.slug}/qr?to=${to.id}&amount=${p.amount_paise}`} />
+          <T className="text-center text-sm leading-5 text-muted">Scan from any UPI app, or pay on this phone. The amount is filled in. Then come back and tap I've paid.</T>
           {Platform.OS === "ios" ? (
             <Rows>
               {IOS_APPS.map(([name, scheme]) => (
@@ -289,6 +291,28 @@ export function PaySheet({ c, p: next, onClose }: { c: Ctx; p: Payment | null; o
         <Err>{error}</Err>
       </Sheet>
     </>
+  );
+}
+
+// The tab's UPI QR from the API (the same one the website shows), dark squares on a white card so it scans in dark mode.
+function UpiQr({ path }: { path: string }) {
+  const [xml, setXml] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let live = true;
+    fetch(BASE + path)
+      .then((r) => (r.ok ? r.text() : Promise.reject()))
+      .then((t) => live && setXml(t))
+      .catch(() => live && setFailed(true));
+    return () => { live = false; };
+  }, [path]);
+  if (failed) return null;
+  return (
+    <View className="items-center">
+      <View className="h-[232px] w-[232px] items-center justify-center bg-white p-3">
+        {xml ? <SvgXml xml={xml} width={208} height={208} /> : <ActivityIndicator color="#0d0d0c" />}
+      </View>
+    </View>
   );
 }
 
