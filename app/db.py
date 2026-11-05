@@ -55,6 +55,13 @@ CREATE TABLE IF NOT EXISTS activity (
     details TEXT NOT NULL,
     created_at BIGINT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS users (  -- our side of an account: Neon Auth owns the email login and password
+    id TEXT PRIMARY KEY,  -- Neon Auth's user id, the token's sub
+    email TEXT UNIQUE NOT NULL,  -- lowercase
+    name TEXT NOT NULL,
+    upi_id TEXT,  -- encrypted, like members.upi_id
+    created_at BIGINT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS stats (
     key TEXT PRIMARY KEY,  -- splits, demos: how many were ever created, since splits delete themselves
     value BIGINT NOT NULL

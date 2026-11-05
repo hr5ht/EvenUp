@@ -290,3 +290,115 @@ def test_capacity():
         # remove someone, then there's room again
         assert c.delete(f"{url}/members/{c_id}", headers={"X-Admin-Token": r["admin_token"]}).status_code == 200
         assert c.post(f"{url}/members", json={"name": "D"}).status_code == 200
+
+
+# ---------- accounts ----------
+
+import time  # noqa: E402
+from email.message import Message  # noqa: E402
+from types import SimpleNamespace  # noqa: E402
+
+import jwt  # noqa: E402
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey  # noqa: E402
+
+from app import main  # noqa: E402
+
+NEON = "https://ep-test.aws.neon.tech"
+KEY = Ed25519PrivateKey.generate()
+
+
+def neon_token(key=KEY, alg="EdDSA", **claims):
+    base = {"sub": "user-1", "email": "Riya@Example.com", "name": "Riya", "emailVerified": True,
+            "iss": NEON, "aud": NEON, "exp": int(time.time()) + 900}
+    return jwt.encode({k: v for k, v in {**base, **claims}.items() if v is not None}, key, algorithm=alg)
+
+
+def bearer(token):
+    return {"Authorization": f"Bearer {token}"}
+
+
+def use_neon(monkeypatch):
+    """Our generated key stands in for Neon's published one."""
+    monkeypatch.setattr(main, "JWKS", SimpleNamespace(get_signing_key_from_jwt=lambda t: SimpleNamespace(key=KEY.public_key())))
+    monkeypatch.setattr(main, "NEON_ORIGIN", NEON)
+    monkeypatch.setattr(main, "NEON_AUTH", NEON + "/neondb/auth")
+
+
+def test_token_checks(monkeypatch):
+    use_neon(monkeypatch)
+    with TestClient(app) as c:
+        me = lambda t: c.get("/api/me", headers=bearer(t)).status_code  # noqa: E731
+        assert me(neon_token(sub="tok-ok")) == 200
+        assert c.get("/api/me").status_code == 401
+        assert me("not-a-token") == 401
+        assert me(neon_token(key=Ed25519PrivateKey.generate(), sub="tok-a")) == 401  # someone else's key
+        assert me(neon_token(iss="https://evil.example", sub="tok-b")) == 401
+        assert me(neon_token(aud="https://evil.example", sub="tok-c")) == 401
+        assert me(neon_token(exp=int(time.time()) - 60, sub="tok-d")) == 401
+        assert me(neon_token(exp=None, sub="tok-e")) == 401
+        assert me(neon_token(key=None, alg="none", sub="tok-f")) == 401
+        assert me(neon_token(key="x" * 32, alg="HS256", sub="tok-g")) == 401
+        assert me(neon_token(emailVerified=False, sub="tok-h", email="h@example.com")) == 403
+
+
+def test_profile(monkeypatch):
+    use_neon(monkeypatch)
+    h = bearer(neon_token(sub="prof-1", email="Prof@Example.com", name="Prof"))
+    with TestClient(app) as c:
+        # the row is made once, the email is stored lowercase, and no UPI ID is needed
+        assert c.get("/api/me", headers=h).json() == {"email": "prof@example.com", "name": "Prof", "upi_id": None}
+        assert c.get("/api/me", headers=h).status_code == 200
+        assert c.patch("/api/me", json={"upi_id": "prof@okaxis"}, headers=h).json()["upi_id"] == "prof@okaxis"
+        assert c.patch("/api/me", json={"upi_id": "nope"}, headers=h).status_code == 422
+        assert c.patch("/api/me", json={"name": "   "}, headers=h).status_code == 400
+        # changing the name leaves the UPI ID alone, null clears it
+        assert c.patch("/api/me", json={"name": " New "}, headers=h).json() == {"email": "prof@example.com", "name": "New", "upi_id": "prof@okaxis"}
+        con = main.db.connect()
+        stored = con.execute("SELECT upi_id FROM users WHERE id = 'prof-1'").fetchone()["upi_id"]
+        con.close()
+        assert "okaxis" not in stored
+        assert c.patch("/api/me", json={"upi_id": None}, headers=h).json()["upi_id"] is None
+        assert c.delete("/api/me", headers=h).status_code == 200
+        # a new Neon account for the same email replaces a row Neon no longer knows
+        c.get("/api/me", headers=h)
+        again = bearer(neon_token(sub="prof-2", email="prof@example.com"))
+        assert c.get("/api/me", headers=again).status_code == 200
+
+
+def test_auth_proxy(monkeypatch):
+    use_neon(monkeypatch)
+    seen = {}
+
+    def fake_neon(method, path, body, headers):
+        seen.update(method=method, path=path, body=body, headers=headers)
+        got = Message()
+        got["content-type"] = "application/json"
+        got.add_header("set-cookie", "__Secure-neon-auth.session_token=abc; Path=/; Domain=ep-test.aws.neon.tech; HttpOnly; Secure; SameSite=None")
+        got.add_header("set-cookie", "other=1; path=/neondb/auth; HttpOnly")
+        return 401, got, b'{"message":"Invalid email or password"}'
+
+    monkeypatch.setattr(main, "neon_call", fake_neon)
+    with TestClient(app) as c:
+        r = c.post("/auth/sign-in/email", json={"email": "a@b.co", "password": "x"}, headers={"Origin": "https://quicktabapp.vercel.app"})
+        # Neon's answer comes back as is, and its cookies become this site's
+        assert r.status_code == 401 and r.json()["message"] == "Invalid email or password"
+        assert r.headers["cache-control"] == "no-store"
+        cookies = r.headers.get_list("set-cookie")
+        assert len(cookies) == 2 and not any("domain" in x.lower() for x in cookies)
+        assert all("Path=/auth" in x for x in cookies) and "HttpOnly" in cookies[0]
+        assert seen["path"] == "sign-in/email" and seen["headers"]["origin"] == "https://quicktabapp.vercel.app"
+        # only the routes we use are forwarded
+        for path in ("admin/list-users", "update-user", "sign-in/../admin/list-users"):
+            assert c.post(f"/auth/{path}", json={}).status_code == 404
+        monkeypatch.setattr(main, "NEON_AUTH", "")
+        assert c.post("/auth/sign-in/email", json={}).status_code == 503
+
+
+def test_auth_rate_limit(monkeypatch):
+    use_neon(monkeypatch)
+    monkeypatch.setattr(main, "neon_call", lambda *a: (200, Message(), b"{}"))
+    main.HITS.clear()
+    with TestClient(app) as c:
+        codes = [c.post("/auth/sign-in/email", json={}).status_code for _ in range(main.AUTH_LIMIT[0] + 1)]
+    main.HITS.clear()
+    assert codes[-1] == 429 and set(codes[:-1]) == {200}

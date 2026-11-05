@@ -241,7 +241,7 @@ input, select, button { font: inherit; color: inherit; margin: 0; }
 label { display: block; margin: var(--s4) 0 var(--s2); }
 label:first-child { margin-top: 0; }
 
-input[type="text"], input[type="password"], select {
+input[type="text"], input[type="email"], input[type="password"], select {
   width: 100%;
   min-height: 46px;
   padding: 0 var(--s3);

@@ -3,3 +3,4 @@ uvicorn
 cryptography
 qrcode
 psycopg[binary]
+PyJWT

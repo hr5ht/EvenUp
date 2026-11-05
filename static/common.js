@@ -34,7 +34,7 @@ async function api(method, url, body, headers) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    let msg = data.detail;
+    let msg = data.detail || data.message; // message: from Neon Auth, through /auth
     if (Array.isArray(msg)) msg = msg.map((d) => d.msg).join(", ");
     throw Object.assign(new Error(msg || `Request failed (${res.status})`), { status: res.status });
   }

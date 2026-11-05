@@ -2,21 +2,26 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import secrets
 import time
 from collections import defaultdict, deque
 from pathlib import Path
-from urllib.parse import quote, urlencode
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote, urlencode, urlsplit
+from urllib.request import HTTPRedirectHandler, Request as NeonRequest, build_opener
 from typing import Dict, List, Literal, Optional
 
+import jwt
 import qrcode
 import qrcode.image.svg
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from starlette.concurrency import run_in_threadpool
 
 from . import db, money
 
@@ -31,6 +36,15 @@ CREATE_LIMIT = (10, 3600)
 WRITE_LIMIT = (60, 60)
 MAX_MEMBERS = 50
 LOGIN_LIMIT = (10, 900)  # per split, so guessing the admin password is slow from any number of IPs
+AUTH_LIMIT = (20, 900)  # sign-ins, sign-ups and reset emails per IP. Neon Auth has its own limits behind this
+
+# Neon Auth owns sign-up, passwords and sessions. This is its Auth URL, from the Neon Console.
+NEON_AUTH = os.environ.get("NEON_AUTH_BASE_URL", "").rstrip("/")
+NEON_ORIGIN = "{0.scheme}://{0.netloc}".format(urlsplit(NEON_AUTH))
+JWKS = jwt.PyJWKClient(f"{NEON_AUTH}/.well-known/jwks.json") if NEON_AUTH else None
+# The only Neon Auth routes this site forwards, so its admin routes stay out of reach.
+AUTH_ROUTES = {"sign-up/email", "sign-in/email", "sign-out", "token", "email-otp/verify-email",
+               "send-verification-email", "request-password-reset", "reset-password", "delete-user"}
 
 # UPI IDs are encrypted at rest. Set UPI_KEY in production (Fernet.generate_key()).
 if not os.environ.get("UPI_KEY"):
@@ -73,13 +87,17 @@ def rate_limited(key, limit, window):
     return False
 
 
+def client_ip(request):
+    # Behind Vercel the socket peer is Vercel's proxy; it sets x-real-ip to the visitor's address.
+    return (os.environ.get("VERCEL") and request.headers.get("x-real-ip")) or (request.client.host if request.client else "?")
+
+
 @app.middleware("http")
 async def security_headers(request, call_next):
-    # Behind Vercel the socket peer is Vercel's proxy; it sets x-real-ip to the visitor's address.
-    ip = (os.environ.get("VERCEL") and request.headers.get("x-real-ip")) or (request.client.host if request.client else "?")
-    if request.method != "GET" and request.url.path.startswith("/api/"):
-        creating = request.method == "POST" and request.url.path in ("/api/splits", "/api/demo")
-        kind, limit = ("create", CREATE_LIMIT) if creating else ("write", WRITE_LIMIT)
+    ip, path = client_ip(request), request.url.path
+    if request.method != "GET" and path.startswith(("/api/", "/auth/")):
+        creating = request.method == "POST" and path in ("/api/splits", "/api/demo")
+        kind, limit = ("auth", AUTH_LIMIT) if path.startswith("/auth/") else ("create", CREATE_LIMIT) if creating else ("write", WRITE_LIMIT)
         if rate_limited((kind, ip), *limit):
             resp = JSONResponse({"detail": "Too many requests. Wait a bit and try again."}, status_code=429)
         else:
@@ -116,6 +134,16 @@ def new():
 @app.get("/g/{slug}")
 def split_page(slug: str):
     return FileResponse(STATIC / "split.html")
+
+
+@app.get("/login")
+def login_page():
+    return FileResponse(STATIC / "login.html")
+
+
+@app.get("/profile")
+def profile_page():
+    return FileResponse(STATIC / "profile.html")
 
 
 # ---------- models ----------
@@ -285,6 +313,101 @@ def create_split(con, body, name="Quick tab"):
     con.execute("UPDATE splits SET admin_member_id = ? WHERE id = ?", (ids[0], sid))
     log(con, sid, "created", None, {"name": name})
     return slug, admin_token(sid, pw_hash), sid, ids[0]
+
+
+# ---------- accounts ----------
+
+class NoRedirect(HTTPRedirectHandler):
+    def redirect_request(self, *args):
+        return None  # hand Neon's redirect back to the browser instead of following it
+
+
+def neon_call(method, path, body, headers):
+    try:
+        r = build_opener(NoRedirect).open(NeonRequest(f"{NEON_AUTH}/{path}", data=body or None, headers=headers, method=method), timeout=15)
+    except HTTPError as e:
+        r = e  # a 4xx from Neon is an answer for the browser, like "wrong password"
+    return r.getcode(), r.headers, r.read()
+
+
+def own_cookie(cookie):
+    """Neon's session cookie, as this site's own: browsers (Safari above all) block third-party ones."""
+    return re.sub(r";\s*path=[^;]*", "; Path=/auth", re.sub(r";\s*domain=[^;]*", "", cookie, flags=re.I), flags=re.I)
+
+
+@app.api_route("/auth/{path:path}", methods=["GET", "POST"])
+async def auth_proxy(path: str, request: Request):
+    """Forwards to Neon Auth, so the session cookie stays on this site."""
+    if path not in AUTH_ROUTES:
+        raise HTTPException(404)
+    if not NEON_AUTH:
+        raise HTTPException(503, "Sign in isn't set up yet.")
+    headers = {k: request.headers[k] for k in ("content-type", "cookie", "origin", "user-agent") if k in request.headers}
+    headers["x-forwarded-for"] = client_ip(request)
+    try:
+        status, got, body = await run_in_threadpool(neon_call, request.method, path, await request.body(), headers)
+    except URLError:
+        raise HTTPException(502, "Sign in is unavailable right now. Try again in a minute.")
+    resp = Response(body, status, media_type=got.get("content-type"), headers={"Cache-Control": "no-store"})
+    for cookie in got.get_all("set-cookie") or []:
+        resp.headers.append("set-cookie", own_cookie(cookie))
+    return resp
+
+
+def current_user(authorization: Optional[str] = Header(None), con=Depends(db.get_db)):
+    """The signed-in user, from a Neon Auth token. Their row is made the first time we see them."""
+    if not JWKS:
+        raise HTTPException(503, "Sign in isn't set up yet.")
+    token = (authorization or "").removeprefix("Bearer ")
+    try:
+        claims = jwt.decode(token, JWKS.get_signing_key_from_jwt(token).key, algorithms=["EdDSA"], issuer=NEON_ORIGIN,
+                            audience=NEON_ORIGIN, options={"require": ["exp", "sub", "iss", "aud"]})
+    except jwt.PyJWTError:
+        raise HTTPException(401, "Sign in again.")
+    if not claims.get("emailVerified"):
+        raise HTTPException(403, "Verify your email first.")
+    u = con.execute("SELECT * FROM users WHERE id = ?", (claims["sub"],)).fetchone()
+    if not u:
+        email = claims["email"].lower()
+        # A verified token proves this email, so an old row for it (an account deleted at Neon) is stale.
+        con.execute("DELETE FROM users WHERE email = ?", (email,))
+        name = (claims.get("name") or email.split("@")[0])[:40]
+        u = con.execute("INSERT INTO users (id, email, name, created_at) VALUES (?, ?, ?, ?) RETURNING *",
+                        (claims["sub"], email, name, now())).fetchone()
+        con.commit()
+    return u
+
+
+class ProfileIn(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=40)
+    upi_id: Optional[str] = Field(default=None, pattern=UPI_RE)  # null clears it
+
+
+def profile(u):
+    return {"email": u["email"], "name": u["name"], "upi_id": dec(u["upi_id"])}
+
+
+@app.get("/api/me")
+def get_me(u=Depends(current_user)):
+    return profile(u)
+
+
+@app.patch("/api/me")
+def update_me(body: ProfileIn, u=Depends(current_user), con=Depends(db.get_db)):
+    name = (body.name or u["name"]).strip()
+    if not name:
+        raise HTTPException(400, "Enter your name")
+    upi = enc(body.upi_id) if "upi_id" in body.model_fields_set else u["upi_id"]
+    u = con.execute("UPDATE users SET name = ?, upi_id = ? WHERE id = ? RETURNING *", (name, upi, u["id"])).fetchone()
+    con.commit()
+    return profile(u)
+
+
+@app.delete("/api/me")
+def delete_me(u=Depends(current_user), con=Depends(db.get_db)):
+    con.execute("DELETE FROM users WHERE id = ?", (u["id"],))
+    con.commit()
+    return {"ok": True}
 
 
 # ---------- API ----------
