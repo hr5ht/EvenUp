@@ -45,7 +45,7 @@ function show(next, note = "") {
   });
 }
 
-const goIn = () => location.replace("/profile");
+const goIn = () => location.replace("/friends");
 
 async function resend() {
   $("error").textContent = "";
@@ -108,6 +108,7 @@ $("auth").onsubmit = async (e) => {
 
 if (resetToken) show("reset");
 else if (pending.get("error")) show("forgot", "That link has expired. Ask for a new one.");
+else if (pending.has("unverified")) show("signin", "Verify your email to continue. Sign in and we'll send you a code.");
 else {
   show("signin");
   authToken().then((t) => t && goIn()); // already signed in

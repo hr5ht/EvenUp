@@ -334,7 +334,7 @@ def own_cookie(cookie):
     """Neon's session cookie, as this site's own: browsers (Safari above all) block third-party ones."""
     cookie = re.sub(r";\s*path=[^;]*", "; Path=/auth", re.sub(r";\s*domain=[^;]*", "", cookie, flags=re.I), flags=re.I)
     if not os.environ.get("VERCEL"):  # local development is plain http, where browsers refuse secure cookies
-        cookie = re.sub(r";\s*secure\b", "", cookie.removeprefix("__Secure-"), flags=re.I)
+        cookie = re.sub(r";\s*(secure|partitioned)\b", "", cookie.removeprefix("__Secure-"), flags=re.I)
         cookie = re.sub(r"samesite=none", "SameSite=Lax", cookie, flags=re.I)
     return cookie
 

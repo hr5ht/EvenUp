@@ -373,7 +373,7 @@ def test_auth_proxy(monkeypatch):
         seen.update(method=method, path=path, body=body, headers=headers)
         got = Message()
         got["content-type"] = "application/json"
-        got.add_header("set-cookie", "__Secure-neon-auth.session_token=abc; Path=/; Domain=ep-test.aws.neon.tech; HttpOnly; Secure; SameSite=None")
+        got.add_header("set-cookie", "__Secure-neon-auth.session_token=abc; Path=/; Domain=ep-test.aws.neon.tech; HttpOnly; Secure; SameSite=None; Partitioned")
         got.add_header("set-cookie", "other=1; path=/neondb/auth; HttpOnly")
         return 401, got, b'{"message":"Invalid email or password"}'
 
@@ -388,7 +388,7 @@ def test_auth_proxy(monkeypatch):
         assert all("Path=/auth" in x for x in cookies) and "HttpOnly" in cookies[0]
         assert seen["path"] == "sign-in/email" and seen["headers"]["origin"] == "https://quicktabapp.vercel.app"
         # plain http locally: no secure cookie, which browsers would refuse, and Neon still gets its own name back
-        assert cookies[0].startswith("neon-auth.session_token=abc") and "Secure" not in cookies[0] and "SameSite=Lax" in cookies[0]
+        assert cookies[0].startswith("neon-auth.session_token=abc") and "Secure" not in cookies[0] and "Partitioned" not in cookies[0] and "SameSite=Lax" in cookies[0]
         c.get("/auth/token", headers={"Cookie": "neon-auth.session_token=abc"})
         assert seen["headers"]["cookie"] == "__Secure-neon-auth.session_token=abc"
         # on Vercel, https: untouched apart from the domain and path

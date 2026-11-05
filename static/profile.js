@@ -12,8 +12,7 @@ function fill(me) {
     fill(await authed("GET", "/api/me"));
     $("page").hidden = false;
   } catch (err) {
-    if (err.status === 401 || err.status === 403) toLogin();
-    else $("email").textContent = err.message;
+    if (!(await needAccount(err))) $("email").textContent = err.message;
   }
 })();
 
