@@ -3,13 +3,12 @@ const value = (id) => $(id).value.trim();
 const pending = new URLSearchParams(location.search);
 const resetToken = pending.get("token");
 
-// One form, five jobs. Each lists the fields it shows and the two links under the button.
+// One form, four jobs. Each lists the fields it shows and the two links under the button.
 const MODES = {
   signin: { title: "Sign in", sub: "Your groups and friends, on any device.", button: "Sign in", fields: ["email", "password"],
     links: [["New here? Create an account", "signup"], ["Forgot password?", "forgot"]] },
   signup: { title: "Create your account", sub: "You can add your UPI ID later, in your profile.", button: "Create account",
     fields: ["name", "email", "password"], links: [["Already have an account? Sign in", "signin"]] },
-  verify: { title: "Check your email", button: "Verify email", fields: ["code"], links: [["Send a new code", "resend"], ["Back to sign in", "signin"]] },
   forgot: { title: "Reset your password", sub: "We'll email you a link. It works for 15 minutes.", button: "Send reset link", fields: ["email"],
     links: [["Back to sign in", "signin"]] },
   reset: { title: "Choose a new password", button: "Save password", fields: ["password"], links: [["Back to sign in", "signin"]] },
@@ -21,7 +20,7 @@ function show(next, note = "") {
   const m = MODES[mode];
   document.title = `${m.title} · QuickTab`;
   $("title").textContent = m.title;
-  $("sub").textContent = mode === "verify" ? `Enter the code we sent to ${value("email")}. It works for 15 minutes.` : m.sub || "";
+  $("sub").textContent = m.sub || "";
   $("submit").textContent = m.button;
   $("note").textContent = note;
   $("error").textContent = "";
@@ -40,21 +39,14 @@ function show(next, note = "") {
     $(id).hidden = !link;
     if (link) {
       $(id).textContent = link[0];
-      $(id).onclick = () => (link[1] === "resend" ? resend() : show(link[1]));
+      $(id).onclick = () => show(link[1]);
     }
   });
 }
 
-const goIn = () => location.replace("/friends");
-
-async function resend() {
-  $("error").textContent = "";
-  try {
-    await api("POST", "/auth/send-verification-email", { email: value("email"), callbackURL: `${location.origin}/login` });
-    $("note").textContent = "New code sent.";
-  } catch (err) {
-    $("error").textContent = err.message;
-  }
+function goIn() {
+  remember(true);
+  location.replace("/dashboard");
 }
 
 async function signIn() {
@@ -63,24 +55,10 @@ async function signIn() {
 }
 
 const SUBMIT = {
-  signin: async () => {
-    try {
-      await signIn();
-    } catch (err) {
-      if (err.status !== 403) throw err; // 403: the password was right, the email isn't verified yet
-      show("verify");
-      await resend();
-    }
-  },
+  signin: signIn,
   signup: async () => {
-    const r = await api("POST", "/auth/sign-up/email", { name: value("name"), email: value("email"), password: $("password").value });
-    if (r.user?.emailVerified) goIn();
-    else show("verify");
-  },
-  verify: async () => {
-    await api("POST", "/auth/email-otp/verify-email", { email: value("email"), otp: value("code") });
-    if (await authToken(true)) goIn();
-    else await signIn(); // Neon's auto sign-in is off
+    await api("POST", "/auth/sign-up/email", { name: value("name"), email: value("email"), password: $("password").value });
+    goIn();
   },
   forgot: async () => {
     await api("POST", "/auth/request-password-reset", { email: value("email"), redirectTo: `${location.origin}/login` });
@@ -108,8 +86,7 @@ $("auth").onsubmit = async (e) => {
 
 if (resetToken) show("reset");
 else if (pending.get("error")) show("forgot", "That link has expired. Ask for a new one.");
-else if (pending.has("unverified")) show("signin", "Verify your email to continue. Sign in and we'll send you a code.");
 else {
-  show("signin");
+  show(pending.get("mode") === "signup" ? "signup" : "signin");
   authToken().then((t) => t && goIn()); // already signed in
 }

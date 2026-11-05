@@ -338,7 +338,7 @@ def test_token_checks(monkeypatch):
         assert me(neon_token(exp=None, sub="tok-e")) == 401
         assert me(neon_token(key=None, alg="none", sub="tok-f")) == 401
         assert me(neon_token(key="x" * 32, alg="HS256", sub="tok-g")) == 401
-        assert me(neon_token(emailVerified=False, sub="tok-h", email="h@example.com")) == 403
+        assert me(neon_token(emailVerified=False, sub="tok-h", email="h@example.com")) == 200  # email and password is enough
 
 
 def test_profile(monkeypatch):

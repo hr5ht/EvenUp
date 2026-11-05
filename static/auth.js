@@ -1,22 +1,24 @@
 // Neon Auth keeps the session in a cookie on /auth. Our own API takes a short-lived token made from it.
 const TOKEN_MS = 10 * 60 * 1000; // Neon's last 15 minutes
-let token = null, tokenAt = 0;
+let token = null, tokenAt = 0, asking = null;
 
 async function authToken(fresh) {
   if (!fresh && token && Date.now() - tokenAt < TOKEN_MS) return token;
-  const data = await api("GET", "/auth/token").catch(() => ({}));
-  token = data.token || null;
-  tokenAt = Date.now();
-  return token;
+  // Requests that start together share one ask, so a page loading two things calls Neon once.
+  asking ||= api("GET", "/auth/token").catch(() => ({})).then((data) => {
+    token = data.token || null;
+    tokenAt = Date.now();
+    asking = null;
+    return token;
+  });
+  return asking;
 }
 
-// For a page that needs an account. An unverified one is signed out, or /login and the page would bounce forever.
-async function needAccount(err) {
-  if (err.status === 401) location.replace("/login");
-  else if (err.status === 403) {
-    await api("POST", "/auth/sign-out", {}).catch(() => {});
-    location.replace("/login?unverified=1");
-  } else return false;
+// For a page that needs an account: true if the visitor is being sent to sign in.
+function needAccount(err) {
+  if (err.status !== 401) return false;
+  remember(false);
+  location.replace("/login");
   return true;
 }
 

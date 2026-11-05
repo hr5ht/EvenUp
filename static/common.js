@@ -58,6 +58,24 @@ function saveIdentity(slug, identity) {
   }
 }
 
+// Only for choosing Sign in or Dashboard on the landing page. The session itself is an HttpOnly cookie.
+function signedIn() {
+  try {
+    return !!localStorage.getItem("quicktab:signed-in");
+  } catch {
+    return false;
+  }
+}
+
+function remember(on) {
+  try {
+    if (on) localStorage.setItem("quicktab:signed-in", "1");
+    else localStorage.removeItem("quicktab:signed-in");
+  } catch {
+    // Private mode etc.: the landing page just says Sign in.
+  }
+}
+
 async function copyText(text, button) {
   try {
     await navigator.clipboard.writeText(text);

@@ -1,5 +1,8 @@
 const $ = (id) => document.getElementById(id);
-const toLogin = () => location.replace("/login");
+function toLogin() {
+  remember(false);
+  location.replace("/login");
+}
 
 function fill(me) {
   $("email").textContent = me.email;
@@ -12,7 +15,7 @@ function fill(me) {
     fill(await authed("GET", "/api/me"));
     $("page").hidden = false;
   } catch (err) {
-    if (!(await needAccount(err))) $("email").textContent = err.message;
+    if (!needAccount(err)) $("email").textContent = err.message;
   }
 })();
 

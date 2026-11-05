@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS friends (
     id {pk},
     from_user TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     to_email TEXT NOT NULL,  -- lets you ask someone with no account yet
-    to_user TEXT REFERENCES users(id) ON DELETE CASCADE,  -- set once to_email has a verified account
+    to_user TEXT REFERENCES users(id) ON DELETE CASCADE,  -- set once to_email has an account
     status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined')),
     created_at BIGINT NOT NULL,
     UNIQUE (from_user, to_email)

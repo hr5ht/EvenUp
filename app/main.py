@@ -47,8 +47,7 @@ NEON_AUTH = os.environ.get("NEON_AUTH_BASE_URL", "").strip("\"' ").rstrip("/")  
 NEON_ORIGIN = "{0.scheme}://{0.netloc}".format(urlsplit(NEON_AUTH))
 JWKS = jwt.PyJWKClient(f"{NEON_AUTH}/.well-known/jwks.json") if NEON_AUTH else None
 # The only Neon Auth routes this site forwards, so its admin routes stay out of reach.
-AUTH_ROUTES = {"sign-up/email", "sign-in/email", "sign-out", "token", "email-otp/verify-email",
-               "send-verification-email", "request-password-reset", "reset-password", "delete-user"}
+AUTH_ROUTES = {"sign-up/email", "sign-in/email", "sign-out", "token", "request-password-reset", "reset-password", "delete-user"}
 
 # UPI IDs are encrypted at rest. Set UPI_KEY in production (Fernet.generate_key()).
 if not os.environ.get("UPI_KEY"):
@@ -148,6 +147,11 @@ def login_page():
 @app.get("/profile")
 def profile_page():
     return FileResponse(STATIC / "profile.html")
+
+
+@app.get("/dashboard")
+def dashboard_page():
+    return FileResponse(STATIC / "dashboard.html")
 
 
 @app.get("/friends")
@@ -386,12 +390,10 @@ def current_user(authorization: Optional[str] = Header(None), con=Depends(db.get
                             audience=NEON_ORIGIN, options={"require": ["exp", "sub", "iss", "aud"]})
     except jwt.PyJWTError:
         raise HTTPException(401, "Sign in again.")
-    if not claims.get("emailVerified"):
-        raise HTTPException(403, "Verify your email first.")
     u = con.execute("SELECT * FROM users WHERE id = ?", (claims["sub"],)).fetchone()
     if not u:
         email = claims["email"].lower()
-        # A verified token proves this email, so an old row for it (an account deleted at Neon) is stale.
+        # Neon keeps emails unique, so a row with this email and another id is left from an account deleted there.
         con.execute("DELETE FROM users WHERE email = ?", (email,))
         name = (claims.get("name") or email.split("@")[0])[:40]
         u = con.execute("INSERT INTO users (id, email, name, created_at) VALUES (?, ?, ?, ?) RETURNING *",

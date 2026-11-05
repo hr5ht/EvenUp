@@ -42,6 +42,16 @@ $("command").onsubmit = (e) => {
   location.href = `/g/${encodeURIComponent(slug)}`;
 };
 
+// Signed in: every account button leads to the dashboard instead.
+if (signedIn()) {
+  $("account").textContent = "Dashboard";
+  $("cta-account").textContent = "Go to your dashboard";
+  $("foot-signin").textContent = "Dashboard";
+  $("announce").href = "/friends";
+  $("foot-signup").remove();
+  for (const id of ["account", "cta-account", "foot-signin"]) $(id).href = "/dashboard";
+}
+
 // ---------- motion ----------
 const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
 

@@ -51,8 +51,8 @@ $("add").onsubmit = async (e) => {
   $("send").disabled = false;
 };
 
-load().then(() => ($("page").hidden = false)).catch(async (err) => {
-  if (!(await needAccount(err))) {
+load().then(() => ($("page").hidden = false)).catch((err) => {
+  if (!needAccount(err)) {
     $("page").hidden = false;
     $("error").textContent = err.message;
   }

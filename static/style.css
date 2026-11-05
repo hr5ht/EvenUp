@@ -299,6 +299,15 @@ button.link { display: inline; min-height: 0; padding: 0; border: 0; background:
 .people .who { flex: 1; min-width: 0; }
 .people .who > * { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .people-title { margin-bottom: var(--s3); }
+.subnav { display: flex; gap: var(--s5); padding: var(--s3) var(--s4) 0; border-bottom: 1px solid var(--line); }
+@media (min-width: 900px) { .subnav { padding-inline: var(--s7); } }
+.subnav a { padding-bottom: var(--s2); border-bottom: 2px solid transparent; color: var(--muted); font-size: 14px; text-decoration: none; }
+.subnav a[aria-current] { border-bottom-color: var(--accent); color: var(--text); font-weight: 600; }
+.dash-stats { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4); }
+.dash-stat, .dash-prompt { display: grid; gap: var(--s2); color: inherit; text-decoration: none; }
+.dash-prompt { gap: var(--s1); }
+.people a.button { flex-shrink: 0; }
+@media (max-width: 479px) { #demo { display: none; } }
 #auth .fields + .muted { margin-top: var(--s3); }
 #auth .fields + .muted:empty { display: none; }
 #auth button[type="submit"], .save, #delete { margin-top: var(--s4); }
