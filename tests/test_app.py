@@ -387,9 +387,25 @@ def test_auth_proxy(monkeypatch):
         assert len(cookies) == 2 and not any("domain" in x.lower() for x in cookies)
         assert all("Path=/auth" in x for x in cookies) and "HttpOnly" in cookies[0]
         assert seen["path"] == "sign-in/email" and seen["headers"]["origin"] == "https://quicktabapp.vercel.app"
+        # plain http locally: no secure cookie, which browsers would refuse, and Neon still gets its own name back
+        assert cookies[0].startswith("neon-auth.session_token=abc") and "Secure" not in cookies[0] and "SameSite=Lax" in cookies[0]
+        c.get("/auth/token", headers={"Cookie": "neon-auth.session_token=abc"})
+        assert seen["headers"]["cookie"] == "__Secure-neon-auth.session_token=abc"
+        # on Vercel, https: untouched apart from the domain and path
+        monkeypatch.setenv("VERCEL", "1")
+        https = c.post("/auth/sign-in/email", json={}).headers.get_list("set-cookie")[0]
+        assert https.startswith("__Secure-neon-auth.session_token=abc") and "Secure" in https and "SameSite=None" in https
+        c.get("/auth/token", headers={"Cookie": "__Secure-neon-auth.session_token=abc"})
+        assert seen["headers"]["cookie"] == "__Secure-neon-auth.session_token=abc"
+        monkeypatch.delenv("VERCEL")
         # only the routes we use are forwarded
         for path in ("admin/list-users", "update-user", "sign-in/../admin/list-users"):
             assert c.post(f"/auth/{path}", json={}).status_code == 404
+        def down(*a):
+            raise ConnectionResetError
+
+        monkeypatch.setattr(main, "neon_call", down)
+        assert c.post("/auth/sign-in/email", json={}).status_code == 502
         monkeypatch.setattr(main, "NEON_AUTH", "")
         assert c.post("/auth/sign-in/email", json={}).status_code == 503
 

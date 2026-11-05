@@ -7,7 +7,7 @@ import secrets
 import time
 from collections import defaultdict, deque
 from pathlib import Path
-from urllib.error import HTTPError, URLError
+from urllib.error import HTTPError
 from urllib.parse import quote, urlencode, urlsplit
 from urllib.request import HTTPRedirectHandler, Request as NeonRequest, build_opener
 from typing import Dict, List, Literal, Optional
@@ -39,7 +39,7 @@ LOGIN_LIMIT = (10, 900)  # per split, so guessing the admin password is slow fro
 AUTH_LIMIT = (20, 900)  # sign-ins, sign-ups and reset emails per IP. Neon Auth has its own limits behind this
 
 # Neon Auth owns sign-up, passwords and sessions. This is its Auth URL, from the Neon Console.
-NEON_AUTH = os.environ.get("NEON_AUTH_BASE_URL", "").rstrip("/")
+NEON_AUTH = os.environ.get("NEON_AUTH_BASE_URL", "").strip("\"' ").rstrip("/")  # stray quotes would stop every page loading
 NEON_ORIGIN = "{0.scheme}://{0.netloc}".format(urlsplit(NEON_AUTH))
 JWKS = jwt.PyJWKClient(f"{NEON_AUTH}/.well-known/jwks.json") if NEON_AUTH else None
 # The only Neon Auth routes this site forwards, so its admin routes stay out of reach.
@@ -332,7 +332,18 @@ def neon_call(method, path, body, headers):
 
 def own_cookie(cookie):
     """Neon's session cookie, as this site's own: browsers (Safari above all) block third-party ones."""
-    return re.sub(r";\s*path=[^;]*", "; Path=/auth", re.sub(r";\s*domain=[^;]*", "", cookie, flags=re.I), flags=re.I)
+    cookie = re.sub(r";\s*path=[^;]*", "; Path=/auth", re.sub(r";\s*domain=[^;]*", "", cookie, flags=re.I), flags=re.I)
+    if not os.environ.get("VERCEL"):  # local development is plain http, where browsers refuse secure cookies
+        cookie = re.sub(r";\s*secure\b", "", cookie.removeprefix("__Secure-"), flags=re.I)
+        cookie = re.sub(r"samesite=none", "SameSite=Lax", cookie, flags=re.I)
+    return cookie
+
+
+def neon_cookies(header):
+    """What own_cookie changed for local development, put back for Neon."""
+    if os.environ.get("VERCEL"):
+        return header
+    return "; ".join(f"__Secure-{c.strip()}" for c in header.split(";"))
 
 
 @app.api_route("/auth/{path:path}", methods=["GET", "POST"])
@@ -344,9 +355,11 @@ async def auth_proxy(path: str, request: Request):
         raise HTTPException(503, "Sign in isn't set up yet.")
     headers = {k: request.headers[k] for k in ("content-type", "cookie", "origin", "user-agent") if k in request.headers}
     headers["x-forwarded-for"] = client_ip(request)
+    if "cookie" in headers:
+        headers["cookie"] = neon_cookies(headers["cookie"])
     try:
         status, got, body = await run_in_threadpool(neon_call, request.method, path, await request.body(), headers)
-    except URLError:
+    except OSError:  # includes a dropped connection or a timeout
         raise HTTPException(502, "Sign in is unavailable right now. Try again in a minute.")
     resp = Response(body, status, media_type=got.get("content-type"), headers={"Cache-Control": "no-store"})
     for cookie in got.get_all("set-cookie") or []:

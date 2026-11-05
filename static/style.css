@@ -293,6 +293,10 @@ button.link { display: inline; min-height: 0; padding: 0; border: 0; background:
 
 .error { min-height: 1.4em; margin-top: var(--s2); color: var(--owe); font-size: 13px; }
 .error:empty { min-height: 0; margin: 0; }
+.fields { display: grid; gap: var(--s4); }
+#auth .fields + .muted { margin-top: var(--s3); }
+#auth .fields + .muted:empty { display: none; }
+#auth button[type="submit"], .save, #delete { margin-top: var(--s4); }
 .hp { position: absolute; left: -9999px; }
 
 .badge {
