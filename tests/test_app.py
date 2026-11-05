@@ -418,3 +418,97 @@ def test_auth_rate_limit(monkeypatch):
         codes = [c.post("/auth/sign-in/email", json={}).status_code for _ in range(main.AUTH_LIMIT[0] + 1)]
     main.HITS.clear()
     assert codes[-1] == 429 and set(codes[:-1]) == {200}
+
+
+# ---------- friends ----------
+
+def person(c, sub, email, name):
+    h = bearer(neon_token(sub=sub, email=email, name=name))
+    assert c.get("/api/me", headers=h).status_code == 200
+    return h
+
+
+def test_friends(monkeypatch):
+    use_neon(monkeypatch)
+    sent = []
+    monkeypatch.setattr(main, "send_email", lambda to, subject, text: sent.append((to, subject, text)))
+    with TestClient(app) as c:
+        a, b = person(c, "f-a", "a@friends.test", "Asha"), person(c, "f-b", "b@friends.test", "Bilal")
+        get = lambda h: c.get("/api/friends", headers=h).json()  # noqa: E731
+        assert c.post("/api/friends", json={"email": "A@friends.test"}, headers=a).status_code == 400  # yourself
+        assert c.post("/api/friends", json={"email": "nope"}, headers=a).status_code == 422
+        assert c.post("/api/friends", json={"email": "x@friends.test"}).status_code == 401
+        # an account or not, the answer and the email are the same
+        known = c.post("/api/friends", json={"email": "B@Friends.test"}, headers=a)
+        unknown = c.post("/api/friends", json={"email": "new@friends.test"}, headers=a)
+        assert known.json() == unknown.json() == {"ok": True} and known.status_code == unknown.status_code
+        assert [s[0] for s in sent] == ["b@friends.test", "new@friends.test"] and sent[0][1] == "Asha wants to split bills with you on QuickTab"
+        # the sender sees only the address they typed, never a name, until it's accepted
+        assert get(a)["sent"] == [{"id": get(a)["sent"][0]["id"], "email": "new@friends.test"}, {"id": get(a)["sent"][1]["id"], "email": "b@friends.test"}]
+        rid = get(b)["requests"][0]["id"]
+        assert get(b)["requests"] == [{"id": rid, "name": "Asha", "email": "a@friends.test"}]
+        # only the person asked can answer
+        assert c.post(f"/api/friends/{rid}/accept", headers=a).status_code == 404
+        stranger = person(c, "f-s", "s@friends.test", "Sam")
+        assert c.post(f"/api/friends/{rid}/accept", headers=stranger).status_code == 404
+        assert c.delete(f"/api/friends/{rid}", headers=stranger).status_code == 404
+        assert c.delete(f"/api/friends/{rid}", headers=b).status_code == 404  # a request is declined, not deleted
+        assert c.post(f"/api/friends/{rid}/accept", headers=b).status_code == 200
+        assert c.post(f"/api/friends/{rid}/accept", headers=b).status_code == 404  # only once
+        assert get(a)["friends"] == [{"id": rid, "name": "Bilal", "email": "b@friends.test"}]
+        assert get(b)["friends"] == [{"id": rid, "name": "Asha", "email": "a@friends.test"}]
+        # a repeat is quiet: no second row, no second email
+        count = len(sent)
+        c.post("/api/friends", json={"email": "b@friends.test"}, headers=a)
+        assert len(sent) == count and len(get(a)["friends"]) == 1
+        # someone invited before they had an account finds it waiting
+        new = person(c, "f-n", "new@friends.test", "Nia")
+        assert [r["name"] for r in get(new)["requests"]] == ["Asha"]
+        # declining tells the sender nothing
+        wid = get(new)["requests"][0]["id"]
+        assert c.post(f"/api/friends/{wid}/decline", headers=new).status_code == 200
+        assert get(new)["requests"] == [] and get(a)["sent"] == [{"id": wid, "email": "new@friends.test"}]
+        # asking back after a decline, or after being asked, is a yes
+        assert c.post("/api/friends", json={"email": "a@friends.test"}, headers=new).status_code == 200
+        assert {f["name"] for f in get(a)["friends"]} == {"Bilal", "Nia"} and get(a)["sent"] == []
+        # either side can remove a friend
+        assert c.delete(f"/api/friends/{wid}", headers=new).status_code == 200
+        assert {f["name"] for f in get(a)["friends"]} == {"Bilal"}
+        # cancel and resend can't pester anyone: the request comes back, the email doesn't
+        c.post("/api/friends", json={"email": "z@friends.test"}, headers=a)
+        count = len(sent)
+        zid = get(a)["sent"][0]["id"]
+        assert c.delete(f"/api/friends/{zid}", headers=a).status_code == 200
+        c.post("/api/friends", json={"email": "z@friends.test"}, headers=a)
+        assert len(sent) == count and get(a)["sent"][0]["email"] == "z@friends.test"
+        # deleting an account removes them from everyone's list
+        assert c.delete("/api/me", headers=b).status_code == 200
+        assert get(a)["friends"] == []
+
+
+def test_friend_daily_limit(monkeypatch):
+    use_neon(monkeypatch)
+    monkeypatch.setattr(main, "send_email", lambda *a: None)
+    with TestClient(app) as c:
+        h = person(c, "f-lim", "lim@friends.test", "Lim")
+        codes = [c.post("/api/friends", json={"email": f"p{i}@friends.test"}, headers=h).status_code for i in range(main.FRIEND_LIMIT[0] + 1)]
+        assert codes[-1] == 429 and set(codes[:-1]) == {200}
+        # the window ends
+        con = main.db.connect()
+        con.execute("UPDATE rate_limits SET window_start = 0 WHERE key = 'friends:f-lim'")
+        con.commit()
+        con.close()
+        assert c.post("/api/friends", json={"email": "later@friends.test"}, headers=h).status_code == 200
+
+
+def test_send_email_never_fails_a_request(monkeypatch):
+    monkeypatch.delenv("RESEND_API_KEY", raising=False)
+    main.send_email("a@b.co", "s", "t")  # no key: nothing happens
+    monkeypatch.setenv("RESEND_API_KEY", "k")
+    monkeypatch.setenv("EMAIL_FROM", "QuickTab <hi@example.com>")
+
+    def down(*a, **k):
+        raise OSError
+
+    monkeypatch.setattr(main, "urlopen", down)
+    main.send_email("a@b.co", "s", "t")

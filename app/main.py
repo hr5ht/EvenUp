@@ -9,7 +9,7 @@ from collections import defaultdict, deque
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib.parse import quote, urlencode, urlsplit
-from urllib.request import HTTPRedirectHandler, Request as NeonRequest, build_opener
+from urllib.request import HTTPRedirectHandler, Request as UrlRequest, build_opener, urlopen
 from typing import Dict, List, Literal, Optional
 
 import jwt
@@ -37,6 +37,10 @@ WRITE_LIMIT = (60, 60)
 MAX_MEMBERS = 50
 LOGIN_LIMIT = (10, 900)  # per split, so guessing the admin password is slow from any number of IPs
 AUTH_LIMIT = (20, 900)  # sign-ins, sign-ups and reset emails per IP. Neon Auth has its own limits behind this
+FRIEND_LIMIT = (20, 24 * 3600)  # friend requests per user
+INVITE_LIMIT = (1, 7 * 24 * 3600)  # emails from one person to one address, so cancel-and-resend can't pester anyone
+EMAIL_RE = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+SITE = "https://quicktabapp.vercel.app"
 
 # Neon Auth owns sign-up, passwords and sessions. This is its Auth URL, from the Neon Console.
 NEON_AUTH = os.environ.get("NEON_AUTH_BASE_URL", "").strip("\"' ").rstrip("/")  # stray quotes would stop every page loading
@@ -144,6 +148,11 @@ def login_page():
 @app.get("/profile")
 def profile_page():
     return FileResponse(STATIC / "profile.html")
+
+
+@app.get("/friends")
+def friends_page():
+    return FileResponse(STATIC / "friends.html")
 
 
 # ---------- models ----------
@@ -324,7 +333,7 @@ class NoRedirect(HTTPRedirectHandler):
 
 def neon_call(method, path, body, headers):
     try:
-        r = build_opener(NoRedirect).open(NeonRequest(f"{NEON_AUTH}/{path}", data=body or None, headers=headers, method=method), timeout=15)
+        r = build_opener(NoRedirect).open(UrlRequest(f"{NEON_AUTH}/{path}", data=body or None, headers=headers, method=method), timeout=15)
     except HTTPError as e:
         r = e  # a 4xx from Neon is an answer for the browser, like "wrong password"
     return r.getcode(), r.headers, r.read()
@@ -387,6 +396,7 @@ def current_user(authorization: Optional[str] = Header(None), con=Depends(db.get
         name = (claims.get("name") or email.split("@")[0])[:40]
         u = con.execute("INSERT INTO users (id, email, name, created_at) VALUES (?, ?, ?, ?) RETURNING *",
                         (claims["sub"], email, name, now())).fetchone()
+        con.execute("UPDATE friends SET to_user = ? WHERE to_email = ? AND to_user IS NULL", (u["id"], email))  # invites waiting
         con.commit()
     return u
 
@@ -419,6 +429,111 @@ def update_me(body: ProfileIn, u=Depends(current_user), con=Depends(db.get_db)):
 @app.delete("/api/me")
 def delete_me(u=Depends(current_user), con=Depends(db.get_db)):
     con.execute("DELETE FROM users WHERE id = ?", (u["id"],))
+    con.commit()
+    return {"ok": True}
+
+
+# ---------- friends ----------
+
+class FriendIn(BaseModel):
+    email: str = Field(max_length=254, pattern=EMAIL_RE)
+
+
+def limited(con, key, limit, window):
+    """rate_limited() for limits that must hold across serverless instances."""
+    t = now()
+    hits = con.execute(
+        "INSERT INTO rate_limits (key, window_start, hits) VALUES (?, ?, 1) ON CONFLICT (key) DO UPDATE SET "
+        "hits = CASE WHEN rate_limits.window_start <= ? THEN 1 ELSE rate_limits.hits + 1 END, "
+        "window_start = CASE WHEN rate_limits.window_start <= ? THEN ? ELSE rate_limits.window_start END RETURNING hits",
+        (key, t, t - window, t - window, t)).fetchone()["hits"]
+    con.commit()
+    return hits > limit
+
+
+def send_email(to, subject, text):
+    """Best effort: a failed email never fails the request, the in-app request is still there.
+    Sends nothing until RESEND_API_KEY and EMAIL_FROM are set."""
+    key, sender = os.environ.get("RESEND_API_KEY"), os.environ.get("EMAIL_FROM")
+    if not key or not sender:
+        return
+    try:
+        urlopen(UrlRequest("https://api.resend.com/emails", method="POST",
+                           data=json.dumps({"from": sender, "to": to, "subject": subject, "text": text}).encode(),
+                           headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json", "User-Agent": "QuickTab"}), timeout=5)
+    except OSError as e:
+        print("Email failed:", type(e).__name__)
+
+
+@app.post("/api/friends")
+def add_friend(body: FriendIn, u=Depends(current_user), con=Depends(db.get_db)):
+    """The answer never says whether the email has an account: same response, same steps, same email."""
+    email = body.email.strip().lower()
+    if email == u["email"]:
+        raise HTTPException(400, "That's your own email.")
+    if limited(con, f"friends:{u['id']}", *FRIEND_LIMIT):
+        raise HTTPException(429, "That's a lot of friend requests for one day. Try again tomorrow.")
+    other = con.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
+    theirs = other and con.execute("SELECT id FROM friends WHERE from_user = ? AND to_user = ?", (other["id"], u["id"])).fetchone()
+    new = None
+    if theirs:  # they already asked, so this is a yes
+        con.execute("UPDATE friends SET status = 'accepted' WHERE id = ?", (theirs["id"],))
+    else:
+        new = con.execute(
+            "INSERT INTO friends (from_user, to_email, to_user, created_at) VALUES (?, ?, ?, ?) "
+            "ON CONFLICT (from_user, to_email) DO NOTHING RETURNING id",
+            (u["id"], email, other and other["id"], now())).fetchone()
+    con.commit()
+    if new and not limited(con, f"invite:{u['id']}:{email}", *INVITE_LIMIT):
+        send_email(email, f"{u['name']} wants to split bills with you on QuickTab",
+                   f"{u['name']} ({u['email']}) added you as a friend on QuickTab.\n\nSee the request: {SITE}/friends\n\n"
+                   "If you don't know them, you can ignore this email.")
+    return {"ok": True}
+
+
+@app.get("/api/friends")
+def list_friends(u=Depends(current_user), con=Depends(db.get_db)):
+    rows = con.execute(
+        "SELECT f.*, a.name AS from_name, a.email AS from_email, b.name AS to_name FROM friends f "
+        "JOIN users a ON a.id = f.from_user LEFT JOIN users b ON b.id = f.to_user "
+        "WHERE f.from_user = ? OR f.to_user = ? ORDER BY f.id DESC", (u["id"], u["id"])).fetchall()
+    out = {"friends": [], "requests": [], "sent": []}
+    for f in rows:
+        mine = f["from_user"] == u["id"]
+        them = {"id": f["id"], "name": f["to_name"], "email": f["to_email"]} if mine else {"id": f["id"], "name": f["from_name"], "email": f["from_email"]}
+        if f["status"] == "accepted":
+            out["friends"].append(them)
+        elif mine:  # a decline stays "sent": the sender is never told, and sees no name before a yes
+            out["sent"].append({"id": f["id"], "email": f["to_email"]})
+        elif f["status"] == "pending":
+            out["requests"].append(them)
+    return out
+
+
+def answer_friend(con, friend_id, u, status):
+    if not con.execute("UPDATE friends SET status = ? WHERE id = ? AND to_user = ? AND status = 'pending'",
+                       (status, friend_id, u["id"])).rowcount:
+        raise HTTPException(404, "Request not found")
+    con.commit()
+    return {"ok": True}
+
+
+@app.post("/api/friends/{friend_id}/accept")
+def accept_friend(friend_id: int, u=Depends(current_user), con=Depends(db.get_db)):
+    return answer_friend(con, friend_id, u, "accepted")
+
+
+@app.post("/api/friends/{friend_id}/decline")
+def decline_friend(friend_id: int, u=Depends(current_user), con=Depends(db.get_db)):
+    return answer_friend(con, friend_id, u, "declined")
+
+
+@app.delete("/api/friends/{friend_id}")
+def remove_friend(friend_id: int, u=Depends(current_user), con=Depends(db.get_db)):
+    """Remove a friend, or cancel a request you sent."""
+    if not con.execute("DELETE FROM friends WHERE id = ? AND (from_user = ? OR (to_user = ? AND status = 'accepted'))",
+                       (friend_id, u["id"], u["id"])).rowcount:
+        raise HTTPException(404, "Friend not found")
     con.commit()
     return {"ok": True}
 
@@ -729,5 +844,6 @@ def cleanup(x_cron_secret: Optional[str] = Header(None), authorization: Optional
     if not secret or not given or not hmac.compare_digest(secret, given):
         raise HTTPException(403)
     n = con.execute("DELETE FROM splits WHERE expires_at < ?", (now() - GRACE,)).rowcount
+    con.execute("DELETE FROM rate_limits WHERE window_start < ?", (now() - INVITE_LIMIT[1],))
     con.commit()
     return {"deleted": n}

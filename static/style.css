@@ -294,6 +294,11 @@ button.link { display: inline; min-height: 0; padding: 0; border: 0; background:
 .error { min-height: 1.4em; margin-top: var(--s2); color: var(--owe); font-size: 13px; }
 .error:empty { min-height: 0; margin: 0; }
 .fields { display: grid; gap: var(--s4); }
+.people { display: grid; gap: var(--s3); margin: 0; padding: 0; list-style: none; }
+.people li { display: flex; align-items: center; gap: var(--s2); min-width: 0; }
+.people .who { flex: 1; min-width: 0; }
+.people .who > * { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.people-title { margin-bottom: var(--s3); }
 #auth .fields + .muted { margin-top: var(--s3); }
 #auth .fields + .muted:empty { display: none; }
 #auth button[type="submit"], .save, #delete { margin-top: var(--s4); }

@@ -62,6 +62,20 @@ CREATE TABLE IF NOT EXISTS users (  -- our side of an account: Neon Auth owns th
     upi_id TEXT,  -- encrypted, like members.upi_id
     created_at BIGINT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS friends (
+    id {pk},
+    from_user TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    to_email TEXT NOT NULL,  -- lets you ask someone with no account yet
+    to_user TEXT REFERENCES users(id) ON DELETE CASCADE,  -- set once to_email has a verified account
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'declined')),
+    created_at BIGINT NOT NULL,
+    UNIQUE (from_user, to_email)
+);
+CREATE TABLE IF NOT EXISTS rate_limits (  -- shared across serverless instances, unlike HITS
+    key TEXT PRIMARY KEY,
+    window_start BIGINT NOT NULL,
+    hits INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS stats (
     key TEXT PRIMARY KEY,  -- splits, demos: how many were ever created, since splits delete themselves
     value BIGINT NOT NULL
