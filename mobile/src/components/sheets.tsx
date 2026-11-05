@@ -128,8 +128,8 @@ export function ExpenseForm({ c, open, editing, onClose }: { c: Ctx; open: boole
               return (
                 <Tap key={m.id} accessibilityRole="checkbox" accessibilityState={{ checked: on }}
                   onPress={() => setPicked(on ? picked.filter((x) => x !== m.id) : [...picked, m.id])}
-                  className={`h-10 justify-center border px-3.5 ${on ? "border-accent bg-surface" : "border-line-2 bg-transparent"}`}>
-                  <T className={`text-sm ${on ? "font-semibold text-accent" : "text-muted"}`}>{on ? "✓ " : ""}{m.name}</T>
+                  className={`h-11 max-w-full justify-center border px-4 ${on ? "border-ink bg-ink" : "border-line-2 bg-surface"}`}>
+                  <T className={`text-sm ${on ? "font-semibold text-ink-text" : "text-muted"}`} numberOfLines={1}>{m.name}</T>
                 </Tap>
               );
             })}
