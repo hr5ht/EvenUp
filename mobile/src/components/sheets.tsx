@@ -99,10 +99,12 @@ export function ExpenseForm({ c, open, editing, onClose }: { c: Ctx; open: boole
       <T className="text-sm text-muted">Paid by {editing ? (editing.paidBy === identity.me ? "you" : c.nameOf(editing.paidBy)) : "you"}</T>
       <View className="gap-1.5">
         <Label>Amount (₹)</Label>
-        <View className="flex-row items-baseline gap-1.5 border-b-2 border-accent pb-1">
-          <T className="text-3xl text-muted">₹</T>
+        {/* Same size for both, centred: baseline alignment is unreliable on a TextInput. Android's font padding would push the digits off centre. */}
+        <View className="flex-row items-center gap-2 border-b-2 border-accent">
+          <T className="text-[40px] font-bold text-muted" style={{ includeFontPadding: false }}>₹</T>
           <Field value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="0" autoFocus={!editing}
-            className="h-14 flex-1 border-0 bg-transparent px-0 text-[40px] font-bold" style={{ borderWidth: 0 }} />
+            className="h-14 min-w-0 flex-1 border-0 bg-transparent px-0 text-[40px] font-bold"
+            style={{ borderWidth: 0, paddingVertical: 0, includeFontPadding: false, textAlignVertical: "center" }} />
         </View>
       </View>
       <View className="gap-2">

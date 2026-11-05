@@ -93,12 +93,13 @@ export function Field({ className = "", ...props }: TextInputProps & { className
       placeholderTextColor={colors.dim}
       onFocus={() => setFocus(true)}
       onBlur={() => setFocus(false)}
-      // Defaults step aside when the className sets its own height, text size or border, so they never fight.
+      // Defaults step aside when the className sets its own height, text size, border or side padding, so they never fight.
       className={[
         !/(^|\s)h-/.test(className) && "h-12",
         !/(^|\s)text-\[|(^|\s)text-(xs|sm|base|lg|xl|\dxl)/.test(className) && "text-base",
         !/(^|\s)border-0/.test(className) && `border ${focus ? "border-text" : "border-line-2"}`,
-        "bg-surface px-3.5 text-text", className,
+        !/(^|\s)px-/.test(className) && "px-3.5",
+        "bg-surface text-text", className,
       ].filter(Boolean).join(" ")}
       {...props}
     />
