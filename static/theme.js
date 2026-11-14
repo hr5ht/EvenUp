@@ -6,7 +6,9 @@ function applyTheme(saved) {
   if (saved) root.dataset.theme = saved; else delete root.dataset.theme;
   const dark = saved ? saved === "dark" : media.matches;
   root.toggleAttribute("data-dark", dark);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#0b0b0a" : "#fafaf9");
+  // The browser bar matches the page; a page with data-fixed (the green home hero) keeps its own colour.
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta && !meta.hasAttribute("data-fixed")) meta.setAttribute("content", dark ? "#161513" : "#f7f4ee");
 }
 const stored = () => { try { return localStorage.getItem("quicktab:theme"); } catch { return null; } };
 applyTheme(stored());
