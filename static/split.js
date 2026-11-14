@@ -70,10 +70,11 @@ async function load() {
   try {
     data = await api("GET", base);
   } catch (err) {
-    $("title").textContent = "Tab not found";
-    $("load-error").textContent = "Tabs are deleted a day after they close, or the link is wrong.";
-    $("content").hidden = true;
-    $("fab").hidden = true;
+    // Polling keeps a tab that's already showing; only a first load that fails is "gone".
+    if (data) return;
+    document.title = "Tab not found · QuickTab";
+    $("page").hidden = true;
+    $("gone").hidden = false;
     return;
   }
   render();
@@ -91,26 +92,29 @@ function render() {
   const when = (t) => new Date(t * 1000).toLocaleString("en-IN", { weekday: "short", hour: "numeric", minute: "2-digit" });
   document.body.classList.toggle("ended", data.ended);
   $("ended-card").hidden = !data.ended;
-  $("ended-text").textContent = `It closed ${when(data.expires_at)}, so nothing can be added. Download the summary before ${when(data.deletes_at)}, when it's deleted for good.`;
+  $("ended-title").textContent = `This tab closed ${when(data.expires_at)}`;
+  $("ended-text").textContent = `Nothing can be added now. Save the summary before ${when(data.deletes_at)}, when it's deleted for good.`;
   const hours = Math.max(0, Math.round((data.expires_at * 1000 - Date.now()) / 3600000));
-  $("expiry").textContent = `Open until ${when(data.expires_at)} (${hours}h left), then read-only for a day.`;
-  $("expiry").hidden = data.ended;
-  // Time left of the 48 hours, as a bar that empties.
+  const people = data.members.length === 1 ? "Just one person so far" : `${data.members.length} people`;
+  $("meta").hidden = false;
+  $("expiry").textContent = data.ended
+    ? `Closed · ${people} · deleted ${when(data.deletes_at)}`
+    : `Open until ${when(data.expires_at)} · ${hours}h left · ${people}`;
+  $("state-dot").className = `dot${data.ended ? "" : " pos"}`;
+  // Time left of the 48 hours, as a line that empties.
   $("life").hidden = data.ended;
   $("life-bar").style.width = `${Math.max(2, Math.min(100, ((data.expires_at - Date.now() / 1000) / (48 * 3600)) * 100))}%`;
-  $("state-tag").classList.toggle("live", !data.ended);
-  $("state-tag").lastChild.textContent = data.ended ? "closed" : "live tab";
   // First render only: the title slides in and the expense rows arrive one by one. Polling re-renders stay still.
   if (!document.body.classList.contains("loaded")) {
     document.body.classList.add("loaded");
-    $("expenses").classList.add("fresh");
-    setTimeout(() => $("expenses").classList.remove("fresh"), 1500);
+    $("content").classList.add("rise");
   }
 
   renderYou();
   renderHero();
   const full = data.members.length >= data.capacity;
   $("tile-balances").textContent = `${data.members.length} of ${data.capacity} people`;
+  $("tile-activity").textContent = plural(data.activity.length, "change");
   // Full: nobody new until the admin removes someone. The server refuses anyway.
   $("join-open").disabled = full;
   $("join-open").textContent = full ? `This tab is full (${data.capacity} people)` : "I'm not on the list";
@@ -142,16 +146,21 @@ function renderHero() {
   const total = live.reduce((a, e) => a + e.amount_paise, 0);
   const me = member(identity.me);
   $("hero-sub").textContent = `${rupees(total)} spent · ${plural(live.length, "expense")}`;
+  $("hero-done").hidden = true;
   if (me) {
     const b = data.balances[me.id] || 0;
     $("hero-label").textContent = b > 0 ? "You get back" : b < 0 ? "You owe" : "You're all settled";
+    $("hero-dot").className = `dot${b > 0 ? " pos" : b < 0 ? " neg" : ""}`;
     countUp($("hero-amount"), Math.abs(b));
-    $("hero-amount").className = `hero-amount ${b > 0 ? "owed" : b < 0 ? "owe" : ""}`;
     $("my-payments").replaceChildren(...paymentsOf(me.id).map(paymentRow));
+    if (!b) {
+      $("hero-done").hidden = false;
+      $("hero-done-text").textContent = live.length ? "Nothing to pay or collect" : "Nothing spent yet. Share the link so others can join";
+    }
   } else {
     $("hero-label").textContent = "Total spent";
+    $("hero-dot").className = "dot";
     countUp($("hero-amount"), total);
-    $("hero-amount").className = "hero-amount";
     $("my-payments").replaceChildren();
   }
 }
@@ -177,7 +186,9 @@ function renderYou() {
     $("my-upi").value = "";
     $("upi-error").textContent = "";
   }
-  $("you-text").textContent = me ? `${me.name}${isAdmin() ? " · admin" : ""} ▾` : "Who are you?";
+  $("you-text").replaceChildren(me ? me.name : "Who are you?", isAdmin() ? el("span", { className: "role", textContent: " · admin" }) : "");
+  $("you-avatar").hidden = !me;
+  if (me) $("you-avatar").textContent = initials(me.name);
   // Saved: one line with Edit. Not saved yet, or editing: the form.
   const saved = !!(me && me.upi_id);
   $("upi-line").hidden = !saved || upiEditing;
@@ -224,8 +235,10 @@ function openPicker() {
     ? "Pick your name. The first time, you create a password, so nobody else can use your name."
     : "Pick your name to open the tab.";
   const people = data.members.map((m) => {
-    const b = el("button", { type: "button", className: m.id === identity.me ? "current" : "" },
-      el("span", { textContent: m.name }), m.id === data.admin_id ? el("span", { className: "badge", textContent: "admin" }) : null);
+    const paid = liveExpenses().filter((e) => e.paid_by === m.id).reduce((a, e) => a + e.amount_paise, 0);
+    const sub = m.id === data.admin_id ? "Opened this tab" : paid ? `Paid ${rupees(paid)}` : "";
+    const b = el("button", { type: "button", className: `pick${m.id === identity.me ? " current" : ""}` },
+      avatar(m.name), el("span", { className: "grow" }, m.name, sub ? el("span", { textContent: sub }) : null), icon("chev"));
     b.onclick = () => pick(m);
     return b;
   });
@@ -399,7 +412,7 @@ $("pay-upi").onclick = () => {
   $("pay-qr").src = `${base}/qr?to=${to.id}&amount=${amount}`;
   // Android's upi:// shows the system's app chooser; iOS gets ours (see #pay-now's click below).
   $("pay-now").href = IS_IOS ? "#" : upiLink(to, amount);
-  $("app-list").replaceChildren(...IOS_APPS.map(([name, scheme]) => el("a", { href: upiLink(to, amount, scheme), textContent: name })));
+  $("app-list").replaceChildren(...IOS_APPS.map(([name, scheme]) => el("a", { className: "choice", href: upiLink(to, amount, scheme) }, el("span", { className: "grow", textContent: name }), icon("chev"))));
   $("pay-upi-hint").textContent = IS_PHONE
     ? "Tap Pay now to open your UPI app, then come back and tap I've paid."
     : "Scan with the UPI app on your phone, then tap I've paid.";
@@ -444,23 +457,22 @@ $("pay-done").onclick = async (ev) => {
   }
 };
 
+// One line on your bill: who you pay (with Pay), or who pays you.
 function paymentRow(p) {
-  const to = member(p.to);
-  const actions = el("div", { className: "row" });
-  if (p.from === identity.me) {
-    const settle = el("button", { type: "button", className: "small primary live-only", textContent: "Settle up" });
-    settle.onclick = () => openSettle(p);
-    actions.append(settle);
-  } else if (p.to === identity.me && !to.upi_id) {
-    // You're being paid: nothing to do except make sure they can pay you.
-    actions.append(el("span", { className: "muted live-only", textContent: "Add your UPI ID to get paid" }));
+  const paying = p.from === identity.me;
+  const other = member(paying ? p.to : p.from);
+  const me = member(identity.me);
+  const sub = paying ? other.upi_id || "No UPI ID yet, cash only" : me.upi_id ? "Pays you" : "Pays you · add your UPI ID to get paid";
+  let pay = null;
+  if (paying) {
+    pay = el("button", { type: "button", className: "small accent live-only", textContent: "Pay" });
+    pay.onclick = () => openSettle(p);
   }
   return el("li", { className: "pay-row" },
-    el("div", { className: "pay-main" },
-      el("span", { className: "grow", textContent: `${label(p.from)} → ${label(p.to)}` }),
-      el("strong", { className: "amount", textContent: rupees(p.amount_paise) }),
-    ),
-    actions,
+    avatar(other.name),
+    el("span", { className: "grow" }, el("b", { textContent: other.name }), el("span", { textContent: sub })),
+    el("strong", { className: "amount", textContent: rupees(p.amount_paise) }),
+    pay,
   );
 }
 
@@ -472,8 +484,9 @@ function renderBalances() {
     const pays = paymentsOf(m.id);
     return el("li", { className: "bal-row" },
       el("div", { className: "bal-main" },
+        avatar(m.name),
         el("span", { className: "grow", textContent: label(m.id) }),
-        el("span", { className: `amount ${b > 0 ? "owed" : b < 0 ? "owe" : ""}`, textContent: text }),
+        el("span", { className: `amount ${b > 0 ? "pos" : b < 0 ? "neg" : ""}`, textContent: text }),
       ),
       pays.length ? el("ul", { className: "bal-detail" }, ...pays.map((p) => el("li", {},
         el("span", { className: "grow", textContent: `${label(p.from)} → ${label(p.to)}` }),
@@ -485,28 +498,67 @@ function renderBalances() {
 
 // ---------- expenses ----------
 
+// Newest first, grouped by day. Each row says what it means for you, not just the total.
 function renderExpenses() {
   const live = data.expenses.filter((e) => !e.deleted);
-  $("exp-count").textContent = live.length ? String(live.length).padStart(2, "0") : "";
+  $("exp-count").textContent = live.length || "";
   if (!live.length) {
-    $("expenses").replaceChildren(el("li", { className: "muted empty", textContent: "No expenses yet. Tap + Add expense." }));
+    const add = el("button", { type: "button", className: "primary live-only" }, icon("plus"), "Add the first expense");
+    add.onclick = () => $("fab").click();
+    $("expenses").replaceChildren(el("div", { className: "empty" },
+      el("span", { className: "ic" }, icon("receipt")),
+      el("h3", { textContent: "No expenses yet" }),
+      el("p", { textContent: "Add what you paid for, and QuickTab splits it between everyone on the tab." }),
+      known() && !data.ended ? add : null));
     return;
   }
-  $("expenses").replaceChildren(...live.map((e) => {
-    const mine = e.shares[identity.me];
-    const payment = e.kind === "payment";
-    const row = el("button", { type: "button", className: "exp-row" },
-      el("span", { className: "grow" },
-        el("span", { className: "title", textContent: payment ? `${label(e.paid_by)} paid ${label(Number(Object.keys(e.shares)[0]))}` : e.description }),
-        el("span", { className: "muted", textContent: payment
-          ? `Settled up · ${payMethod(e)}`
-          : `${label(e.paid_by)} paid${mine ? ` · your share ${rupees(mine)}` : ""}` }),
-      ),
-      el("strong", { className: "amount", textContent: rupees(e.amount_paise) }),
-    );
-    row.onclick = () => openExpense(e);
-    return el("li", {}, row);
-  }));
+  const dayOf = (t) => {
+    const d = new Date(t * 1000), now = new Date();
+    const days = Math.round((new Date(now.toDateString()) - new Date(d.toDateString())) / 86400000);
+    return days === 0 ? "Today" : days === 1 ? "Yesterday" : d.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" });
+  };
+  const rows = [];
+  let day = null;
+  for (const e of live) {
+    if (dayOf(e.created_at) !== day) {
+      day = dayOf(e.created_at);
+      rows.push(el("p", { className: "day", textContent: day }));
+    }
+    rows.push(expenseRow(e));
+  }
+  $("expenses").replaceChildren(...rows);
+}
+
+function expenseRow(e) {
+  const mine = e.shares[identity.me] || 0;
+  const payment = e.kind === "payment";
+  let title, sub, note, tone = "";
+  if (payment) {
+    const to = Number(Object.keys(e.shares)[0]);
+    title = `${label(e.paid_by)} paid ${label(to)}`;
+    sub = `Settled up · ${payMethod(e)}`;
+    note = e.paid_by === identity.me ? "You paid" : to === identity.me ? "Paid to you" : `Between ${nameOf(e.paid_by)} and ${nameOf(to)}`;
+    if (to === identity.me) tone = "pos";
+  } else {
+    const ways = Object.keys(e.shares).length;
+    title = e.description;
+    sub = `${label(e.paid_by)} paid${ways > 1 ? ` · split ${ways} ways` : ""}`;
+    if (e.paid_by === identity.me) {
+      const lent = e.amount_paise - mine;
+      note = lent ? `You lent ${rupees(lent)}` : "Just you";
+      tone = lent ? "pos" : "";
+    } else {
+      note = mine ? `You owe ${rupees(mine)}` : "Not in this one";
+      tone = mine ? "neg" : "";
+    }
+  }
+  const row = el("button", { type: "button", className: "exp-row" },
+    payment ? el("span", { className: "tick" }, icon("check")) : avatar(nameOf(e.paid_by)),
+    el("span", { className: "grow" }, el("span", { className: "title", textContent: title }), el("span", { className: "muted", textContent: sub })),
+    el("span", { className: "v" }, el("strong", { className: "amount", textContent: rupees(e.amount_paise) }), el("span", { className: tone, textContent: note })),
+  );
+  row.onclick = () => openExpense(e);
+  return row;
 }
 
 function openExpense(e) {
@@ -521,6 +573,7 @@ function openExpense(e) {
       el("p", { className: "muted", textContent: `Paid by ${label(e.paid_by)} · ${when}` }),
       el("h3", { textContent: "Split between" }),
       el("ul", { className: "list" }, ...Object.entries(e.shares).map(([id, s]) => el("li", {},
+        avatar(nameOf(Number(id))),
         el("span", { className: "grow", textContent: label(Number(id)) }),
         el("span", { className: "amount", textContent: rupees(s) }),
       ))),
@@ -546,7 +599,7 @@ function openExpense(e) {
 
 function buildMemberInputs() {
   $("equal-box").replaceChildren(...data.members.map((m) =>
-    el("label", {}, el("input", { type: "checkbox", value: m.id, checked: true }), el("span", { textContent: m.name }))));
+    el("label", {}, el("input", { type: "checkbox", value: m.id, checked: true }), el("span", {}, avatar(m.name), m.id === identity.me ? "You" : m.name))));
   $("exact-box").replaceChildren(...data.members.map((m) =>
     el("div", { className: "exact-row" },
       el("span", { textContent: m.name }),
@@ -696,8 +749,8 @@ function renderActivity() {
     }
     return el("li", {},
       el("span", { className: "grow" },
-        el("div", { textContent: title }),
-        el("div", { className: "muted", textContent: new Date(a.created_at * 1000).toLocaleString() }),
+        el("span", { textContent: title }),
+        el("span", { className: "muted", textContent: new Date(a.created_at * 1000).toLocaleString("en-IN", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) }),
       ),
       undo,
     );
@@ -732,8 +785,9 @@ function renderAdminMembers() {
       }
     };
     return el("li", {},
-      el("span", { className: "grow" }, el("div", { textContent: m.name }),
-        el("div", { className: "muted", textContent: m.upi_id || "no UPI ID" })),
+      avatar(m.name),
+      el("span", { className: "grow" }, el("span", { textContent: m.name }),
+        el("span", { className: "muted", textContent: m.upi_id || "No UPI ID" })),
       el("span", { className: "row" }, editUpi, remove),
     );
   }));
@@ -779,10 +833,10 @@ $("download-png").onclick = async (ev) => {
   const button = ev.currentTarget;
   button.disabled = true;
   try {
-    // A compact receipt: white and grey on black, the app's one accent only for money coming back.
+    // A compact receipt on paper: ink and grey, green only for money coming back.
     // Balances only, plus every recorded payment so anyone can check it.
     const W = 600, PAD = 32;
-    const C = { bg: "#fafaf9", text: "#0d0d0c", muted: "#6b6963", line: "#d4d2ce", accent: "#2b4bff" };
+    const C = { bg: "#fffdf8", text: "#1f1b16", muted: "#7b7266", line: "#d9d0c1", accent: "#15803d" };
     const money = (p) => rupees(p).replace(/\.00$/, ""); // ₹650, not ₹650.00
     const expenses = liveExpenses();
     const total = expenses.reduce((a, e) => a + e.amount_paise, 0);

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex">
-  <meta name="theme-color" content="#fafaf9">
+  <meta name="theme-color" content="#f7f4ee">
   <title>QuickTab</title>
   <link rel="stylesheet" href="/static/style.css">
   <script src="/static/theme.js"></script>
@@ -14,76 +14,86 @@
 <body class="split-page">
 <header class="topbar">
   <a href="/" class="logo">QuickTab</a>
-  <div class="row">
-    <button type="button" class="small theme-toggle" id="theme" aria-label="Switch light or dark theme"><svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg><svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></button>
-    <button type="button" id="switch" class="you-chip"><span id="you-text">…</span></button>
+  <div class="end">
+    <button type="button" class="icon-btn theme" id="theme" aria-label="Switch light or dark theme"><svg class="i moon"><use href="/static/icons.svg#moon"/></svg><svg class="i sun"><use href="/static/icons.svg#sun"/></svg></button>
+    <button type="button" id="switch" class="you-chip"><span class="avatar" id="you-avatar" hidden></span><span id="you-text">…</span><svg class="i sm"><use href="/static/icons.svg#chevdown"/></svg></button>
   </div>
 </header>
 
-<main class="app">
-  <header class="page-head">
-    <span class="tag live" id="state-tag"><i class="pulse"></i>live tab</span>
-    <div class="line"><h1 id="title">Loading…</h1></div>
-    <p class="muted" id="expiry" hidden></p>
-    <div class="life" id="life" hidden><span id="life-bar"></span></div>
-    <p class="error" id="load-error"></p>
+<main class="gone" id="gone" hidden>
+  <h1>This tab is gone</h1>
+  <p>Tabs are deleted a day after they close, or the link is wrong. Ask whoever shared it for a fresh one.</p>
+  <div class="row"><a class="button" href="/">Go home</a><a class="button primary" href="/new">Open a tab</a></div>
+</main>
+
+<main class="tab-page" id="page">
+  <header class="tab-head">
+    <div>
+      <h1 id="title">Loading…</h1>
+      <p class="meta" id="meta" hidden><span class="dot" id="state-dot"></span><span id="expiry"></span></p>
+    </div>
+    <div class="end"><button type="button" data-open="share-sheet"><svg class="i"><use href="/static/icons.svg#share"/></svg>Share</button></div>
   </header>
+  <div class="life" id="life" hidden><span id="life-bar"></span></div>
+  <p class="error" id="load-error"></p>
 
-  <div id="content" class="stagger" hidden>
-    <div class="side">
-    <section class="card glow-card" id="ended-card" hidden>
-      <p class="overline">Tab closed</p>
-      <p class="muted" id="ended-text"></p>
-      <div class="actions split2">
-        <button type="button" id="ended-png">Download image</button>
-        <button type="button" id="ended-csv" class="primary">Download CSV</button>
+  <section class="notice" id="ended-card" hidden>
+    <span class="ic"><svg class="i"><use href="/static/icons.svg#clock"/></svg></span>
+    <span class="grow"><strong id="ended-title">This tab has closed</strong><span id="ended-text"></span></span>
+    <span class="row"><button type="button" id="ended-png">Save image</button><button type="button" id="ended-csv" class="primary">Download CSV</button></span>
+  </section>
+
+  <div id="content" class="tab-grid" hidden>
+    <div class="col-a">
+      <div class="lift">
+        <section class="bill torn">
+          <p class="hero-label"><span class="dot" id="hero-dot"></span><span id="hero-label"></span></p>
+          <p class="hero-amount" id="hero-amount" data-paise="1"></p>
+          <p class="sub" id="hero-sub"></p>
+          <ul class="pays" id="my-payments"></ul>
+          <p class="done" id="hero-done" hidden><svg class="i"><use href="/static/icons.svg#check"/></svg><span id="hero-done-text"></span></p>
+        </section>
       </div>
-    </section>
 
-    <div class="upi-line live-only" id="upi-line" hidden>
-      <span class="muted">UPI ID:</span><span id="upi-line-id"></span>
-      <button type="button" class="small" id="upi-edit">Edit</button>
+      <div class="upi-line live-only" id="upi-line" hidden>
+        <svg class="i"><use href="/static/icons.svg#wallet"/></svg><span class="k">Your UPI ID</span><span id="upi-line-id"></span>
+        <button type="button" class="small ghost" id="upi-edit">Edit</button>
+      </div>
+
+      <form class="upi-form live-only" id="upi-form" hidden>
+        <label for="my-upi">Add your UPI ID so people can pay you</label>
+        <div class="row">
+          <input type="text" id="my-upi" maxlength="100" placeholder="name@bank" autocapitalize="off" spellcheck="false" required>
+          <button class="primary" type="submit">Save</button>
+        </div>
+        <p class="error" id="upi-error"></p>
+        <button type="button" class="link" id="upi-cancel" hidden>Cancel</button>
+      </form>
+
+      <nav class="side-list">
+        <button type="button" class="side-row" data-open="balances-sheet"><svg class="i"><use href="/static/icons.svg#chart"/></svg>Balances<span class="hint"><span id="tile-balances"></span><svg class="i sm"><use href="/static/icons.svg#chev"/></svg></span></button>
+        <button type="button" class="side-row" data-open="activity-sheet"><svg class="i"><use href="/static/icons.svg#history"/></svg>Activity<span class="hint"><span id="tile-activity"></span><svg class="i sm"><use href="/static/icons.svg#chev"/></svg></span></button>
+        <button type="button" class="side-row" data-open="share-sheet"><svg class="i"><use href="/static/icons.svg#share"/></svg>Share<span class="hint">Link, image or CSV<svg class="i sm"><use href="/static/icons.svg#chev"/></svg></span></button>
+        <button type="button" class="side-row live-only" data-open="admin-sheet" id="admin-tile" hidden><svg class="i"><use href="/static/icons.svg#shield"/></svg>Admin<span class="hint">Members, delete<svg class="i sm"><use href="/static/icons.svg#chev"/></svg></span></button>
+      </nav>
     </div>
 
-    <form class="card live-only" id="upi-form" hidden>
-      <label for="my-upi">Add your UPI ID so people can pay you</label>
-      <div class="row">
-        <input type="text" id="my-upi" maxlength="100" placeholder="name@bank" required>
-        <button class="primary" type="submit">Save</button>
+    <div class="col-b">
+      <div class="list-head">
+        <h2>Expenses</h2><span class="count" id="exp-count"></span>
+        <button type="button" class="primary live-only" id="fab" hidden><svg class="i"><use href="/static/icons.svg#plus"/></svg>Add expense<kbd>N</kbd></button>
       </div>
-      <p class="error" id="upi-error"></p>
-      <button type="button" class="link" id="upi-cancel" hidden>Cancel</button>
-    </form>
-
-    <section class="card hero glow-card">
-      <p class="hero-label" id="hero-label"></p>
-      <p class="hero-amount" id="hero-amount"></p>
-      <p class="muted" id="hero-sub"></p>
-      <ul class="list" id="my-payments"></ul>
-    </section>
-
-    <nav class="tiles three spot">
-      <button type="button" class="tile" data-open="balances-sheet"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M8 17v-4M13 17V9M18 17V5"/></svg></span><span class="tile-text"><strong>Balances</strong><span id="tile-balances"></span></span></button>
-      <button type="button" class="tile" data-open="share-sheet"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M16 6l-4-4-4 4M12 2v13"/></svg></span><span class="tile-text"><strong>Share</strong><span>Link, image</span></span></button>
-      <button type="button" class="tile" data-open="activity-sheet"><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="tile-text"><strong>Activity</strong><span>History</span></span></button>
-      <button type="button" class="tile tile-wide live-only" data-open="admin-sheet" id="admin-tile" hidden><span class="ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span><span class="tile-text"><strong>Admin</strong><span>Members, UPI IDs, delete tab</span></span></button>
-    </nav>
-    </div>
-
-    <div class="main">
-      <div class="main-head"><h2 class="section-title">Expenses</h2><span class="tag" id="exp-count"></span></div>
-      <ul class="list group card-list" id="expenses"></ul>
+      <div id="expenses"></div>
     </div>
   </div>
 </main>
 
-<button type="button" class="fab primary live-only" id="fab" hidden>+ Add expense <kbd>N</kbd></button>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <!-- ---------- sheets ---------- -->
 
 <dialog class="sheet" id="balances-sheet">
-  <div class="sheet-head"><h2>Balances</h2><button type="button" class="icon-btn" data-close aria-label="Close">✕</button></div>
+  <div class="sheet-head"><h2>Balances</h2><button type="button" class="icon-btn" data-close aria-label="Close"><svg class="i"><use href="/static/icons.svg#x"/></svg></button></div>
   <div class="sheet-body">
     <p class="muted">Debts are simplified, so each line is one real payment.</p>
     <ul class="list" id="balances"></ul>
@@ -91,28 +101,28 @@
 </dialog>
 
 <dialog class="sheet" id="share-sheet">
-  <div class="sheet-head"><h2>Share</h2><button type="button" class="icon-btn" data-close aria-label="Close">✕</button></div>
+  <div class="sheet-head"><h2>Share</h2><button type="button" class="icon-btn" data-close aria-label="Close"><svg class="i"><use href="/static/icons.svg#x"/></svg></button></div>
   <div class="sheet-body">
     <div class="menu">
-      <button type="button" id="copy-link">Copy link to this tab</button>
-      <button type="button" id="download-png">Save summary image</button>
-      <button type="button" id="download-csv">Download expenses (CSV)</button>
+      <button type="button" class="choice" id="copy-link"><span class="ic"><svg class="i"><use href="/static/icons.svg#link"/></svg></span><span class="grow">Copy link to this tab<span>For the group chat</span></span></button>
+      <button type="button" class="choice" id="download-png"><span class="ic"><svg class="i"><use href="/static/icons.svg#image"/></svg></span><span class="grow">Save summary image<span>Balances and payments on one receipt</span></span></button>
+      <button type="button" class="choice" id="download-csv"><span class="ic"><svg class="i"><use href="/static/icons.svg#file"/></svg></span><span class="grow">Download expenses<span>A CSV with everyone's share</span></span></button>
     </div>
   </div>
 </dialog>
 
 <dialog class="sheet" id="activity-sheet">
-  <div class="sheet-head"><h2>Activity</h2><button type="button" class="icon-btn" data-close aria-label="Close">✕</button></div>
+  <div class="sheet-head"><h2>Activity</h2><button type="button" class="icon-btn" data-close aria-label="Close"><svg class="i"><use href="/static/icons.svg#x"/></svg></button></div>
   <div class="sheet-body"><ul class="list" id="activity"></ul></div>
 </dialog>
 
 <dialog class="sheet" id="admin-sheet">
-  <div class="sheet-head"><h2>Admin</h2><button type="button" class="icon-btn" data-close aria-label="Close">✕</button></div>
+  <div class="sheet-head"><h2>Admin</h2><button type="button" class="icon-btn" data-close aria-label="Close"><svg class="i"><use href="/static/icons.svg#x"/></svg></button></div>
   <div class="sheet-body">
     <ul class="list" id="admin-members"></ul>
     <label for="new-member">Add someone</label>
     <input type="text" id="new-member" maxlength="40" placeholder="Name">
-    <input type="text" id="new-member-upi" maxlength="100" placeholder="UPI ID (optional)" class="stack">
+    <input type="text" id="new-member-upi" maxlength="100" placeholder="UPI ID (optional)" class="stack" autocapitalize="off" spellcheck="false">
     <div class="actions"><button type="button" id="add-member" class="primary block">Add person</button></div>
     <p class="error" id="admin-error"></p>
     <div class="danger-zone"><button type="button" id="delete-split" class="danger block">Delete this tab now</button></div>
@@ -120,9 +130,9 @@
 </dialog>
 
 <dialog class="sheet" id="expense-sheet">
-  <div class="sheet-head"><h2 id="exp-title"></h2><button type="button" class="icon-btn" data-close aria-label="Close">✕</button></div>
+  <div class="sheet-head"><h2 id="exp-title"></h2><button type="button" class="icon-btn" data-close aria-label="Close"><svg class="i"><use href="/static/icons.svg#x"/></svg></button></div>
   <div class="sheet-body" id="exp-detail"></div>
-  <div class="sheet-foot two live-only">
+  <div class="sheet-foot live-only">
     <button type="button" id="exp-delete" class="danger">Delete</button>
     <button type="button" id="exp-edit" class="primary">Edit</button>
   </div>
@@ -130,14 +140,14 @@
 
 <dialog class="sheet" id="form-sheet">
   <form id="expense-form" class="sheet-form">
-    <div class="sheet-head"><h2 id="form-title">Add expense</h2><button type="button" class="icon-btn" data-close aria-label="Close">✕</button></div>
+    <div class="sheet-head"><h2 id="form-title">Add expense</h2><button type="button" class="icon-btn" data-close aria-label="Close"><svg class="i"><use href="/static/icons.svg#x"/></svg></button></div>
     <div class="sheet-body">
-      <p class="muted" id="form-payer"></p>
+      <p class="form-payer" id="form-payer"></p>
       <label for="amount">Amount (₹)</label>
-      <input type="text" id="amount" class="amount-input" inputmode="decimal" placeholder="0" required>
+      <input type="text" id="amount" class="amount-input" inputmode="decimal" placeholder="0" autocomplete="off" required>
 
-      <label for="desc">What for? <span class="optional">optional</span></label>
-      <input type="text" id="desc" maxlength="100" placeholder="Dinner, cab, tickets…">
+      <label for="desc">What for <span class="optional">Optional</span></label>
+      <input type="text" id="desc" maxlength="100" placeholder="Dinner, cab, tickets">
 
       <label>Split</label>
       <div class="segmented">
@@ -153,34 +163,30 @@
 </dialog>
 
 <dialog class="sheet fullscreen" id="who-dialog">
-  <div class="sheet-head"><h2 id="who-title" tabindex="-1" autofocus>Who are you?</h2><button type="button" class="icon-btn" data-close aria-label="Close">✕</button></div>
+  <div class="sheet-head"><h2 id="who-title" tabindex="-1" autofocus>Who are you?</h2><button type="button" class="icon-btn" data-close aria-label="Close"><svg class="i"><use href="/static/icons.svg#x"/></svg></button></div>
   <div class="sheet-body">
     <p class="muted" id="who-sub"></p>
-    <div id="who-list" class="menu who-list"></div>
-    <button type="button" id="join-open" class="join-open live-only">I'm not on the list</button>
+    <div id="who-list" class="who-list"></div>
+    <button type="button" id="join-open" class="ghost join-open live-only"><svg class="i"><use href="/static/icons.svg#userplus"/></svg>I'm not on the list</button>
     <form id="join-form" class="who-form" hidden>
-      <div class="card">
-        <label for="join-name">Your name</label>
-        <input type="text" id="join-name" maxlength="40" placeholder="As your friends know you" autocomplete="given-name" required>
-        <div id="join-pw-box" hidden>
-          <label for="join-pw">Create a password</label>
-          <input type="password" id="join-pw" minlength="4" maxlength="100" autocomplete="new-password" placeholder="At least 4 characters">
-          <p class="muted hint">You'll need it to open the tab as you on another phone.</p>
-        </div>
-        <p class="muted hint" id="join-hint">You can add your UPI ID once you're in.</p>
-        <p class="error" id="join-error"></p>
+      <label for="join-name">Your name</label>
+      <input type="text" id="join-name" maxlength="40" placeholder="As your friends know you" autocomplete="given-name" required>
+      <div id="join-pw-box" hidden>
+        <label for="join-pw">Create a password</label>
+        <input type="password" id="join-pw" minlength="4" maxlength="100" autocomplete="new-password" placeholder="At least 4 characters">
+        <p class="hint">You'll need it to open the tab as you on another phone.</p>
       </div>
+      <p class="hint" id="join-hint">You can add your UPI ID once you're in.</p>
+      <p class="error" id="join-error"></p>
       <button class="primary block" type="submit">Join tab</button>
       <button type="button" id="join-back" class="link back-link">Back to the list</button>
     </form>
     <!-- After picking a name: create or enter your password (protected split, or an older split's admin). -->
     <form id="pw-form" class="who-form" hidden>
-      <div class="card">
-        <label for="admin-pw" id="pw-label"></label>
-        <input type="password" id="admin-pw" maxlength="100" required>
-        <p class="muted hint" id="pw-hint"></p>
-        <p class="error" id="pw-error"></p>
-      </div>
+      <label for="admin-pw" id="pw-label"></label>
+      <input type="password" id="admin-pw" maxlength="100" required>
+      <p class="hint" id="pw-hint"></p>
+      <p class="error" id="pw-error"></p>
       <button class="primary block" type="submit" id="pw-submit"></button>
       <button type="button" id="pw-back" class="link back-link">Not you? Back to the list</button>
     </form>
@@ -188,35 +194,35 @@
 </dialog>
 
 <dialog class="sheet" id="confirm-sheet">
-  <div class="sheet-head"><h2 id="confirm-title"></h2><button type="button" class="icon-btn" data-close aria-label="Close">✕</button></div>
+  <div class="sheet-head"><h2 id="confirm-title"></h2><button type="button" class="icon-btn" data-close aria-label="Close"><svg class="i"><use href="/static/icons.svg#x"/></svg></button></div>
   <div class="sheet-body"><p class="muted" id="confirm-text"></p></div>
-  <div class="sheet-foot two">
+  <div class="sheet-foot">
     <button type="button" data-close>Cancel</button>
     <button type="button" id="confirm-ok" class="danger"></button>
   </div>
 </dialog>
 
 <dialog class="sheet" id="pay-sheet">
-  <div class="sheet-head"><h2 id="pay-title"></h2><button type="button" class="icon-btn" data-close aria-label="Close">✕</button></div>
+  <div class="sheet-head"><h2 id="pay-title"></h2><button type="button" class="icon-btn" data-close aria-label="Close"><svg class="i"><use href="/static/icons.svg#x"/></svg></button></div>
   <div class="sheet-body">
     <div id="pay-choose">
       <p class="muted">How are you paying?</p>
       <div class="menu">
-        <button type="button" id="pay-cash">Cash</button>
-        <button type="button" id="pay-upi">UPI</button>
+        <button type="button" class="choice" id="pay-upi"><span class="ic"><svg class="i"><use href="/static/icons.svg#phone"/></svg></span><span class="grow">UPI<span>Scan the QR, or open GPay, PhonePe or Paytm</span></span><svg class="i sm"><use href="/static/icons.svg#chev"/></svg></button>
+        <button type="button" class="choice" id="pay-cash"><span class="ic"><svg class="i"><use href="/static/icons.svg#wallet"/></svg></span><span class="grow">Cash<span>Mark it paid once you've handed it over</span></span><svg class="i sm"><use href="/static/icons.svg#chev"/></svg></button>
       </div>
-      <p class="muted pay-note" id="pay-no-upi" hidden></p>
+      <p class="pay-note" id="pay-no-upi" hidden></p>
     </div>
     <div id="pay-cash-step" hidden>
       <p class="pay-question" id="pay-cash-text"></p>
       <p class="muted">Marking it paid updates balances for everyone.</p>
     </div>
     <div id="pay-upi-step" hidden>
-      <img id="pay-qr" class="qr" alt="UPI QR code" width="220" height="220">
+      <img id="pay-qr" class="qr" alt="UPI QR code" width="216" height="216">
       <p class="muted center" id="pay-upi-hint"></p>
       <div class="pay-manual">
-        <span class="muted">Or pay by hand to this UPI ID</span>
-        <div class="row"><span class="link-box" id="pay-upi-id"></span><button type="button" id="pay-copy" class="small">Copy</button></div>
+        <span>Or pay by hand to this UPI ID</span>
+        <div class="row"><span class="link-box" id="pay-upi-id"></span><button type="button" id="pay-copy" class="small ghost">Copy</button></div>
       </div>
     </div>
     <p class="error" id="pay-error"></p>
@@ -224,13 +230,13 @@
   <div class="sheet-foot" id="pay-foot" hidden>
     <button type="button" id="pay-back">Back</button>
     <button type="button" id="pay-done" class="primary">Mark as paid</button>
-    <a id="pay-now" class="button primary" hidden>Pay now</a>
+    <a id="pay-now" class="button accent" hidden>Pay now</a>
   </div>
 </dialog>
 
 <!-- iPhone only: iOS has no UPI app chooser like Android, so Pay now asks here. -->
 <dialog class="sheet" id="app-sheet">
-  <div class="sheet-head"><h2>Choose your app</h2><button type="button" class="icon-btn" data-close aria-label="Close">✕</button></div>
+  <div class="sheet-head"><h2>Choose your app</h2><button type="button" class="icon-btn" data-close aria-label="Close"><svg class="i"><use href="/static/icons.svg#x"/></svg></button></div>
   <div class="sheet-body"><div class="menu" id="app-list"></div></div>
 </dialog>
 </body>

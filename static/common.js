@@ -91,26 +91,43 @@ async function copyText(text, button) {
 function countUp(node, value, fmt = rupees, ms = 700) {
   const from = Number(node.dataset.value || 0);
   node.dataset.value = value;
+  // Big figures show paise smaller: ₹2,550<small>.00</small>.
+  const paint = (v) => {
+    const [whole, paise] = fmt(v).split(".");
+    if (paise === undefined || !node.dataset.paise) node.textContent = fmt(v);
+    else node.replaceChildren(whole, el("small", { textContent: `.${paise}` }));
+  };
   if (from === value || matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    node.textContent = fmt(value);
+    paint(value);
     return;
   }
   const start = performance.now();
   const step = (t) => {
     const k = Math.min(1, (t - start) / ms);
-    node.textContent = fmt(Math.round(from + (value - from) * (1 - (1 - k) ** 3)));
+    paint(Math.round(from + (value - from) * (1 - (1 - k) ** 3)));
     if (k < 1) requestAnimationFrame(step);
   };
   requestAnimationFrame(step);
 }
 
-// Spotlight: in any .spot grid, every cell lights up around the cursor, so the glow crosses cell borders.
-document.addEventListener("pointermove", (e) => {
-  const grid = e.target.closest?.(".spot");
-  if (!grid) return;
-  for (const cell of grid.children) {
-    const r = cell.getBoundingClientRect();
-    cell.style.setProperty("--mx", `${e.clientX - r.left}px`);
-    cell.style.setProperty("--my", `${e.clientY - r.top}px`);
-  }
-});
+// A line icon from the sprite: icon("check").
+function icon(name) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+  use.setAttribute("href", `/static/icons.svg#${name}`);
+  svg.setAttribute("class", "i");
+  svg.setAttribute("aria-hidden", "true");
+  svg.append(use);
+  return svg;
+}
+
+// "Riya" -> "Ri", "Riya Sen" -> "RS": two letters, so Aman and Arjun don't share an "A".
+function initials(name) {
+  const words = String(name).trim().split(/\s+/);
+  if (words.length > 1) return (words[0][0] + words[1][0]).toUpperCase();
+  return words[0].charAt(0).toUpperCase() + words[0].charAt(1).toLowerCase();
+}
+
+function avatar(name) {
+  return el("span", { className: "avatar", textContent: initials(name || "?"), ariaHidden: "true" });
+}
