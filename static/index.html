@@ -3,32 +3,33 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#f7f4ee">
+  <meta name="theme-color" content="#ffc532">
   <title>QuickTab · Split bills, settle with UPI</title>
   <meta name="description" content="Split bills with friends and settle up with UPI in one tap. No account needed for a quick tab.">
-  <link rel="preload" href="/static/fonts/serif-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/display-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/style.css">
   <script src="/static/theme.js"></script>
   <script src="/static/common.js" defer></script>
   <script src="/static/home.js" defer></script>
 </head>
 <body class="home">
-<header class="topbar">
-  <a href="/" class="logo">QuickTab</a>
-  <nav class="nav"><a href="#how">How it works</a><a href="#features">Features</a><a href="#faq">FAQ</a></nav>
-  <div class="end">
-    <button type="button" class="icon-btn theme" id="theme" aria-label="Switch light or dark theme"><svg class="i moon"><use href="/static/icons.svg#moon"/></svg><svg class="i sun"><use href="/static/icons.svg#sun"/></svg></button>
-    <a class="textlink" id="account" href="/login">Sign in</a>
-    <a class="button small primary" href="/new">Open a tab</a>
-  </div>
-</header>
 
-<main>
-  <!-- Hero: text on columns 1 to 6, the receipt and phone on 7 to 12 -->
-  <section class="wrap grid hero">
+<!-- Hero: one marigold band. Text on columns 1-7, the phone on 8-12, cut off by the band's bottom edge. -->
+<section class="band sun hero-band">
+  <header class="wrap l-nav">
+    <a href="/" class="logo">QuickTab</a>
+    <nav class="nav"><a href="#how">How it works</a><a href="#features">Features</a><a href="#faq">FAQ</a></nav>
+    <div class="end">
+      <button type="button" class="icon-btn theme" id="theme" aria-label="Switch light or dark theme"><svg class="i moon"><use href="/static/icons.svg#moon"/></svg><svg class="i sun"><use href="/static/icons.svg#sun"/></svg></button>
+      <a class="textlink" id="account" href="/login">Sign in</a>
+      <a class="button small primary" href="/new">Open a tab</a>
+    </div>
+  </header>
+
+  <div class="wrap grid hero">
     <div class="hero-text rise">
       <a class="news" id="announce" href="/login?mode=signup">Accounts and friends are here <svg class="i sm"><use href="/static/icons.svg#arrow"/></svg></a>
-      <h1 class="display">Split the bill,<br><span>settle it on UPI</span></h1>
+      <h1 class="mega">Split the bill. Settle it on UPI.</h1>
       <p class="lead">Add who paid what. QuickTab works out the fewest payments, and everyone pays in one tap with GPay, PhonePe or Paytm.</p>
       <form class="start" id="command" autocomplete="off">
         <input type="text" id="cmd" maxlength="200" aria-label="Your name" placeholder="Your name">
@@ -42,29 +43,9 @@
       <p class="error" id="demo-error" role="alert"></p>
     </div>
 
-    <div class="hero-visual table" aria-hidden="true">
-      <div class="receipt-wrap lift">
-        <div class="receipt torn">
-          <div class="r-head"><strong>Goa trip</strong>4 people · 14 to 16 Nov</div>
-          <div class="r-rows">
-            <div class="r-row"><span>Villa</span><span class="who">Riya</span><span>12,000.00</span></div>
-            <div class="r-row"><span>Scuba diving</span><span class="who">Aman</span><span>6,000.00</span></div>
-            <div class="r-row"><span>Dinner</span><span class="who">You</span><span>3,200.00</span></div>
-            <div class="r-row"><span>Scooters</span><span class="who">Kabir</span><span>1,800.00</span></div>
-          </div>
-          <div class="r-total">
-            <div class="r-row"><span>Total</span><span>₹23,000.00</span></div>
-            <div class="r-row"><span>Each</span><span>₹5,750.00</span></div>
-          </div>
-          <div class="r-settle">
-            <p>Settles in 3 payments</p>
-            <div class="r-row"><span>Kabir → Riya</span><span>3,950.00</span></div>
-            <div class="r-row"><span>You → Riya</span><span>2,300.00</span></div>
-            <div class="r-row"><span>You → Aman</span><span>250.00</span></div>
-          </div>
-          <div class="r-foot">quicktab · no fees</div>
-        </div>
-      </div>
+    <div class="hero-phone" aria-hidden="true">
+      <div class="sticker s1"><span class="tick-ic"><svg class="i"><use href="/static/icons.svg#check"/></svg></span><span><b>Kabir paid Riya</b><span>₹3,950.00 · UPI</span></span></div>
+      <div class="sticker s2"><b>3 payments</b><span>settle 4 people</span></div>
       <div class="phone">
         <div class="screen">
           <div class="s-top"><span>Goa trip</span><span>46h left</span></div>
@@ -72,8 +53,8 @@
           <div class="s-amt">₹2,550<small>.00</small></div>
           <div class="s-sub">₹23,000.00 spent · 4 expenses</div>
           <div class="s-pay">
-            <div class="s-pay-row"><span class="grow"><b>Riya</b><span>riya@okhdfcbank</span></span><b>₹2,300</b><span class="s-btn">Pay</span></div>
-            <div class="s-pay-row"><span class="grow"><b>Aman</b><span>aman@ybl</span></span><b>₹250</b><span class="s-btn">Pay</span></div>
+            <div class="s-pay-row"><span class="s-av">Ri</span><span class="grow"><b>Riya</b><span>riya@okhdfcbank</span></span><b>₹2,300</b><span class="s-btn">Pay</span></div>
+            <div class="s-pay-row"><span class="s-av">Am</span><span class="grow"><b>Aman</b><span>aman@ybl</span></span><b>₹250</b><span class="s-btn">Pay</span></div>
           </div>
           <div class="s-apps">Opens GPay, PhonePe or Paytm</div>
           <div class="s-list">
@@ -81,14 +62,17 @@
             <div class="s-item"><span>Villa, 2 nights</span><span>₹12,000</span></div>
             <div class="s-item"><span>Scuba diving</span><span>₹6,000</span></div>
             <div class="s-item"><span>Dinner at the shack</span><span>₹3,200</span></div>
+            <div class="s-item"><span>Scooter rentals</span><span>₹1,800</span></div>
           </div>
         </div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- UPI apps and the four facts share the same column lines as the hero -->
-  <div class="wrap">
+<main>
+  <!-- UPI apps and four facts, on the same column lines as the hero -->
+  <section class="wrap">
     <div class="grid strip">
       <span class="strip-label">Works with any UPI app</span>
       <span class="strip-names"><span>GPay</span><span>PhonePe</span><span>Paytm</span><span>BHIM</span><span>Amazon Pay</span><span>CRED</span><span>Your bank's app</span></span>
@@ -96,37 +80,50 @@
     <div class="grid facts">
       <div class="fact"><strong>48h</strong><span>Each tab stays open</span></div>
       <div class="fact"><strong>50</strong><span>People per tab, at most</span></div>
-      <div class="fact"><strong>n − 1</strong><span>Payments to settle, at most</span></div>
+      <div class="fact"><strong>n−1</strong><span>Payments to settle, at most</span></div>
       <div class="fact"><strong>₹0</strong><span>Fees, sign-ups or ads</span></div>
     </div>
-  </div>
+  </section>
 
-  <section class="wrap grid l-sec" id="preview">
+  <section class="wrap grid l-sec" id="how">
     <header class="l-head">
-      <p class="eyebrow">What your friends see</p>
-      <h2 class="h2">One link, and everyone sees what they owe</h2>
-      <p>Drop the link in the WhatsApp group. Each person picks their name, adds what they paid and taps Pay. Money goes app to app, never through QuickTab.</p>
+      <p class="eyebrow">How it works</p>
+      <h2 class="h2">Settled in about a minute</h2>
     </header>
-    <div class="pv" aria-hidden="true">
-      <div class="pv-bar"><span class="pv-dots"><i></i><i></i><i></i></span><span class="pv-url">quicktabapp.vercel.app/g/goa-trip</span></div>
-      <div class="pv-body">
-        <div class="pv-title"><h3>Goa trip</h3><p><span class="dot pos"></span>Open · 46h left · 4 people</p></div>
-        <div class="pv-grid">
-          <div class="lift">
-            <div class="pv-bill torn">
-              <p class="pv-label"><span class="dot neg"></span>You owe</p>
-              <p class="pv-amt">₹2,550<small>.00</small></p>
-              <p class="pv-sub">₹23,000.00 spent · 4 expenses</p>
-              <div class="pv-pay"><span class="avatar">Ri</span><span class="pv-who"><b>Riya</b><span>riya@okhdfcbank</span></span><b>₹2,300.00</b><span class="button small accent">Pay</span></div>
-              <div class="pv-pay"><span class="avatar">Am</span><span class="pv-who"><b>Aman</b><span>aman@ybl</span></span><b>₹250.00</b><span class="button small accent">Pay</span></div>
+    <div class="step"><span class="step-n">1</span><h3>Open a tab</h3><p>Your name, how many people, and an optional password. No account needed.</p></div>
+    <div class="step"><span class="step-n">2</span><h3>Share the link</h3><p>Drop it in the WhatsApp group. Everyone adds what they paid and their UPI ID.</p></div>
+    <div class="step"><span class="step-n">3</span><h3>Settle up</h3><p>Tap Pay or scan the QR. QuickTab keeps it to the fewest payments.</p></div>
+  </section>
+
+  <!-- The product, on an ink band -->
+  <section class="band ink-band l-sec-band" id="preview">
+    <div class="wrap grid">
+      <header class="l-head">
+        <p class="eyebrow">What your friends see</p>
+        <h2 class="h2">One link, and everyone sees what they owe</h2>
+        <p>Each person picks their name, adds what they paid and taps Pay. Money goes app to app, never through QuickTab.</p>
+      </header>
+      <div class="pv" aria-hidden="true">
+        <div class="pv-bar"><span class="pv-dots"><i></i><i></i><i></i></span><span class="pv-url">quicktabapp.vercel.app/g/goa-trip</span></div>
+        <div class="pv-body">
+          <div class="pv-title"><h3>Goa trip</h3><p><span class="dot pos"></span>Open · 46h left · 4 people</p></div>
+          <div class="pv-grid">
+            <div class="lift">
+              <div class="pv-bill torn">
+                <p class="pv-label"><span class="dot neg"></span>You owe</p>
+                <p class="pv-amt">₹2,550<small>.00</small></p>
+                <p class="pv-sub">₹23,000.00 spent · 4 expenses</p>
+                <div class="pv-pay"><span class="avatar">Ri</span><span class="pv-who"><b>Riya</b><span>riya@okhdfcbank</span></span><b>₹2,300.00</b><span class="button small accent">Pay</span></div>
+                <div class="pv-pay"><span class="avatar">Am</span><span class="pv-who"><b>Aman</b><span>aman@ybl</span></span><b>₹250.00</b><span class="button small accent">Pay</span></div>
+              </div>
             </div>
-          </div>
-          <div class="pv-list">
-            <p class="pv-list-head"><b>Expenses</b><span>4</span></p>
-            <div class="pv-row"><span class="avatar">Ri</span><span class="pv-who"><b>Villa, 2 nights</b><span>Riya paid · split 4 ways</span></span><span class="pv-v"><b>₹12,000.00</b><span class="neg">You owe ₹3,000.00</span></span></div>
-            <div class="pv-row"><span class="avatar">Am</span><span class="pv-who"><b>Scuba diving</b><span>Aman paid · split 4 ways</span></span><span class="pv-v"><b>₹6,000.00</b><span class="neg">You owe ₹1,500.00</span></span></div>
-            <div class="pv-row"><span class="avatar">Ar</span><span class="pv-who"><b>Dinner at the shack</b><span>You paid · split 4 ways</span></span><span class="pv-v"><b>₹3,200.00</b><span class="pos">You lent ₹2,400.00</span></span></div>
-            <div class="pv-row"><span class="avatar">Ka</span><span class="pv-who"><b>Scooter rentals</b><span>Kabir paid · split 4 ways</span></span><span class="pv-v"><b>₹1,800.00</b><span class="neg">You owe ₹450.00</span></span></div>
+            <div class="pv-list">
+              <p class="pv-list-head"><b>Expenses</b><span>4</span></p>
+              <div class="pv-row"><span class="avatar">Ri</span><span class="pv-who"><b>Villa, 2 nights</b><span>Riya paid · split 4 ways</span></span><span class="pv-v"><b>₹12,000.00</b><span class="neg">You owe ₹3,000.00</span></span></div>
+              <div class="pv-row"><span class="avatar">Am</span><span class="pv-who"><b>Scuba diving</b><span>Aman paid · split 4 ways</span></span><span class="pv-v"><b>₹6,000.00</b><span class="neg">You owe ₹1,500.00</span></span></div>
+              <div class="pv-row"><span class="avatar">Ar</span><span class="pv-who"><b>Dinner at the shack</b><span>You paid · split 4 ways</span></span><span class="pv-v"><b>₹3,200.00</b><span class="pos">You lent ₹2,400.00</span></span></div>
+              <div class="pv-row"><span class="avatar">Ka</span><span class="pv-who"><b>Scooter rentals</b><span>Kabir paid · split 4 ways</span></span><span class="pv-v"><b>₹1,800.00</b><span class="neg">You owe ₹450.00</span></span></div>
+            </div>
           </div>
         </div>
       </div>
@@ -137,7 +134,6 @@
     <header class="l-head">
       <p class="eyebrow">Features</p>
       <h2 class="h2">Everything a group trip needs</h2>
-      <p>Nothing to install, nothing to sign up for. Open a tab when the bill comes, close it when everyone has paid.</p>
     </header>
     <div class="feat"><span class="feat-ic"><svg class="i"><use href="/static/icons.svg#link"/></svg></span><h3>No sign-up</h3><p>One link in the group chat. Everyone picks their name and they're in.</p></div>
     <div class="feat"><span class="feat-ic"><svg class="i"><use href="/static/icons.svg#phone"/></svg></span><h3>Pay with UPI</h3><p>A Pay button and a QR code with the amount already filled in.</p></div>
@@ -145,17 +141,6 @@
     <div class="feat"><span class="feat-ic"><svg class="i"><use href="/static/icons.svg#lock"/></svg></span><h3>Private</h3><p>UPI IDs are encrypted. Add a password per person if you want one.</p></div>
     <div class="feat"><span class="feat-ic"><svg class="i"><use href="/static/icons.svg#clock"/></svg></span><h3>Deletes itself</h3><p>Open for 48 hours, read-only for a day, then deleted for good.</p></div>
     <div class="feat"><span class="feat-ic"><svg class="i"><use href="/static/icons.svg#download"/></svg></span><h3>Keep the receipt</h3><p>Save a summary image or a CSV of every expense.</p></div>
-  </section>
-
-  <section class="wrap grid l-sec" id="how">
-    <header class="l-head">
-      <p class="eyebrow">How it works</p>
-      <h2 class="h2">Settled in about a minute</h2>
-      <p>Three steps, and only the first one needs you.</p>
-    </header>
-    <div class="step"><strong>1</strong><h3>Open a tab</h3><p>Your name, how many people, and an optional password.</p></div>
-    <div class="step"><strong>2</strong><h3>Share the link</h3><p>Everyone adds what they paid and their UPI ID.</p></div>
-    <div class="step"><strong>3</strong><h3>Settle up</h3><p>Tap Pay or scan the QR, then share the summary.</p></div>
   </section>
 
   <section class="wrap grid l-sec" id="faq">
@@ -176,10 +161,10 @@
     </div>
   </section>
 
-  <section class="wrap grid l-sec">
-    <div class="cta">
-      <h2>Your next trip, settled before the cab home</h2>
-      <div class="cta-actions"><a class="button large" id="cta-account" href="/login?mode=signup">Create an account</a><a class="button large accent" href="/new">Open a tab</a></div>
+  <section class="wrap l-sec">
+    <div class="band sun cta">
+      <h2 class="mega">Your next trip, settled before the cab home</h2>
+      <div class="cta-actions"><a class="button large primary" href="/new">Open a tab</a><a class="button large" id="cta-account" href="/login?mode=signup">Create an account</a></div>
     </div>
   </section>
 </main>
