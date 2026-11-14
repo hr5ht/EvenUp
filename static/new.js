@@ -7,8 +7,7 @@ const size = () => people;
 function syncNames() {
   const box = $("members");
   while (box.children.length < size() - 1) {
-    box.append(el("div", { className: "row" },
-      el("input", { type: "text", placeholder: "Name", maxLength: 40, className: "m-name" })));
+    box.append(el("input", { type: "text", placeholder: "Name", maxLength: 40, className: "m-name" }));
   }
   while (box.children.length > size() - 1) box.lastChild.remove();
 }
@@ -18,7 +17,6 @@ function setSize(n) {
   $("size").textContent = people;
   $("size-down").disabled = people === MIN;
   $("size-up").disabled = people === MAX;
-  $("t-people").textContent = people;
   syncNames();
 }
 $("size-down").onclick = () => setSize(people - 1);
@@ -29,16 +27,11 @@ function showProtect() {
   $("protect-box").hidden = !on;
   $("admin-password").required = on;
   $("protect-sub").textContent = on ? "Everyone signs in with their own password" : "Off: anyone can pick any name";
-  $("t-pw").textContent = on ? "on" : "off";
 }
 $("protect").onchange = () => { showProtect(); if ($("protect").checked) $("admin-password").focus(); };
 showProtect();
 setSize(MIN);
 $("my-name").value = new URLSearchParams(location.search).get("name") || ""; // from the landing command bar
-// The terminal card mirrors the form.
-const showAdmin = () => ($("t-admin").textContent = JSON.stringify($("my-name").value.trim() || "you"));
-$("my-name").oninput = showAdmin;
-showAdmin();
 
 $("create").onsubmit = async (e) => {
   e.preventDefault();
@@ -74,11 +67,6 @@ $("create").onsubmit = async (e) => {
     };
     $("create").hidden = true;
     $("created").hidden = false;
-    // ...and the terminal "runs" the command.
-    $("t-cursor").remove();
-    $("t-hint").replaceChildren(
-      el("span", { className: "s", textContent: "✓ tab opened" }), "\n",
-      el("span", { className: "s", textContent: "✓ link ready: " }), share.replace(/^https?:\/\//, ""), el("span", { className: "cursor" }));
   } catch (err) {
     $("error").textContent = err.message;
     button.disabled = false;

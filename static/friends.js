@@ -1,9 +1,10 @@
 const $ = (id) => document.getElementById(id);
 
-function who(person) {
-  return person.name
-    ? el("div", { className: "who" }, el("strong", { textContent: person.name }), el("span", { className: "muted", textContent: person.email }))
-    : el("div", { className: "who" }, el("span", { textContent: person.email }));
+// One person: avatar, name and email, then their buttons.
+function row(p, ...acts) {
+  return el("div", { className: "person" }, avatar(p.name || p.email),
+    el("span", { className: "grow" }, el("strong", { textContent: p.name || p.email }), p.name ? el("span", { textContent: p.email }) : null),
+    el("span", { className: "acts" }, ...acts));
 }
 
 function action(label, url, method = "POST", className = "small") {
@@ -23,15 +24,15 @@ function action(label, url, method = "POST", className = "small") {
 }
 
 function fill(id, rows, empty) {
-  $(id).replaceChildren(...(rows.length ? rows : empty ? [el("li", { className: "muted", textContent: empty })] : []));
+  $(id).replaceChildren(...(rows.length ? rows : empty ? [el("p", { className: "empty-line", textContent: empty })] : []));
 }
 
 async function load() {
   const { friends, requests, sent } = await authed("GET", "/api/friends");
-  fill("requests", requests.map((p) => el("li", {}, who(p),
-    action("Accept", `/api/friends/${p.id}/accept`, "POST", "small primary"), action("Decline", `/api/friends/${p.id}/decline`))));
-  fill("friends", friends.map((p) => el("li", {}, who(p), action("Remove", `/api/friends/${p.id}`, "DELETE"))), "No friends yet. Add one by email above.");
-  fill("sent", sent.map((p) => el("li", {}, who(p), action("Cancel", `/api/friends/${p.id}`, "DELETE"))));
+  fill("requests", requests.map((p) => row(p,
+    action("Decline", `/api/friends/${p.id}/decline`), action("Accept", `/api/friends/${p.id}/accept`, "POST", "small primary"))));
+  fill("friends", friends.map((p) => row(p, action("Remove", `/api/friends/${p.id}`, "DELETE", "small ghost"))), "No friends yet. Add one by email above.");
+  fill("sent", sent.map((p) => row(p, action("Cancel", `/api/friends/${p.id}`, "DELETE", "small ghost"))));
   $("requests-card").hidden = !requests.length;
   $("sent-card").hidden = !sent.length;
 }
