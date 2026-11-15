@@ -226,7 +226,7 @@ def test_name_and_count():
         n = count()
         slug = c.post("/api/splits", json={"members": [{"name": "Admin"}]}).json()["slug"]
         assert count() == n + 1
-        assert c.get(f"/api/splits/{slug}").json()["name"] == "Quick tab"
+        assert c.get(f"/api/splits/{slug}").json()["name"] == "Tab"
 
 
 def test_protected():
@@ -379,14 +379,14 @@ def test_auth_proxy(monkeypatch):
 
     monkeypatch.setattr(main, "neon_call", fake_neon)
     with TestClient(app) as c:
-        r = c.post("/auth/sign-in/email", json={"email": "a@b.co", "password": "x"}, headers={"Origin": "https://quicktabapp.vercel.app"})
+        r = c.post("/auth/sign-in/email", json={"email": "a@b.co", "password": "x"}, headers={"Origin": "https://getevenup.vercel.app"})
         # Neon's answer comes back as is, and its cookies become this site's
         assert r.status_code == 401 and r.json()["message"] == "Invalid email or password"
         assert r.headers["cache-control"] == "no-store"
         cookies = r.headers.get_list("set-cookie")
         assert len(cookies) == 2 and not any("domain" in x.lower() for x in cookies)
         assert all("Path=/auth" in x for x in cookies) and "HttpOnly" in cookies[0]
-        assert seen["path"] == "sign-in/email" and seen["headers"]["origin"] == "https://quicktabapp.vercel.app"
+        assert seen["path"] == "sign-in/email" and seen["headers"]["origin"] == "https://getevenup.vercel.app"
         # plain http locally: no secure cookie, which browsers would refuse, and Neon still gets its own name back
         assert cookies[0].startswith("neon-auth.session_token=abc") and "Secure" not in cookies[0] and "Partitioned" not in cookies[0] and "SameSite=Lax" in cookies[0]
         c.get("/auth/token", headers={"Cookie": "neon-auth.session_token=abc"})

@@ -8,7 +8,7 @@ import Reanimated, { FadeInDown, Keyframe, ZoomIn } from "react-native-reanimate
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { Anim, Btn, EASE, Err, Field, Icon, initials, Label, Logo, T, Tap, Toggle } from "@/components/ui";
-import { api, saveIdentity, tabUrl } from "@/lib/api";
+import { api, countTab, nextTabNo, saveIdentity, tabUrl } from "@/lib/api";
 import { useTheme } from "@/lib/theme";
 
 const MIN = 2, MAX = 50; // same cap as the server
@@ -36,12 +36,15 @@ export default function NewTab() {
     setBusy(true);
     try {
       const others = addNames ? names.slice(0, people - 1).map((n) => n?.trim()).filter(Boolean) : [];
+      const n = await nextTabNo();
       const { slug, admin_token, admin_id } = await api("POST", "/api/splits", {
         members: [{ name: name.trim() }, ...others.map((n) => ({ name: n }))],
         size: people,
         admin_password: protect ? password : null,
         website: "",
+        name: `Tab ${n}`,
       });
+      await countTab(n);
       // No passwords: this phone opens the tab as you. Protected: you sign in with your password like everyone.
       await saveIdentity(slug, protect ? {} : { me: admin_id, adminToken: admin_token });
       setCreated(slug);

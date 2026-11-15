@@ -2,7 +2,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // Production by default; EXPO_PUBLIC_API_URL=http://<your-lan-ip>:8000 for the local server.
-export const BASE = (process.env.EXPO_PUBLIC_API_URL || "https://quicktabapp.vercel.app").replace(/\/$/, "");
+export const BASE = (process.env.EXPO_PUBLIC_API_URL || "https://getevenup.vercel.app").replace(/\/$/, "");
 export const tabUrl = (slug: string) => `${BASE}/g/${slug}`;
 
 export type Member = { id: number; name: string; upi_id: string | null; has_password: boolean };
@@ -69,9 +69,9 @@ export function lifeOf(t: Tab) {
   return { hours: Math.max(0, Math.round((t.expires_at - now) / 3600)), pct: Math.max(2, Math.min(100, ((t.expires_at - now) / (48 * 3600)) * 100)) };
 }
 
-// Every tab is called "Quick tab", so lists tell them apart by who's in them.
+// Older tabs are all "Quick tab" or "Tab", so lists tell those apart by who's in them.
 export function tabTitle(t: Tab) {
-  if (t.name !== "Quick tab") return t.name;
+  if (t.name !== "Quick tab" && t.name !== "Tab") return t.name;
   const names = t.members.map((m) => m.name);
   return names.length > 3 ? `${names.slice(0, 3).join(", ")} +${names.length - 3}` : names.join(", ");
 }
@@ -85,6 +85,10 @@ export const slugFrom = (v: string) => v.trim().split("/g/").pop()!.split(/[?#/\
 export type Identity = { me?: number; token?: string | null; adminToken?: string | null };
 type Saved = Record<string, Identity & { addedAt: number }>;
 const KEY = "quicktab:tabs";
+
+// This phone's tabs are Tab 1, Tab 2, ...: the next number, and keeping it once the tab exists.
+export const nextTabNo = async () => Number(await AsyncStorage.getItem("tab-count")) + 1;
+export const countTab = (n: number) => AsyncStorage.setItem("tab-count", String(n));
 
 async function readAll(): Promise<Saved> {
   try {

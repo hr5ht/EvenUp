@@ -61,6 +61,8 @@ $("create").onsubmit = async (e) => {
   const others = $("add-names").checked ? [...document.querySelectorAll(".m-name")].map((i) => i.value.trim()).filter(Boolean) : [];
   const protect = $("protect").checked;
   const button = e.submitter;
+  let n = 1; // this browser's tabs are Tab 1, Tab 2, ...
+  try { n = Number(localStorage.getItem("tab-count")) + 1; } catch {}
   button.disabled = true;
   try {
     const { slug, admin_token, admin_id } = await api("POST", "/api/splits", {
@@ -68,7 +70,9 @@ $("create").onsubmit = async (e) => {
       size: size(),
       admin_password: protect ? $("admin-password").value : null,
       website: $("website").value,
+      name: `Tab ${n}`,
     });
+    try { localStorage.setItem("tab-count", n); } catch {}
     // No passwords: this device opens the split as you. Protected: you sign in with your password like everyone.
     if (!protect) saveIdentity(slug, { me: admin_id, adminToken: admin_token });
     const share = `${location.origin}/g/${slug}`;

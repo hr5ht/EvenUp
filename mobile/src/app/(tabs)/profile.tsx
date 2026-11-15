@@ -27,7 +27,7 @@ export default function Profile() {
   }, []));
 
   const leave = async () => {
-    if (!(await ask("Sign out?", "Your quick tabs stay on this phone.", "Sign out"))) return;
+    if (!(await ask("Sign out?", "Your tabs stay on this phone.", "Sign out"))) return;
     await signOut();
     setMe(null);
   };
@@ -68,7 +68,7 @@ export default function Profile() {
               </View>
               <View className="flex-1 gap-0.5">
                 <T className="text-[24px] font-bold leading-7">You're not signed in</T>
-                <T className="text-[13px] text-muted">Quick tabs work without an account.</T>
+                <T className="text-[13px] text-muted">Tabs work without an account.</T>
               </View>
             </View>
             <View className="gap-3.5 border-t border-line pt-5">

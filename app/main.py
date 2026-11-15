@@ -40,7 +40,7 @@ AUTH_LIMIT = (20, 900)  # sign-ins, sign-ups and reset emails per IP. Neon Auth 
 FRIEND_LIMIT = (20, 24 * 3600)  # friend requests per user
 INVITE_LIMIT = (1, 7 * 24 * 3600)  # emails from one person to one address, so cancel-and-resend can't pester anyone
 EMAIL_RE = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
-SITE = "https://quicktabapp.vercel.app"
+SITE = "https://getevenup.vercel.app"
 FOREVER = 4102444800  # 1 Jan 2100: a group's expires_at, so groups never close or get cleaned up
 
 # Neon Auth owns sign-up, passwords and sessions. This is its Auth URL, from the Neon Console.
@@ -178,6 +178,7 @@ class SplitIn(BaseModel):
     # Set: password protected, the admin uses this and everyone else creates their own.
     # Unset: no passwords at all, and whoever picks the admin's name is the admin.
     admin_password: Optional[str] = Field(default=None, min_length=4, max_length=100)
+    name: str = Field(default="Tab", min_length=1, max_length=40)  # "Tab 3": the opener's device counts its tabs
     website: str = ""  # honeypot, humans never see it
 
 
@@ -333,7 +334,8 @@ def get_expense(con, split_id, expense_id):
     return e
 
 
-def create_split(con, body, name="Quick tab"):
+def create_split(con, body, name=None):
+    name = name or body.name
     slug = secrets.token_urlsafe(16)  # 128-bit, unguessable
     pw_hash = hash_password(body.admin_password) if body.admin_password else ""
     t = now()
@@ -816,7 +818,7 @@ def demo(con=Depends(db.get_db)):
     body = SplitIn(members=[
         MemberIn(name="Guest", upi_id="guest@evenup"), MemberIn(name="Riya", upi_id="riya@evenup"),
         MemberIn(name="Kabir", upi_id="kabir@evenup"), MemberIn(name="Aman", upi_id="aman@evenup")])
-    slug, token, sid, _ = create_split(con, body, "Quick tab (demo)")
+    slug, token, sid, _ = create_split(con, body, "Tab (demo)")
     count(con, "demos")
     con.commit()
     everyone = me, riya, kabir, aman = member_ids(con, sid)

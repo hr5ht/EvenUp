@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS splits (
     expires_at BIGINT NOT NULL,  -- end of the open phase, then read-only for a day, then deleted
     created_at BIGINT NOT NULL,
     capacity INTEGER,  -- most members allowed, the headcount given at creation. NULL is the default 50
-    owner_user_id TEXT  -- set: a group, private to its signed-in members and never expiring. Unset: a quick tab
+    owner_user_id TEXT  -- set: a group, private to its signed-in members and never expiring. Unset: a tab
 );
 CREATE TABLE IF NOT EXISTS members (
     id {pk},

@@ -13,7 +13,7 @@ function savedSlugs() {
 const stand = (b) => (b > 0 ? ["You get back", rupees(b), "pos"] : b < 0 ? ["You owe", rupees(-b), "neg"] : ["", "Settled", "settled"]);
 const listNames = (names) => (names.length > 3 ? `${names.slice(0, 3).join(", ")} +${names.length - 3}` : names.join(", ").replace(/, ([^,]*)$/, " and $1"));
 
-// One group or quick tab as a list row: what it is, who's in it, what was spent and where you stand.
+// One group or tab as a list row: what it is, who's in it, what was spent and where you stand.
 function row({ href, name, kind, tag, people, spent, balance, closed }) {
   const [label, amount, cls] = balance === null ? ["", `${people.length} people`, "settled"] : stand(balance);
   return el("a", { className: `list-row${closed ? " closed" : ""}`, href },
@@ -41,7 +41,7 @@ async function loadTabs() {
     const hours = Math.max(0, Math.round((t.expires_at - Date.now() / 1000) / 3600));
     return row({
       href: `/g/${slug}`, name: t.name, kind: "quick", closed: t.ended,
-      tag: t.ended ? "Quick tab · closed" : `Quick tab · ${hours}h left`,
+      tag: t.ended ? "Tab · closed" : `Tab · ${hours}h left`,
       people: t.members.map((m) => (m.id === me ? "You" : m.name)),
       spent: t.expenses.filter((e) => !e.deleted && e.kind === "expense").reduce((a, e) => a + e.amount_paise, 0),
       balance: t.members.some((m) => m.id === me) ? t.balances[me] || 0 : null,
@@ -53,7 +53,7 @@ function renderList(rows) {
   $("n-list").textContent = rows.length || "";
   $("list").replaceChildren(...(rows.length ? rows : [el("div", { className: "empty" },
     el("span", { className: "ic" }, icon("receipt")), el("h3", { textContent: "Nothing to split yet" }),
-    el("p", { textContent: "Start a group for people you split with often, or open a quick tab for one trip or dinner." }),
+    el("p", { textContent: "Start a group for people you split with often, or open a tab for one trip or dinner." }),
     el("span", { className: "row" },
       el("button", { type: "button", onclick: () => openGroupSheet() }, icon("users"), "New group"),
       el("a", { className: "button primary", href: "/new" }, icon("plus"), "Open a tab")))]));

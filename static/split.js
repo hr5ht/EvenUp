@@ -224,7 +224,7 @@ function renderYou() {
   }
 }
 
-// A quick tab isn't tied to your account, so it takes your profile's UPI ID when it has none.
+// A tab isn't tied to your account, so it takes your profile's UPI ID when it has none.
 // Changing one it already has still needs the admin, as for everyone.
 let upiSynced = false;
 async function useProfileUpi(me) {

@@ -1,4 +1,4 @@
-// One tab, opened from My tabs or straight from a link (quicktab://g/<slug> or https://quicktabapp.vercel.app/g/<slug>).
+// One tab, opened from My tabs or straight from a link (quicktab://g/<slug> or https://getevenup.vercel.app/g/<slug>).
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, Keyboard, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, View } from "react-native";
