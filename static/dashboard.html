@@ -24,9 +24,10 @@
     <a class="side-user" href="/profile"><span class="avatar" id="side-avatar"></span><span class="grow"><b id="side-name"></b><span id="side-email"></span></span></a>
   </aside>
   <main class="main">
-    <div class="main-bar"><a href="/" class="logo"><span class="logo-mark"></span>QuickTab</a><div class="end"><button type="button" class="wide-only" data-open="group-sheet"><svg class="i"><use href="/static/icons.svg#users"/></svg>New group</button><a class="button primary" href="/new"><svg class="i"><use href="/static/icons.svg#plus"/></svg>Open a tab</a></div></div>
-    <header class="page-title"><p class="eyebrow" id="today"></p><h1>Home</h1></header>
+    <div class="main-bar"><a href="/" class="logo"><span class="logo-mark"></span>QuickTab</a></div>
+    <header class="page-title"><div><p class="eyebrow" id="today"></p><h1>Home</h1></div><button type="button" class="title-act" data-open="group-sheet"><svg class="i"><use href="/static/icons.svg#users"/></svg>New group</button></header>
     <div id="page" hidden>
+      <div class="notices">
       <a class="prompt" id="upi-prompt" href="/profile" hidden>
         <span class="ic"><svg class="i"><use href="/static/icons.svg#wallet"/></svg></span>
         <span class="grow"><b>Add your UPI ID</b><span>So friends can pay you in one tap</span></span>
@@ -36,6 +37,7 @@
         <h2>Friend requests <span class="count" id="n-requests"></span></h2>
         <div id="requests"></div>
       </section>
+      </div>
 
       <section class="dash-sec">
         <div class="sec-row"><h2>Groups and tabs</h2><span class="count" id="n-list"></span></div>
