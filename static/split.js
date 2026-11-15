@@ -562,7 +562,7 @@ function expenseRow(e) {
 
 function openExpense(e) {
   const payment = e.kind === "payment";
-  const when = new Date(e.created_at * 1000).toLocaleString();
+  const when = new Date(e.created_at * 1000).toLocaleString("en-IN", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
   $("exp-title").textContent = payment ? "Settle-up" : e.description;
   $("exp-detail").replaceChildren(
     el("p", { className: "hero-amount", textContent: rupees(e.amount_paise) }),
@@ -760,7 +760,7 @@ function renderActivity() {
 
 function renderAdminMembers() {
   $("admin-members").replaceChildren(...data.members.map((m) => {
-    const remove = el("button", { type: "button", className: "small", textContent: "Remove" });
+    const remove = el("button", { type: "button", className: "small danger", textContent: "Remove" });
     remove.onclick = async () => {
       if (!(await askConfirm(`Remove ${m.name}?`, "They can join again from the link if they need to.", "Remove"))) return;
       $("admin-error").textContent = "";

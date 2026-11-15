@@ -131,6 +131,23 @@ dialog.sheet::backdrop { background: rgb(0 0 0 / 0.6); backdrop-filter: blur(6px
 .segmented { border-radius: 999px; }
 .segmented span { border-radius: 999px; }
 
+/* small popups: round avatars, pill buttons, quiet danger */
+.avatar { border-radius: 50%; }
+.sheet button.small, .sheet .list button { height: 32px; padding: 0 14px; border-radius: 999px; font-size: 13px; background: rgb(255 255 255 / 0.03); border-color: var(--line-2); }
+.sheet .list button:hover { background: rgb(255 255 255 / 0.07); }
+.sheet .list button.danger { color: var(--neg); border-color: rgb(255 123 114 / 0.25); }
+.danger, .danger:hover { border-radius: 999px; border-color: rgb(255 123 114 / 0.25); background: rgb(255 123 114 / 0.04); }
+.danger:hover { background: rgb(255 123 114 / 0.1); }
+.danger-zone { border-top-style: dashed; }
+.sheet .list > li { border-top-color: var(--line); }
+.bal-main .amount { font-weight: 500; }
+.bal-detail li { font: 12px/18px var(--mono); }
+.link-box, .pay-manual .row { border-radius: 14px; }
+.pay-manual .row button { border-radius: 999px; }
+.toast { padding: 0 8px 0 20px; box-shadow: 0 0 0 1px rgb(255 255 255 / 0.1), 0 20px 40px -12px rgb(0 0 0 / 0.8); }
+.toast .link { color: #0a0a0b; opacity: 1; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.chips input:checked + span { box-shadow: 0 0 0 1px rgb(255 255 255 / 0.1); }
+
 @media (max-width: 640px) {
   .topbar { height: 64px; }
   .tab-page { padding-top: 24px; }
