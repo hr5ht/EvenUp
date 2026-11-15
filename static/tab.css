@@ -46,6 +46,18 @@ input:focus { border-color: rgb(227 199 155 / 0.6); box-shadow: 0 0 0 4px rgb(22
 .col-a { animation: up .9s var(--ease) .1s both; }
 .col-b { animation: up .9s var(--ease) .2s both; }
 
+/* actions: one row by the title, Share last and white */
+.tab-head { align-items: flex-end; flex-wrap: wrap; }
+.tab-head > div:first-child { flex: 1 1 auto; min-width: 0; }
+.tab-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.tab-actions .act { height: 40px; padding: 0 16px; gap: 8px; border-radius: 999px; font-size: 14px; white-space: nowrap; }
+.tab-actions .act:not(.primary) { background: rgb(255 255 255 / 0.03); border-color: var(--line-2); }
+.tab-actions .act:not(.primary):hover { background: rgb(255 255 255 / 0.07); }
+.tab-actions .act:not(.primary) .i { color: var(--brass); }
+.tab-actions .act.primary { margin-left: 4px; }
+.act .c { font: 12px/1 var(--mono); color: var(--muted); }
+.act .c:empty { display: none; }
+
 /* your bill, printed on paper */
 .lift { filter: drop-shadow(0 40px 40px rgb(0 0 0 / 0.55)) drop-shadow(0 4px 6px rgb(0 0 0 / 0.4)); }
 .bill { padding: 28px 28px 0; border-radius: 4px 4px 0 0; color: var(--ink-p); background: linear-gradient(180deg, #f6f3ec, #ebe6db); animation: print 1.3s var(--ease) .15s both; }
@@ -116,5 +128,10 @@ dialog.sheet::backdrop { background: rgb(0 0 0 / 0.6); backdrop-filter: blur(6px
   .hero-amount { font-size: 56px; }
   .list-head h2 { font-size: 30px; }
   .exp-row { margin: 0; width: 100%; padding: 0; border-radius: 0; }
+  .tab-actions { flex: 1 0 100%; order: 2; margin: 16px -16px 0; padding: 4px 16px; overflow-x: auto; scrollbar-width: none; }
+  .tab-actions .act { height: 38px; padding: 0 14px; }
+  .tab-actions::-webkit-scrollbar { display: none; }
+  .tab-actions .act { flex: none; }
+  .tab-actions .act.primary { order: -1; margin: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .bill, .tab-head, .life, .col-a, .col-b { animation: none; } }

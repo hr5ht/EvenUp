@@ -113,8 +113,7 @@ function render() {
   renderYou();
   renderHero();
   const full = data.members.length >= data.capacity;
-  $("tile-balances").textContent = `${data.members.length} of ${data.capacity} people`;
-  $("tile-activity").textContent = plural(data.activity.length, "change");
+  $("tile-activity").textContent = data.activity.length || "";
   // Full: nobody new until the admin removes someone. The server refuses anyway.
   $("join-open").disabled = full;
   $("join-open").textContent = full ? `This tab is full (${data.capacity} people)` : "I'm not on the list";

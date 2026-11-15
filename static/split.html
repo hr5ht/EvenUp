@@ -33,7 +33,12 @@
       <h1 id="title">Loading…</h1>
       <p class="meta" id="meta" hidden><span class="dot" id="state-dot"></span><span id="expiry"></span></p>
     </div>
-    <div class="end"><button type="button" data-open="share-sheet"><svg class="i"><use href="/static/icons.svg#share"/></svg>Share</button></div>
+    <nav class="tab-actions" aria-label="Tab actions">
+      <button type="button" class="act" data-open="balances-sheet"><svg class="i"><use href="/static/icons.svg#chart"/></svg>Balances</button>
+      <button type="button" class="act" data-open="activity-sheet"><svg class="i"><use href="/static/icons.svg#history"/></svg>Activity<span class="c" id="tile-activity"></span></button>
+      <button type="button" class="act live-only" data-open="admin-sheet" id="admin-tile" hidden><svg class="i"><use href="/static/icons.svg#shield"/></svg>Admin</button>
+      <button type="button" class="act primary" data-open="share-sheet"><svg class="i"><use href="/static/icons.svg#share"/></svg>Share</button>
+    </nav>
   </header>
   <div class="life" id="life" hidden><span id="life-bar"></span></div>
   <p class="error" id="load-error"></p>
@@ -71,12 +76,6 @@
         <button type="button" class="link" id="upi-cancel" hidden>Cancel</button>
       </form>
 
-      <nav class="side-list">
-        <button type="button" class="side-row" data-open="balances-sheet"><svg class="i"><use href="/static/icons.svg#chart"/></svg>Balances<span class="hint"><span id="tile-balances"></span><svg class="i sm"><use href="/static/icons.svg#chev"/></svg></span></button>
-        <button type="button" class="side-row" data-open="activity-sheet"><svg class="i"><use href="/static/icons.svg#history"/></svg>Activity<span class="hint"><span id="tile-activity"></span><svg class="i sm"><use href="/static/icons.svg#chev"/></svg></span></button>
-        <button type="button" class="side-row" data-open="share-sheet"><svg class="i"><use href="/static/icons.svg#share"/></svg>Share<span class="hint">Link, image or CSV<svg class="i sm"><use href="/static/icons.svg#chev"/></svg></span></button>
-        <button type="button" class="side-row live-only" data-open="admin-sheet" id="admin-tile" hidden><svg class="i"><use href="/static/icons.svg#shield"/></svg>Admin<span class="hint">Members, delete<svg class="i sm"><use href="/static/icons.svg#chev"/></svg></span></button>
-      </nav>
     </div>
 
     <div class="col-b">
