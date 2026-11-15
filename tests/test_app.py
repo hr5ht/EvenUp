@@ -512,3 +512,86 @@ def test_send_email_never_fails_a_request(monkeypatch):
 
     monkeypatch.setattr(main, "urlopen", down)
     main.send_email("a@b.co", "s", "t")
+
+
+def befriend(c, a, b, b_email):
+    """a asks b, b accepts. Returns the friend row id (the same for both sides)."""
+    c.post("/api/friends", json={"email": b_email}, headers=a)
+    rid = c.get("/api/friends", headers=b).json()["requests"][0]["id"]
+    assert c.post(f"/api/friends/{rid}/accept", headers=b).status_code == 200
+    return rid
+
+
+def test_groups(monkeypatch):
+    use_neon(monkeypatch)
+    monkeypatch.setattr(main, "send_email", lambda *a: None)
+    main.HITS.clear()  # the per-IP write limit is shared by every test
+    with TestClient(app) as c:
+        o = person(c, "g-o", "o@groups.test", "Owner")
+        f = person(c, "g-f", "f@groups.test", "Fatima")
+        x = person(c, "g-x", "x@groups.test", "Xavier")  # signed in, but not in the group
+        rid = befriend(c, o, f, "f@groups.test")
+        assert c.post("/api/groups", json={"name": "Flat 4B", "friend_ids": [999]}, headers=o).status_code == 404  # not a friend
+        assert c.post("/api/groups", json={"name": "Flat 4B"}).status_code == 401
+        slug = c.post("/api/groups", json={"name": "Flat 4B", "friend_ids": [rid]}, headers=o).json()["slug"]
+        base = f"/api/splits/{slug}"
+
+        g = c.get(base, headers=f).json()
+        owner_id, fatima = [m["id"] for m in g["members"]]
+        assert g["group"] and g["me"] == fatima and g["admin_id"] == owner_id and not g["ended"]
+        assert c.get(base, headers=o).json()["me"] == owner_id
+
+        # outsiders and signed-out visitors see nothing, through every route
+        expense = {"paid_by": owner_id, "amount_paise": 900, "description": "Milk", "split": "equal", "participants": [owner_id, fatima]}
+        for h in ({}, x):
+            assert c.get(base, headers=h).status_code == 404
+            assert c.get(f"{base}/qr?to={owner_id}&amount=100", headers=h).status_code == 404
+            assert c.post(f"{base}/expenses", json=expense, headers=h).status_code == 404
+            assert c.post(f"{base}/members", json={"name": "Sneaky"}, headers=h).status_code == 404  # no joining by link
+            assert c.put(f"{base}/members/{owner_id}/upi", json={"upi_id": "evil@ybl"}, headers=h).status_code == 404
+            assert c.post(f"{base}/members/{owner_id}/enter", json={"password": "x"}, headers=h).status_code == 404
+            assert c.post(f"{base}/admin-login", json={"password": "x"}, headers=h).status_code == 404
+            assert c.delete(base, headers=h).status_code == 404
+        assert c.get(base, headers=bearer("not-a-token")).status_code == 401
+
+        # members split expenses as usual; the ledger says who did what
+        assert c.post(f"{base}/expenses", json=expense, headers=f).status_code == 200
+        assert c.get(base, headers=o).json()["activity"][0]["details"]["by"] == "Fatima"
+        # a payment can only be recorded by the payer or the person paid
+        pay = {"paid_by": fatima, "amount_paise": 450, "description": "Fatima paid Owner · Cash", "split": "exact",
+               "shares": {str(owner_id): 450}, "kind": "payment"}
+        assert c.post(f"{base}/expenses", json=pay, headers=f).status_code == 200
+
+        main.HITS.clear()
+        # only the owner runs the group
+        assert c.delete(f"{base}/members/{fatima}", headers=f).status_code == 403
+        assert c.delete(base, headers=f).status_code == 403
+
+        groups = c.get("/api/groups", headers=f).json()
+        assert [(gr["name"], gr["spent"], gr["balance"], gr["members"]) for gr in groups] == [("Flat 4B", 900, 0, ["Owner", "Fatima"])]
+        assert c.get("/api/groups", headers=x).json() == []
+        assert [a["group_name"] for a in c.get("/api/me/activity", headers=f).json()][-1] == "Flat 4B"
+        assert c.get("/api/me/activity", headers=x).json() == []
+
+        # members bring in their own friends, once
+        xid = befriend(c, f, x, "x@groups.test")
+        assert c.post(f"/api/groups/{slug}/members", json={"friend_id": xid}, headers=o).status_code == 404  # not the owner's friend
+        assert c.post(f"/api/groups/{slug}/members", json={"friend_id": xid}, headers=f).status_code == 200
+        assert c.post(f"/api/groups/{slug}/members", json={"friend_id": xid}, headers=f).status_code == 400
+        assert c.get(base, headers=x).status_code == 200
+
+        # your profile is you in every group
+        c.patch("/api/me", json={"name": "Fatima K", "upi_id": "fatima@okaxis"}, headers=f)
+        me = next(m for m in c.get(base, headers=o).json()["members"] if m["id"] == fatima)
+        assert (me["name"], me["upi_id"]) == ("Fatima K", "fatima@okaxis")
+
+        # groups outlive the cleanup job
+        assert c.post("/cron/cleanup", headers={"X-Cron-Secret": "s3cret"}).status_code == 200
+        assert c.get(base, headers=o).status_code == 200
+
+        # deleting the owner's account hands the group on, and their rows stay for the balances
+        assert c.delete("/api/me", headers=o).status_code == 200
+        g = c.get(base, headers=f).json()
+        assert g["admin_id"] == fatima and g["members"][0]["name"] == "Deleted user"
+        assert c.delete(base, headers=f).status_code == 200
+        assert c.get(base, headers=f).status_code == 404

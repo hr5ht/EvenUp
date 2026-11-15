@@ -17,14 +17,16 @@ CREATE TABLE IF NOT EXISTS splits (
     last_activity_at BIGINT NOT NULL,  -- unused since the lifetime became fixed, kept so existing databases match
     expires_at BIGINT NOT NULL,  -- end of the open phase, then read-only for a day, then deleted
     created_at BIGINT NOT NULL,
-    capacity INTEGER  -- most members allowed, the headcount given at creation. NULL is the default 50
+    capacity INTEGER,  -- most members allowed, the headcount given at creation. NULL is the default 50
+    owner_user_id TEXT  -- set: a group, private to its signed-in members and never expiring. Unset: a quick tab
 );
 CREATE TABLE IF NOT EXISTS members (
     id {pk},
     split_id INTEGER NOT NULL REFERENCES splits(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     upi_id TEXT,
-    pw_hash TEXT  -- password protected splits only, set by the member the first time they pick their name
+    pw_hash TEXT,  -- password protected splits only, set by the member the first time they pick their name
+    user_id TEXT  -- groups: the account this member is
 );
 CREATE TABLE IF NOT EXISTS expenses (
     id {pk},
@@ -82,7 +84,9 @@ CREATE TABLE IF NOT EXISTS stats (
 );
 """
 # Columns added after launch, for databases created before them.
-NEW_COLUMNS = {"splits": [("capacity", "INTEGER")], "members": [("pw_hash", "TEXT")]}
+NEW_COLUMNS = {"splits": [("capacity", "INTEGER"), ("owner_user_id", "TEXT")], "members": [("pw_hash", "TEXT"), ("user_id", "TEXT")]}
+# After NEW_COLUMNS, since they can index a column an older database only just got.
+INDEXES = ["CREATE INDEX IF NOT EXISTS members_user ON members (user_id)"]
 
 
 class PgConnection:
@@ -127,6 +131,8 @@ def init():
         for col, kind in cols:
             if col not in have:
                 con.execute(f"ALTER TABLE {table} ADD COLUMN {col} {kind}")
+    for statement in INDEXES:
+        con.execute(statement)
     con.commit()
     con.close()
 

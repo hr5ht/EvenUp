@@ -41,6 +41,7 @@ FRIEND_LIMIT = (20, 24 * 3600)  # friend requests per user
 INVITE_LIMIT = (1, 7 * 24 * 3600)  # emails from one person to one address, so cancel-and-resend can't pester anyone
 EMAIL_RE = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
 SITE = "https://quicktabapp.vercel.app"
+FOREVER = 4102444800  # 1 Jan 2100: a group's expires_at, so groups never close or get cleaned up
 
 # Neon Auth owns sign-up, passwords and sessions. This is its Auth URL, from the Neon Console.
 NEON_AUTH = os.environ.get("NEON_AUTH_BASE_URL", "").strip("\"' ").rstrip("/")  # stray quotes would stop every page loading
@@ -159,6 +160,11 @@ def friends_page():
     return FileResponse(STATIC / "friends.html")
 
 
+@app.get("/activity")
+def activity_page():
+    return FileResponse(STATIC / "activity.html")
+
+
 # ---------- models ----------
 
 class MemberIn(BaseModel):
@@ -224,16 +230,30 @@ def admin_token(split_id, pw_hash):
     return hmac.new(SECRET_KEY, f"{split_id}:{pw_hash}".encode(), hashlib.sha256).hexdigest()
 
 
-def load_split(con, slug, ended_ok=False):
+def group_member(con, s, user):
+    """Your member id in a group, or None."""
+    m = user and con.execute("SELECT id FROM members WHERE split_id = ? AND user_id = ?", (s["id"], user["id"])).fetchone()
+    return m["id"] if m else None
+
+
+def load_split(con, slug, ended_ok=False, user=None):
     s = con.execute("SELECT * FROM splits WHERE slug = ?", (slug,)).fetchone()
     if not s or s["expires_at"] + GRACE < now():
+        raise HTTPException(404, "Tab not found or expired")
+    # Groups are private. Only a route that passes the signed-in user can reach one, and only as a member,
+    # so a route that forgets about groups refuses them instead of leaking one.
+    if s["owner_user_id"] and not group_member(con, s, user):
         raise HTTPException(404, "Tab not found or expired")
     if not ended_ok and s["expires_at"] < now():
         raise HTTPException(410, "This tab is closed, so it can't be changed. Open a new one for new expenses.")
     return s
 
 
-def require_admin(s, token):
+def require_admin(s, token, user=None):
+    if s["owner_user_id"]:  # a group's admin is its owner, never "whoever picked the name"
+        if not user or user["id"] != s["owner_user_id"]:
+            raise HTTPException(403, "Only the group's owner can do that")
+        return
     if not s["admin_pw_hash"]:  # a split without passwords: whoever picked the admin's name is the admin
         return
     if not token or not hmac.compare_digest(token, admin_token(s["id"], s["admin_pw_hash"])):
@@ -284,7 +304,9 @@ def compute_shares(members, e):
     return shares
 
 
-def log(con, split_id, action, expense_id, details):
+def log(con, split_id, action, expense_id, details, user=None):
+    if user:  # groups: a lasting ledger says who did what
+        details = {**details, "by": user["name"]}
     con.execute(
         "INSERT INTO activity (split_id, action, expense_id, details, created_at) VALUES (?, ?, ?, ?, ?)",
         (split_id, action, expense_id, json.dumps(details), now()),
@@ -403,6 +425,11 @@ def current_user(authorization: Optional[str] = Header(None), con=Depends(db.get
     return u
 
 
+def maybe_user(authorization: Optional[str] = Header(None), con=Depends(db.get_db)):
+    """The signed-in user when the request carries a token, else None. Only groups need one."""
+    return current_user(authorization, con) if authorization else None
+
+
 class ProfileIn(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=40)
     upi_id: Optional[str] = Field(default=None, pattern=UPI_RE)  # null clears it
@@ -424,12 +451,23 @@ def update_me(body: ProfileIn, u=Depends(current_user), con=Depends(db.get_db)):
         raise HTTPException(400, "Enter your name")
     upi = enc(body.upi_id) if "upi_id" in body.model_fields_set else u["upi_id"]
     u = con.execute("UPDATE users SET name = ?, upi_id = ? WHERE id = ? RETURNING *", (name, upi, u["id"])).fetchone()
+    con.execute("UPDATE members SET name = ?, upi_id = ? WHERE user_id = ?", (name, upi, u["id"]))  # you, in every group
     con.commit()
     return profile(u)
 
 
 @app.delete("/api/me")
 def delete_me(u=Depends(current_user), con=Depends(db.get_db)):
+    # Your groups go to their longest-standing member, or away with you if nobody else has an account in them.
+    for g in con.execute("SELECT id FROM splits WHERE owner_user_id = ?", (u["id"],)).fetchall():
+        heir = con.execute("SELECT id, user_id FROM members WHERE split_id = ? AND user_id IS NOT NULL AND user_id != ? ORDER BY id LIMIT 1",
+                           (g["id"], u["id"])).fetchone()
+        if heir:
+            con.execute("UPDATE splits SET owner_user_id = ?, admin_member_id = ? WHERE id = ?", (heir["user_id"], heir["id"], g["id"]))
+        else:
+            con.execute("DELETE FROM splits WHERE id = ?", (g["id"],))
+    # Your rows stay so everyone else's balances still add up, but they're no longer you.
+    con.execute("UPDATE members SET user_id = NULL, name = 'Deleted user', upi_id = NULL WHERE user_id = ?", (u["id"],))
     con.execute("DELETE FROM users WHERE id = ?", (u["id"],))
     con.commit()
     return {"ok": True}
@@ -540,6 +578,101 @@ def remove_friend(friend_id: int, u=Depends(current_user), con=Depends(db.get_db
     return {"ok": True}
 
 
+# ---------- groups ----------
+# A group is a split with an owner and no end: expenses, balances, undo and /g/{slug} all work unchanged.
+# Its members are accounts, added from your friends, and only they can open it.
+
+class GroupIn(BaseModel):
+    name: str = Field(min_length=1, max_length=40)
+    friend_ids: List[int] = Field(default=[], max_length=MAX_MEMBERS - 1)  # ids from /api/friends
+
+
+class GroupMemberIn(BaseModel):
+    friend_id: int
+
+
+def friend_user(con, u, friend_id):
+    """The account behind one of your accepted friends."""
+    f = con.execute("SELECT * FROM friends WHERE id = ? AND status = 'accepted' AND (from_user = ? OR to_user = ?)",
+                    (friend_id, u["id"], u["id"])).fetchone()
+    if not f:
+        raise HTTPException(404, "Friend not found")
+    return con.execute("SELECT * FROM users WHERE id = ?", (f["to_user"] if f["from_user"] == u["id"] else f["from_user"],)).fetchone()
+
+
+def add_user_member(con, split_id, user):
+    # The UPI ID is copied encrypted as it is; saving your profile updates it in every group.
+    return con.execute("INSERT INTO members (split_id, name, upi_id, user_id) VALUES (?, ?, ?, ?) RETURNING id",
+                       (split_id, user["name"], user["upi_id"], user["id"])).fetchone()["id"]
+
+
+def money_of(con, split_id):
+    """(spent, balances) of a split's live expenses, without loading everything read() returns."""
+    ex = {}
+    for r in con.execute("SELECT e.id, e.paid_by, e.amount_paise, e.kind, sh.member_id, sh.share_paise FROM expenses e "
+                         "JOIN shares sh ON sh.expense_id = e.id WHERE e.split_id = ? AND e.deleted = 0", (split_id,)):
+        ex.setdefault(r["id"], (r["paid_by"], r["amount_paise"], r["kind"], {}))[3][r["member_id"]] = r["share_paise"]
+    spent = sum(a for _, a, kind, _ in ex.values() if kind == "expense")
+    return spent, money.balances(member_ids(con, split_id), [(p, a, sh) for p, a, _, sh in ex.values()])
+
+
+@app.post("/api/groups")
+def create_group(body: GroupIn, u=Depends(current_user), con=Depends(db.get_db)):
+    name = body.name.strip()
+    if not name:
+        raise HTTPException(400, "Give the group a name")
+    others = {o["id"]: o for o in (friend_user(con, u, i) for i in set(body.friend_ids))}
+    slug, t = secrets.token_urlsafe(16), now()
+    sid = con.execute("INSERT INTO splits (slug, name, admin_pw_hash, last_activity_at, expires_at, created_at, owner_user_id) "
+                      "VALUES (?, ?, '', ?, ?, ?, ?) RETURNING id", (slug, name, t, FOREVER, t, u["id"])).fetchone()["id"]
+    me = add_user_member(con, sid, u)
+    for o in others.values():
+        add_user_member(con, sid, o)
+    con.execute("UPDATE splits SET admin_member_id = ? WHERE id = ?", (me, sid))
+    log(con, sid, "created", None, {"name": name}, u)
+    con.commit()
+    return {"slug": slug}
+
+
+@app.get("/api/groups")
+def list_groups(u=Depends(current_user), con=Depends(db.get_db)):
+    out = []
+    for g in con.execute("SELECT s.id, s.slug, s.name, s.created_at, m.id AS me FROM splits s JOIN members m ON m.split_id = s.id "
+                         "WHERE m.user_id = ? AND s.owner_user_id IS NOT NULL ORDER BY s.created_at DESC", (u["id"],)).fetchall():
+        spent, bal = money_of(con, g["id"])
+        last = con.execute("SELECT MAX(created_at) AS t FROM activity WHERE split_id = ?", (g["id"],)).fetchone()["t"]
+        out.append({"slug": g["slug"], "name": g["name"], "spent": spent, "balance": bal.get(g["me"], 0), "updated_at": last or g["created_at"],
+                    "members": [r["name"] for r in con.execute("SELECT name FROM members WHERE split_id = ? ORDER BY id", (g["id"],))]})
+    return out
+
+
+@app.post("/api/groups/{slug}/members")
+def add_group_member(slug: str, body: GroupMemberIn, u=Depends(current_user), con=Depends(db.get_db)):
+    """Any member can bring in one of their own friends."""
+    s = load_split(con, slug, user=u)
+    if not s["owner_user_id"]:
+        raise HTTPException(404, "Group not found")
+    other = friend_user(con, u, body.friend_id)
+    if con.execute("SELECT id FROM members WHERE split_id = ? AND user_id = ?", (s["id"], other["id"])).fetchone():
+        raise HTTPException(400, f"{other['name']} is already in this group")
+    if len(member_ids(con, s["id"])) >= MAX_MEMBERS:
+        raise HTTPException(400, f"A group holds {MAX_MEMBERS} people at most")
+    mid = add_user_member(con, s["id"], other)
+    log(con, s["id"], "member_added", None, {"name": other["name"]}, u)
+    con.commit()
+    return {"id": mid}
+
+
+@app.get("/api/me/activity")
+def my_activity(u=Depends(current_user), con=Depends(db.get_db)):
+    """The latest changes across every group you're in."""
+    rows = con.execute(
+        "SELECT a.id, a.action, a.expense_id, a.details, a.created_at, s.slug, s.name AS group_name FROM activity a "
+        "JOIN splits s ON s.id = a.split_id JOIN members m ON m.split_id = s.id "
+        "WHERE m.user_id = ? AND s.owner_user_id IS NOT NULL ORDER BY a.id DESC LIMIT 50", (u["id"],)).fetchall()
+    return [{**dict(r), "details": json.loads(r["details"])} for r in rows]
+
+
 # ---------- API ----------
 
 @app.post("/api/splits")
@@ -576,7 +709,7 @@ def demo(con=Depends(db.get_db)):
         ExpenseIn(paid_by=aman, amount_paise=600000, description="Scuba diving", split="exact", shares={riya: 300000, aman: 300000}),
         ExpenseIn(paid_by=aman, amount_paise=100000, description="Aman paid Riya · Cash", split="exact", shares={riya: 100000}, kind="payment"),
     ]:
-        add_expense(slug, e, x_member_token=None, con=con)
+        add_expense(slug, e, x_member_token=None, user=None, con=con)
     return {"slug": slug, "admin_token": token, "admin_id": me}
 
 
@@ -591,8 +724,8 @@ def admin_login(slug: str, body: LoginIn, con=Depends(db.get_db)):
 
 
 @app.get("/api/splits/{slug}")
-def read(slug: str, con=Depends(db.get_db)):
-    s = load_split(con, slug, ended_ok=True)
+def read(slug: str, user=Depends(maybe_user), con=Depends(db.get_db)):
+    s = load_split(con, slug, ended_ok=True, user=user)
     ended = s["expires_at"] < now()
     # Nobody pays through an ended split, so its UPI IDs stop being shown.
     rows = con.execute("SELECT * FROM members WHERE split_id = ? ORDER BY id", (s["id"],)).fetchall()
@@ -628,6 +761,8 @@ def read(slug: str, con=Depends(db.get_db)):
         "balances": bal,
         "settlement": [{"from": d, "to": c, "amount_paise": a} for d, c, a in money.settle(bal)],
         "activity": activity,
+        "group": bool(s["owner_user_id"]),
+        "me": group_member(con, s, user) if s["owner_user_id"] else None,  # groups know who you are from your account
     }
 
 
@@ -639,9 +774,9 @@ def upi_link(upi_id, name, amount_paise, note):
 
 
 @app.get("/api/splits/{slug}/qr")
-def qr(slug: str, to: int, amount: int, con=Depends(db.get_db)):
+def qr(slug: str, to: int, amount: int, user=Depends(maybe_user), con=Depends(db.get_db)):
     """UPI QR for paying a member of this split. Only encodes this split's own UPI IDs."""
-    s = load_split(con, slug)
+    s = load_split(con, slug, user=user)
     m = con.execute("SELECT * FROM members WHERE id = ? AND split_id = ?", (to, s["id"])).fetchone()
     if not m or not m["upi_id"] or not 0 < amount <= 10**10:
         raise HTTPException(404, "No UPI ID for this member")
@@ -652,25 +787,29 @@ def qr(slug: str, to: int, amount: int, con=Depends(db.get_db)):
 
 
 @app.post("/api/splits/{slug}/expenses")
-def add_expense(slug: str, body: ExpenseIn, x_member_token: Optional[str] = Header(None), con=Depends(db.get_db)):
-    s = load_split(con, slug)
+def add_expense(slug: str, body: ExpenseIn, x_member_token: Optional[str] = Header(None), user=Depends(maybe_user),
+                con=Depends(db.get_db)):
+    s = load_split(con, slug, user=user)
     require_member(con, s, x_member_token)
     shares = compute_shares(member_ids(con, s["id"]), body)
     if body.kind == "payment" and (len(shares) != 1 or body.paid_by in shares):
         raise HTTPException(400, "A payment goes from one member to one other member")
+    if s["owner_user_id"] and body.kind == "payment" and group_member(con, s, user) not in (body.paid_by, *shares):
+        raise HTTPException(403, "Only the person paying or being paid can record a payment")
     eid = con.execute(
         "INSERT INTO expenses (split_id, paid_by, amount_paise, description, kind, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id",
         (s["id"], body.paid_by, body.amount_paise, body.description, body.kind, now(), now()),
     ).fetchone()["id"]
     write_shares(con, eid, shares)
-    log(con, s["id"], "added", eid, {"description": body.description, "amount_paise": body.amount_paise})
+    log(con, s["id"], "added", eid, {"description": body.description, "amount_paise": body.amount_paise}, user)
     con.commit()
     return {"id": eid}
 
 
 @app.put("/api/splits/{slug}/expenses/{expense_id}")
-def edit_expense(slug: str, expense_id: int, body: ExpenseIn, x_member_token: Optional[str] = Header(None), con=Depends(db.get_db)):
-    s = load_split(con, slug)
+def edit_expense(slug: str, expense_id: int, body: ExpenseIn, x_member_token: Optional[str] = Header(None),
+                 user=Depends(maybe_user), con=Depends(db.get_db)):
+    s = load_split(con, slug, user=user)
     require_member(con, s, x_member_token)
     prev = snapshot(con, get_expense(con, s["id"], expense_id))
     shares = compute_shares(member_ids(con, s["id"]), body)
@@ -684,30 +823,32 @@ def edit_expense(slug: str, expense_id: int, body: ExpenseIn, x_member_token: Op
         raise HTTPException(409, "This expense changed since you opened it. Reload and try again.")
     write_shares(con, expense_id, shares)
     log(con, s["id"], "edited", expense_id,
-        {"description": body.description, "amount_paise": body.amount_paise, "prev": prev})
+        {"description": body.description, "amount_paise": body.amount_paise, "prev": prev}, user)
     con.commit()
     return {"ok": True}
 
 
 @app.delete("/api/splits/{slug}/expenses/{expense_id}")
-def delete_expense(slug: str, expense_id: int, x_member_token: Optional[str] = Header(None), con=Depends(db.get_db)):
-    s = load_split(con, slug)
+def delete_expense(slug: str, expense_id: int, x_member_token: Optional[str] = Header(None), user=Depends(maybe_user),
+                   con=Depends(db.get_db)):
+    s = load_split(con, slug, user=user)
     require_member(con, s, x_member_token)
-    set_deleted(con, s["id"], get_expense(con, s["id"], expense_id), True)
+    set_deleted(con, s["id"], get_expense(con, s["id"], expense_id), True, user)
     con.commit()
     return {"ok": True}
 
 
-def set_deleted(con, split_id, e, deleted):
+def set_deleted(con, split_id, e, deleted, user=None):
     con.execute("UPDATE expenses SET deleted = ?, version = version + 1 WHERE id = ?", (int(deleted), e["id"]))
     log(con, split_id, "deleted" if deleted else "restored", e["id"],
-        {"description": e["description"], "amount_paise": e["amount_paise"]})
+        {"description": e["description"], "amount_paise": e["amount_paise"]}, user)
 
 
 @app.post("/api/splits/{slug}/activity/{activity_id}/undo")
-def undo(slug: str, activity_id: int, x_member_token: Optional[str] = Header(None), con=Depends(db.get_db)):
+def undo(slug: str, activity_id: int, x_member_token: Optional[str] = Header(None), user=Depends(maybe_user),
+         con=Depends(db.get_db)):
     """Undo the latest change to an expense. The undo is itself logged, so it can be undone too."""
-    s = load_split(con, slug)
+    s = load_split(con, slug, user=user)
     require_member(con, s, x_member_token)
     a = con.execute("SELECT * FROM activity WHERE id = ? AND split_id = ?", (activity_id, s["id"])).fetchone()
     if not a or a["expense_id"] is None:
@@ -717,9 +858,9 @@ def undo(slug: str, activity_id: int, x_member_token: Optional[str] = Header(Non
         raise HTTPException(409, "Only the latest change to an expense can be undone. Reload and try again.")
     e = get_expense(con, s["id"], a["expense_id"])
     if a["action"] in ("added", "restored"):
-        set_deleted(con, s["id"], e, True)
+        set_deleted(con, s["id"], e, True, user)
     elif a["action"] == "deleted":
-        set_deleted(con, s["id"], e, False)
+        set_deleted(con, s["id"], e, False, user)
     elif a["action"] == "edited":
         prev = json.loads(a["details"])["prev"]
         shares = {int(m): p for m, p in prev["shares"].items()}
@@ -732,7 +873,7 @@ def undo(slug: str, activity_id: int, x_member_token: Optional[str] = Header(Non
         )
         write_shares(con, e["id"], shares)
         log(con, s["id"], "edited", e["id"],
-            {"description": prev["description"], "amount_paise": prev["amount_paise"], "prev": current})
+            {"description": prev["description"], "amount_paise": prev["amount_paise"], "prev": current}, user)
     con.commit()
     return {"ok": True}
 
@@ -810,9 +951,10 @@ def set_upi(slug: str, member_id: int, body: UpiIn, x_admin_token: Optional[str]
 
 
 @app.delete("/api/splits/{slug}/members/{member_id}")
-def remove_member(slug: str, member_id: int, x_admin_token: Optional[str] = Header(None), con=Depends(db.get_db)):
-    s = load_split(con, slug)
-    require_admin(s, x_admin_token)
+def remove_member(slug: str, member_id: int, x_admin_token: Optional[str] = Header(None), user=Depends(maybe_user),
+                  con=Depends(db.get_db)):
+    s = load_split(con, slug, user=user)
+    require_admin(s, x_admin_token, user)
     m = con.execute("SELECT * FROM members WHERE id = ? AND split_id = ?", (member_id, s["id"])).fetchone()
     if not m:
         raise HTTPException(404, "Member not found")
@@ -823,15 +965,15 @@ def remove_member(slug: str, member_id: int, x_admin_token: Optional[str] = Head
         raise HTTPException(400, f"{m['name']} is in some expenses. Edit or delete those first.")
     con.execute(f"DELETE FROM expenses WHERE id IN ({used} AND deleted = 1)", (member_id, member_id))
     con.execute("DELETE FROM members WHERE id = ?", (member_id,))
-    log(con, s["id"], "member_removed", None, {"name": m["name"]})
+    log(con, s["id"], "member_removed", None, {"name": m["name"]}, user)
     con.commit()
     return {"ok": True}
 
 
 @app.delete("/api/splits/{slug}")
-def delete_split(slug: str, x_admin_token: Optional[str] = Header(None), con=Depends(db.get_db)):
-    s = load_split(con, slug)
-    require_admin(s, x_admin_token)
+def delete_split(slug: str, x_admin_token: Optional[str] = Header(None), user=Depends(maybe_user), con=Depends(db.get_db)):
+    s = load_split(con, slug, ended_ok=True, user=user)
+    require_admin(s, x_admin_token, user)
     con.execute("DELETE FROM splits WHERE id = ?", (s["id"],))
     con.commit()
     return {"ok": True}
