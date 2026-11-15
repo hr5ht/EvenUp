@@ -82,13 +82,23 @@ input:focus { border-color: rgb(227 199 155 / 0.6); box-shadow: 0 0 0 4px rgb(22
 .bill .pos { color: var(--pos-p) !important; } .bill .neg { color: var(--neg-p) !important; }
 
 /* cards beside the bill */
-.upi-line, .upi-form, .side-list, .notice { border-radius: 18px; background: linear-gradient(180deg, var(--paper), var(--card)); box-shadow: inset 0 0 0 1px var(--line); }
-.upi-line .i, .side-row > .i, .choice .ic .i, .notice .ic .i, .empty .ic .i { color: var(--brass); }
-.side-list { padding: 6px; }
-.side-row { border-radius: 12px; transition: background .2s; }
-.side-row:hover { background: rgb(255 255 255 / 0.04); }
-.side-row .hint .i { transition: transform .3s var(--ease); }
-.side-row:hover .hint .i { transform: translateX(2px); }
+.notice { border-radius: 18px; background: linear-gradient(180deg, var(--paper), var(--card)); box-shadow: inset 0 0 0 1px var(--line); }
+.choice .ic .i, .notice .ic .i, .empty .ic .i { color: var(--brass); }
+
+/* your UPI ID is printed on the bill, above the barcode: where friends pay you */
+.bill .upi-line, .bill .upi-form { margin: 20px 0 0; padding: 16px 0 0; border-radius: 0; border-top: 1px dashed var(--rule-p); box-shadow: none; background: none; }
+.bill .upi-line { min-height: 0; gap: 10px; }
+.bill .upi-line .i { color: var(--ink-p2); }
+.bill .upi-line .k { color: var(--ink-p2); font-size: 13px; }
+.bill .upi-line #upi-line-id { color: var(--ink-p); font-weight: 600; }
+.bill .upi-line button, .bill .upi-form .link { height: auto; padding: 0; border: 0; background: none; color: var(--ink-p); font-size: 14px; font-weight: 500;
+  text-decoration: underline; text-decoration-color: var(--rule-p); text-underline-offset: 3px; }
+.bill .upi-form label { margin: 0 0 10px; color: var(--ink-p2); }
+.bill .upi-form input { background: #fffdf8; border-color: #d6ccb9; color: var(--ink-p); }
+.bill .upi-form input::placeholder { color: #a39a8a; }
+.bill .upi-form input:focus { border-color: var(--ink-p); box-shadow: 0 0 0 4px rgb(29 26 22 / 0.1); }
+.bill .upi-form .primary, .bill .upi-form .primary:hover { background: var(--ink-p); color: #f6f3ec; box-shadow: none; }
+.bill .upi-form .error { color: var(--neg-p); }
 
 /* expenses */
 .list-head { margin-bottom: 4px; }

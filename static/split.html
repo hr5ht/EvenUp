@@ -58,23 +58,23 @@
           <p class="sub" id="hero-sub"></p>
           <ul class="pays" id="my-payments"></ul>
           <p class="done" id="hero-done" hidden><svg class="i"><use href="/static/icons.svg#check"/></svg><span id="hero-done-text"></span></p>
+          <div class="upi-line live-only" id="upi-line" hidden>
+            <svg class="i"><use href="/static/icons.svg#wallet"/></svg><span class="k">Your UPI ID</span><span id="upi-line-id"></span>
+            <button type="button" class="small ghost" id="upi-edit">Edit</button>
+          </div>
+
+          <form class="upi-form live-only" id="upi-form" hidden>
+            <label for="my-upi">Add your UPI ID so people can pay you</label>
+            <div class="row">
+              <input type="text" id="my-upi" maxlength="100" placeholder="name@bank" autocapitalize="off" spellcheck="false" required>
+              <button class="primary" type="submit">Save</button>
+            </div>
+            <p class="error" id="upi-error"></p>
+            <button type="button" class="link" id="upi-cancel" hidden>Cancel</button>
+          </form>
         </section>
       </div>
 
-      <div class="upi-line live-only" id="upi-line" hidden>
-        <svg class="i"><use href="/static/icons.svg#wallet"/></svg><span class="k">Your UPI ID</span><span id="upi-line-id"></span>
-        <button type="button" class="small ghost" id="upi-edit">Edit</button>
-      </div>
-
-      <form class="upi-form live-only" id="upi-form" hidden>
-        <label for="my-upi">Add your UPI ID so people can pay you</label>
-        <div class="row">
-          <input type="text" id="my-upi" maxlength="100" placeholder="name@bank" autocapitalize="off" spellcheck="false" required>
-          <button class="primary" type="submit">Save</button>
-        </div>
-        <p class="error" id="upi-error"></p>
-        <button type="button" class="link" id="upi-cancel" hidden>Cancel</button>
-      </form>
 
     </div>
 
