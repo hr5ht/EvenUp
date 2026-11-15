@@ -25,9 +25,7 @@ export default function Home() {
       try {
         setList(await myList());
         return setError("");
-      } catch (err) {
-        if ((err as ApiError).status !== 401) return setError((err as Error).message);
-      } // a lapsed session: this phone's own list, until you sign in again
+      } catch {} // offline, a lapsed session or an older server: this phone's own list, so your tabs never vanish
     }
     setList(null);
     const saved = await savedTabs();
