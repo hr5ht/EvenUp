@@ -1,4 +1,5 @@
-// My tabs: every tab this phone opened or created, with who you are in it. No account, so this list is the account.
+// Home. Signed out: every tab this phone opened or created, with who you are in it, so this list is the account.
+// Signed in: your account's groups and tabs, the same on every device.
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { RefreshControl, ScrollView, View } from "react-native";
@@ -6,6 +7,7 @@ import { FadeInDown } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Anim, Tap, Btn, Err, Field, Icon, Label, Logo, T, Tag, useConfirm } from "@/components/ui";
 import { api, ApiError, forgetTab, rupees, savedTabs, slugFrom, tabTitle, lifeOf, type Identity, type Tab } from "@/lib/api";
+import { isSignedIn, myList, type Listed } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 
 type Row = { slug: string; identity: Identity; data?: Tab; error?: string };
@@ -13,11 +15,21 @@ type Row = { slug: string; identity: Identity; data?: Tab; error?: string };
 export default function Home() {
   const { colors } = useTheme();
   const [rows, setRows] = useState<Row[] | null>(null);
+  const [list, setList] = useState<Listed[] | null>(null); // signed in: from your account
   const [refreshing, setRefreshing] = useState(false);
   const [link, setLink] = useState("");
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
+    if (await isSignedIn()) {
+      try {
+        setList(await myList());
+        return setError("");
+      } catch (err) {
+        if ((err as ApiError).status !== 401) return setError((err as Error).message);
+      } // a lapsed session: this phone's own list, until you sign in again
+    }
+    setList(null);
     const saved = await savedTabs();
     const loaded = await Promise.all(saved.map(async ({ slug, addedAt, ...identity }): Promise<Row | null> => {
       try {
@@ -68,7 +80,7 @@ export default function Home() {
             <View className="h-px w-4 bg-accent" />
             <T className="text-sm text-accent">{new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}</T>
           </View>
-          <T className="text-[48px] font-bold leading-[52px]">Your tabs</T>
+          <T className="text-[48px] font-bold leading-[52px]">{list ? "Home" : "Your tabs"}</T>
         </Anim>
 
         <View className="gap-2.5">
@@ -84,6 +96,29 @@ export default function Home() {
           <Err>{error}</Err>
         </View>
 
+        {list ? (
+          <View className="gap-4">
+            <View className="flex-row items-baseline gap-2.5">
+              <T className="text-[30px] font-bold leading-9">Groups and tabs</T>
+              {!!list.length && <T mono className="text-[13px] text-muted">{list.length}</T>}
+            </View>
+            {list.length === 0 ? (
+              <View className="items-center gap-2 rounded-[20px] border border-dashed border-line-2 px-6 py-8">
+                <View className="mb-2 h-12 w-12 items-center justify-center rounded-2xl bg-surface-2"><Icon.Receipt color={colors.accent} size={22} /></View>
+                <T className="text-[22px] font-bold">Nothing to split yet</T>
+                <T className="text-center text-sm leading-5 text-muted">Tap + to open a tab. Your tabs and groups are kept on your account, on every device.</T>
+              </View>
+            ) : (
+              <View className="overflow-hidden rounded-[20px] border border-line bg-surface p-1.5">
+                {list.map((r, i) => (
+                  <Anim key={r.slug} entering={FadeInDown.delay(i * 50).duration(350)}>
+                    <ListCard row={r} first={i === 0} onPress={() => router.push(`/g/${r.slug}`)} />
+                  </Anim>
+                ))}
+              </View>
+            )}
+          </View>
+        ) : (
         <View className="gap-4">
           <View className="flex-row items-baseline gap-2.5">
             <T className="text-[30px] font-bold leading-9">Saved on this phone</T>
@@ -108,6 +143,7 @@ export default function Home() {
           )}
           {!!rows?.length && <T className="text-xs text-dim">Hold a tab to remove it from this phone.</T>}
         </View>
+        )}
       </ScrollView>
 
       {confirmEl}
@@ -154,6 +190,34 @@ function TabCard({ row, first, onPress, onLongPress }: { row: Row; first: boolea
           </T>
         </View>
       )}
+    </Tap>
+  );
+}
+
+// A group or tab from your account: what it is, who's in it and what was spent, and where you stand.
+function ListCard({ row, first, onPress }: { row: Listed; first: boolean; onPress: () => void }) {
+  const { colors } = useTheme();
+  const group = row.kind === "group";
+  const names = row.members.length > 3 ? `${row.members.slice(0, 3).join(", ")} +${row.members.length - 3}` : row.members.join(", ");
+  const b = row.balance;
+  return (
+    <Tap onPress={onPress} className={`flex-row items-center gap-3.5 px-3.5 py-4 ${first ? "" : "border-t border-line"} ${row.ended ? "opacity-60" : ""}`}>
+      <View className="h-11 w-11 items-center justify-center rounded-full border border-line-2 bg-surface-2">
+        {group ? <Icon.Users color={colors.accent} size={19} /> : <Icon.Receipt color={colors.accent} size={19} />}
+      </View>
+      <View className="flex-1 gap-1.5">
+        <T className="text-[20px] font-bold leading-6" numberOfLines={1}>{row.name}</T>
+        <View className="flex-row items-center gap-2">
+          {group ? <Tag live={!row.ended}>{row.ended ? "deleted" : "group"}</Tag> : row.ended ? <Tag>closed</Tag> : <Tag live>{row.hours}h left</Tag>}
+          <T className="flex-1 text-[13px] text-muted" numberOfLines={1}>{names} · {rupees(row.spent)}</T>
+        </View>
+      </View>
+      <View className="items-end gap-0.5">
+        {!!b && <T className="text-xs text-muted">{b > 0 ? "You get back" : "You owe"}</T>}
+        <T className={`font-bold ${b ? "text-[20px]" : "text-base text-muted"} ${b > 0 ? "text-owed" : b < 0 ? "text-owe" : ""}`}>
+          {b ? rupees(Math.abs(b)) : "Settled"}
+        </T>
+      </View>
     </Tap>
   );
 }

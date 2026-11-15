@@ -16,6 +16,7 @@ export type Tab = {
   name: string; expires_at: number; deletes_at: number; ended: boolean; admin_id: number; protected: boolean;
   admin_login: boolean; open_admin: boolean; capacity: number; members: Member[]; expenses: Expense[];
   balances: Record<string, number>; settlement: Payment[]; activity: Activity[];
+  group?: boolean; me?: number | null; // groups know you from your account
 };
 
 export class ApiError extends Error {

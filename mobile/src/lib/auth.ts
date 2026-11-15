@@ -1,7 +1,7 @@
 // Accounts, the same way the website does it: Neon Auth through our /auth proxy keeps the session in a cookie,
 // and /auth/token turns it into a short-lived token for our own API.
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { api, ApiError, BASE } from "@/lib/api";
+import { api, ApiError, BASE, loadIdentity, savedTabs, saveIdentity, type Identity } from "@/lib/api";
 
 const FLAG = "quicktab:signed-in"; // only for what to show; the session itself is the cookie
 const JAR = "quicktab:session";
@@ -62,11 +62,23 @@ export async function forgotPassword(email: string) {
   await authApi("POST", "request-password-reset", { email, redirectTo: `${BASE}/login` }); // the reset itself happens on the website
 }
 
-export async function signOut() {
-  await authApi("POST", "sign-out", {}).catch(() => {}); // offline: the phone forgets you anyway
+async function forget() {
   token = null;
   jar = {};
   await AsyncStorage.multiRemove([FLAG, JAR]);
+}
+
+export async function signOut() {
+  await authApi("POST", "sign-out", {}).catch(() => {}); // offline: the phone forgets you anyway
+  await forget();
+}
+
+// Like the website: Neon checks the password and deletes the login, then our side lets go of everything else.
+export async function deleteAccount(password: string) {
+  await authToken(true); // the session ends with the login, so take the token for our own delete first
+  await authApi("POST", "delete-user", { password });
+  await authed("DELETE", "/api/me");
+  await forget();
 }
 
 async function authToken(fresh: boolean) {
@@ -78,8 +90,8 @@ async function authToken(fresh: boolean) {
 
 // api() as the signed-in user. A token can go stale before it expires, so a 401 gets one fresh try; a second
 // 401 means the session is gone, and the phone forgets it.
-export async function authed<T = any>(method: string, path: string, body?: unknown): Promise<T> {
-  const send = async (fresh: boolean) => api<T>(method, path, body, { Authorization: `Bearer ${await authToken(fresh)}` });
+export async function authed<T = any>(method: string, path: string, body?: unknown, headers: Record<string, string> = {}): Promise<T> {
+  const send = async (fresh: boolean) => api<T>(method, path, body, { ...headers, Authorization: `Bearer ${await authToken(fresh)}` });
   try {
     return await send(false);
   } catch (err) {
@@ -91,4 +103,36 @@ export async function authed<T = any>(method: string, path: string, body?: unkno
       throw again;
     }
   }
+}
+
+// Signed in, a tab or group is read as you: groups need it, tabs don't mind.
+export async function accountHeaders(): Promise<Record<string, string>> {
+  const t = (await isSignedIn()) && (await authToken(false));
+  return t ? { Authorization: `Bearer ${t}` } : {};
+}
+
+// Who you are in a tab goes on your account, so it's on your Home on every device. A protected tab needs your session.
+export const claimTab = (slug: string, id: Identity) =>
+  authed("POST", `/api/splits/${slug}/claim`, { member_id: id.me }, id.token ? { "X-Member-Token": id.token } : {});
+
+export type Listed = {
+  kind: "group" | "tab"; slug: string; name: string; ended: boolean; spent: number; balance: number; members: string[];
+  expires_at?: number; hours?: number; me?: number; token?: string | null; admin_token?: string | null;
+};
+
+// Signed in, Home is your account's: your groups and your tabs. Tabs this phone opened before you signed in join it
+// first, and tabs opened elsewhere teach this phone who you are in them.
+export async function myList(): Promise<Listed[]> {
+  const [groups, first] = await Promise.all([authed<Listed[]>("GET", "/api/groups"), authed<Listed[]>("GET", "/api/tabs")]);
+  let tabs = first;
+  const linked = new Set(tabs.map((t) => t.slug));
+  const local = (await savedTabs()).filter((t) => !linked.has(t.slug) && t.me != null);
+  if (local.length) {
+    await Promise.allSettled(local.map((t) => claimTab(t.slug, t)));
+    tabs = await authed<Listed[]>("GET", "/api/tabs");
+  }
+  for (const t of tabs) {
+    if ((await loadIdentity(t.slug)).me !== t.me) await saveIdentity(t.slug, { me: t.me, token: t.token, adminToken: t.admin_token });
+  }
+  return [...groups.map((g) => ({ ...g, kind: "group" as const })), ...tabs.map((t) => ({ ...t, kind: "tab" as const, hours: Math.max(0, Math.round((t.expires_at! - Date.now() / 1000) / 3600)) }))];
 }

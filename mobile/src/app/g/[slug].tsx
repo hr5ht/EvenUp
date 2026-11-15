@@ -11,6 +11,7 @@ import {
 import Svg, { Path } from "react-native-svg";
 import { Anim, Avatar, Tap, Btn, Err, Field, Icon, initials, Label, T, Tag, Toast, useCountUp, type ToastMsg } from "@/components/ui";
 import { Who } from "@/components/who";
+import { accountHeaders, claimTab, isSignedIn } from "@/lib/auth";
 import { api, ApiError, forgetTab, lifeOf, loadIdentity, plural, rupees, saveIdentity, UPI_HINT, type Expense, type Identity, type Payment, type Tab } from "@/lib/api";
 import { useTheme } from "@/lib/theme";
 
@@ -40,11 +41,13 @@ export default function TabScreen() {
     idRef.current = next;
     setIdentityState(next);
     saveIdentity(slug, next);
+    // Signed in, who you are here goes on your account too, so the tab is on your Home everywhere.
+    if (next.me != null && !latest.current?.group) isSignedIn().then((yes) => yes && claimTab(slug, next).catch(() => {}));
   }, [slug]);
 
   const load = useCallback(async () => {
     try {
-      const d = await api<Tab>("GET", base);
+      const d = await api<Tab>("GET", base, undefined, await accountHeaders());
       latest.current = d;
       setData(d);
       setLoadError("");
@@ -60,8 +63,10 @@ export default function TabScreen() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on open; state is set after the request
     Promise.all([loadIdentity(slug), load()]).then(([i, d]) => {
+      if (d?.group) i = { me: d.me ?? undefined }; // your account says who you are; nothing kept on this phone
       idRef.current = i;
       setIdentityState(i);
+      if (d?.group) return;
       if (d) saveIdentity(slug, i);
       else forgetTab(slug);
     });
@@ -112,7 +117,7 @@ export default function TabScreen() {
   // Every change carries this phone's sessions: the member one (protected tabs) and the admin one.
   const call = async (method: string, sub: string, body?: unknown) => {
     const id = idRef.current;
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = await accountHeaders();
     if (id.token) headers["X-Member-Token"] = id.token;
     if (id.adminToken) headers["X-Admin-Token"] = id.adminToken;
     try {
@@ -173,7 +178,7 @@ export default function TabScreen() {
             </Tap>
           )}
           {/* Your name: the avatar sits in the pill's round end, 4px in all round, like the site's .you-chip. */}
-          <Tap accessibilityRole="button" accessibilityLabel={`You're ${me.name}. Switch person`} onPress={() => setPicker(true)}
+          <Tap accessibilityRole="button" accessibilityLabel={`You're ${me.name}. Switch person`} onPress={() => !data.group && setPicker(true)}
             className="h-11 shrink flex-row items-center gap-2.5 rounded-full border border-line-2 bg-surface-2 p-1 pr-3.5">
             <View className="h-9 w-9 items-center justify-center rounded-full" style={{ backgroundColor: "rgba(227,199,155,0.14)" }}>
               <T className="text-[13px] font-medium text-accent">{initials(me.name)}</T>
@@ -202,10 +207,10 @@ export default function TabScreen() {
           <View className="flex-row items-center gap-2">
             <View className={`h-1.5 w-1.5 rounded-full ${data.ended ? "bg-dim" : "bg-owed"}`} />
             <T className="flex-1 text-sm text-muted" numberOfLines={1}>
-              {data.ended ? `Closed · ${(data.members.length === 1 ? "1 person" : `${data.members.length} people`)}` : `Open until ${when(data.expires_at)} · ${hours}h left · ${(data.members.length === 1 ? "1 person" : `${data.members.length} people`)}`}
+              {data.group ? `Group · ${(data.members.length === 1 ? "1 person" : `${data.members.length} people`)}` : data.ended ? `Closed · ${(data.members.length === 1 ? "1 person" : `${data.members.length} people`)}` : `Open until ${when(data.expires_at)} · ${hours}h left · ${(data.members.length === 1 ? "1 person" : `${data.members.length} people`)}`}
             </T>
           </View>
-          {!data.ended && <View className="mt-1 h-px bg-line-2"><View className="h-px bg-accent" style={{ width: `${life}%` }} /></View>}
+          {!data.ended && !data.group && <View className="mt-1 h-px bg-line-2"><View className="h-px bg-accent" style={{ width: `${life}%` }} /></View>}
         </Anim>
 
         <Anim entering={FadeInDown.delay(60).duration(450)}>
