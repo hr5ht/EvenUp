@@ -28,9 +28,9 @@ function row({ slug, name, group, ended, hours, people, balance }) {
     stand);
 }
 
-function show(rows, empty) {
-  $("n-list").textContent = rows.length || "";
-  $("list").replaceChildren(rows.length ? el("div", { className: "list" }, ...rows) : el("div", { className: "empty" },
+function show(rows, empty, box = "list", count = "n-list") {
+  $(count).textContent = rows.length || "";
+  $(box).replaceChildren(rows.length ? el("div", { className: "list" }, ...rows) : el("div", { className: "empty" },
     el("span", { className: "sq-ic" }, icon("receipt")), el("h3", { textContent: empty[0] }), el("p", { textContent: empty[1] })));
 }
 
@@ -71,16 +71,18 @@ async function accountTabs() {
 
 let friendList = []; // for New group
 
+// Signed in, Home is just your groups and tabs.
 async function loadAccount() {
-  $("title").textContent = "Home";
-  $("list-title").textContent = "Groups and tabs";
-  const mine = authed("GET", "/api/me");
-  const [me, groups, tabs] = await Promise.all([mine, authed("GET", "/api/groups"), accountTabs()]);
-  $("upi-prompt").hidden = !!me.upi_id;
-  show([
-    ...groups.map((g) => row({ slug: g.slug, name: g.name, group: true, ended: g.ended, people: `${listNames(g.members)} · ${rupees(g.spent)}`, balance: g.balance })),
-    ...tabs.map((t) => row({ slug: t.slug, name: t.name, ended: t.ended, hours: hoursLeft(t.expires_at), people: `${listNames(t.members)} · ${rupees(t.spent)}`, balance: t.balance })),
-  ], ["Nothing to split yet", "Tap + to open a tab or start a group. They're kept on your account, on every device."]);
+  $("list-title").textContent = "Tabs";
+  const [groups, tabs] = await Promise.all([authed("GET", "/api/groups"), accountTabs()]);
+  const g = groups.map((g) => row({ slug: g.slug, name: g.name, group: true, ended: g.ended, people: `${listNames(g.members)} · ${rupees(g.spent)}`, balance: g.balance }));
+  const t = tabs.map((t) => row({ slug: t.slug, name: t.name, ended: t.ended, hours: hoursLeft(t.expires_at), people: `${listNames(t.members)} · ${rupees(t.spent)}`, balance: t.balance }));
+  const none = !g.length && !t.length;
+  $("groups-sec").hidden = !g.length;
+  show(g, [], "groups", "n-groups");
+  $("list-title").hidden = none;
+  show(t, none ? ["Nothing to split yet", "Tap + to open a tab or start a group. They're kept on your account, on every device."]
+    : ["No tabs open", "Tap + to open one for a trip or a dinner."]);
   friendList = (await authed("GET", "/api/friends")).friends;
 }
 
@@ -122,9 +124,8 @@ $("group-form").onsubmit = async (ev) => {
 // ---------- start ----------
 
 (async () => {
-  $("today").textContent = new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
   if (signedIn()) {
-    $("head").hidden = $("bar").hidden = false;
+    $("bar").hidden = false;
     document.querySelector("main").classList.add("with-bar");
     try {
       await loadAccount();
@@ -136,7 +137,8 @@ $("group-form").onsubmit = async (ev) => {
     } catch (err) {
       if (err.status !== 401) return ($("error").textContent = err.message);
       remember(false); // the session lapsed: this browser's own list, until you sign in again
-      $("head").hidden = $("bar").hidden = true;
+      $("bar").hidden = $("groups-sec").hidden = true;
+      $("list-title").hidden = false;
       document.querySelector("main").classList.remove("with-bar");
     }
   }
