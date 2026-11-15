@@ -73,14 +73,6 @@ export default function Home() {
         refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.muted}
           onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
       >
-        <Anim entering={FadeInDown.duration(450)} className="gap-3">
-          <View className="flex-row items-center gap-2.5">
-            <View className="h-px w-4 bg-accent" />
-            <T className="text-sm text-accent">{new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}</T>
-          </View>
-          <T className="text-[48px] font-bold leading-[52px]">{list ? "Home" : "Your tabs"}</T>
-        </Anim>
-
         <View className="gap-2.5">
           <Label>Got a link?</Label>
           <View className="h-14 flex-row items-center rounded-full border border-line-2 bg-surface pl-5 pr-1.5">
@@ -95,27 +87,18 @@ export default function Home() {
         </View>
 
         {list ? (
-          <View className="gap-4">
-            <View className="flex-row items-baseline gap-2.5">
-              <T className="text-[30px] font-bold leading-9">Groups and tabs</T>
-              {!!list.length && <T mono className="text-[13px] text-muted">{list.length}</T>}
+          list.length === 0 ? (
+            <View className="items-center gap-2 rounded-[20px] border border-dashed border-line-2 px-6 py-8">
+              <View className="mb-2 h-12 w-12 items-center justify-center rounded-2xl bg-surface-2"><Icon.Receipt color={colors.accent} size={22} /></View>
+              <T className="text-[22px] font-bold">Nothing to split yet</T>
+              <T className="text-center text-sm leading-5 text-muted">Tap + to open a tab. Your tabs and groups are kept on your account, on every device.</T>
             </View>
-            {list.length === 0 ? (
-              <View className="items-center gap-2 rounded-[20px] border border-dashed border-line-2 px-6 py-8">
-                <View className="mb-2 h-12 w-12 items-center justify-center rounded-2xl bg-surface-2"><Icon.Receipt color={colors.accent} size={22} /></View>
-                <T className="text-[22px] font-bold">Nothing to split yet</T>
-                <T className="text-center text-sm leading-5 text-muted">Tap + to open a tab. Your tabs and groups are kept on your account, on every device.</T>
-              </View>
-            ) : (
-              <View className="overflow-hidden rounded-[20px] border border-line bg-surface p-1.5">
-                {list.map((r, i) => (
-                  <Anim key={r.slug} entering={FadeInDown.delay(i * 50).duration(350)}>
-                    <ListCard row={r} first={i === 0} onPress={() => router.push(`/g/${r.slug}`)} />
-                  </Anim>
-                ))}
-              </View>
-            )}
-          </View>
+          ) : (
+            <>
+              <Section title="Groups" rows={list.filter((r) => r.kind === "group")} />
+              <Section title="Tabs" rows={list.filter((r) => r.kind !== "group")} />
+            </>
+          )
         ) : (
         <View className="gap-4">
           <View className="flex-row items-baseline gap-2.5">
@@ -146,6 +129,26 @@ export default function Home() {
 
       {confirmEl}
     </SafeAreaView>
+  );
+}
+
+// Signed in: your groups, or your tabs, as one card of rows. Nothing to show, no section.
+function Section({ title, rows }: { title: string; rows: Listed[] }) {
+  if (!rows.length) return null;
+  return (
+    <View className="gap-4">
+      <View className="flex-row items-baseline gap-2.5">
+        <T className="text-[30px] font-bold leading-9">{title}</T>
+        <T mono className="text-[13px] text-muted">{rows.length}</T>
+      </View>
+      <View className="overflow-hidden rounded-[20px] border border-line bg-surface p-1.5">
+        {rows.map((r, i) => (
+          <Anim key={r.slug} entering={FadeInDown.delay(i * 50).duration(350)}>
+            <ListCard row={r} first={i === 0} onPress={() => router.push(`/g/${r.slug}`)} />
+          </Anim>
+        ))}
+      </View>
+    </View>
   );
 }
 
