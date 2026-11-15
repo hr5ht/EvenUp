@@ -68,7 +68,7 @@ function openGroupSheet() {
   $("group-error").textContent = "";
   $("group-friends").replaceChildren(...friendList.map((f) =>
     el("label", {}, el("input", { type: "checkbox", value: f.id }), el("span", {}, avatar(f.name), f.name))));
-  $("group-hint").textContent = "Anyone not on QuickTab yet gets an invite, and joins when they say yes. You can add more people later.";
+  $("group-hint").textContent = "Anyone not on EvenUp yet gets an invite, and joins when they say yes. You can add more people later.";
   $("group-sheet").showModal();
   $("group-name").focus();
 }

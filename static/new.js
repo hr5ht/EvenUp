@@ -80,9 +80,9 @@ $("create").onsubmit = async (e) => {
     $("open-tab").href = share;
     // The phone's share sheet (WhatsApp, Telegram…). Without one, as on most laptops: WhatsApp Web.
     $("share").onclick = async () => {
-      const text = "Add what you paid on QuickTab, we'll settle up with UPI.";
+      const text = "Add what you paid on EvenUp, we'll settle up with UPI.";
       if (navigator.share) {
-        try { await navigator.share({ title: "QuickTab", text, url: share }); } catch { /* closed the sheet */ }
+        try { await navigator.share({ title: "EvenUp", text, url: share }); } catch { /* closed the sheet */ }
       } else {
         window.open(`https://wa.me/?text=${encodeURIComponent(`${text} ${share}`)}`, "_blank", "noopener");
       }

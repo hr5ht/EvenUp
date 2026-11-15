@@ -500,7 +500,7 @@ def send_email(to, subject, text):
     try:
         urlopen(UrlRequest("https://api.resend.com/emails", method="POST",
                            data=json.dumps({"from": sender, "to": to, "subject": subject, "text": text}).encode(),
-                           headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json", "User-Agent": "QuickTab"}), timeout=5)
+                           headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json", "User-Agent": "EvenUp"}), timeout=5)
     except OSError as e:
         print("Email failed:", type(e).__name__)
 
@@ -526,8 +526,8 @@ def add_friend(body: FriendIn, u=Depends(current_user), con=Depends(db.get_db)):
             (u["id"], email, other and other["id"], now())).fetchone()
     con.commit()
     if new and not limited(con, f"invite:{u['id']}:{email}", *INVITE_LIMIT):
-        send_email(email, f"{u['name']} wants to split bills with you on QuickTab",
-                   f"{u['name']} ({u['email']}) added you as a friend on QuickTab.\n\nSee the request: {SITE}/friends\n\n"
+        send_email(email, f"{u['name']} wants to split bills with you on EvenUp",
+                   f"{u['name']} ({u['email']}) added you as a friend on EvenUp.\n\nSee the request: {SITE}/friends\n\n"
                    "If you don't know them, you can ignore this email.")
     return {"ok": True}
 
@@ -812,10 +812,10 @@ def create(body: SplitIn, con=Depends(db.get_db)):
 def demo(con=Depends(db.get_db)):
     """A fresh, filled-in split for someone who just wants to look around. Same lifetime as any split.
     Guest ends up owing, so the Pay flow is there to try."""
-    # @quicktab isn't a real UPI handle, so a demo Pay can never reach a real account.
+    # @evenup isn't a real UPI handle, so a demo Pay can never reach a real account.
     body = SplitIn(members=[
-        MemberIn(name="Guest", upi_id="guest@quicktab"), MemberIn(name="Riya", upi_id="riya@quicktab"),
-        MemberIn(name="Kabir", upi_id="kabir@quicktab"), MemberIn(name="Aman", upi_id="aman@quicktab")])
+        MemberIn(name="Guest", upi_id="guest@evenup"), MemberIn(name="Riya", upi_id="riya@evenup"),
+        MemberIn(name="Kabir", upi_id="kabir@evenup"), MemberIn(name="Aman", upi_id="aman@evenup")])
     slug, token, sid, _ = create_split(con, body, "Quick tab (demo)")
     count(con, "demos")
     con.commit()
@@ -1100,8 +1100,8 @@ def delete_split(slug: str, x_admin_token: Optional[str] = Header(None), user=De
             con.commit()
             for r in con.execute("SELECT x.email FROM members m JOIN users x ON x.id = m.user_id WHERE m.split_id = ? AND x.id != ?",
                                  (s["id"], user["id"])).fetchall():
-                send_email(r["email"], f"{s['name']} was deleted on QuickTab",
-                           f"{user['name']} deleted the group {s['name']} on QuickTab. You can still see it until tomorrow: {SITE}/g/{slug}")
+                send_email(r["email"], f"{s['name']} was deleted on EvenUp",
+                           f"{user['name']} deleted the group {s['name']} on EvenUp. You can still see it until tomorrow: {SITE}/g/{slug}")
         return {"ok": True}
     con.execute("DELETE FROM splits WHERE id = ?", (s["id"],))
     con.commit()

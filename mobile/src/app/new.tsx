@@ -93,7 +93,7 @@ export default function NewTab() {
               setTimeout(() => setCopied(false), 1500);
             }} />
             <Btn className="flex-1" variant="ink" title="Share link"
-              onPress={() => Share.share({ message: `Add what you paid on QuickTab, we'll settle up with UPI. ${link}`, url: link }).catch(() => {})} />
+              onPress={() => Share.share({ message: `Add what you paid on EvenUp, we'll settle up with UPI. ${link}`, url: link }).catch(() => {})} />
           </View>
           <Tap accessibilityRole="link" onPress={() => router.replace(`/g/${created}`)} className="flex-row items-center justify-center gap-2 py-2">
             <T className="text-[15px] font-medium text-accent">Open the tab</T>
@@ -224,7 +224,7 @@ function Slip({ name, people, protect, opened }: { name: string; people: number;
     <View className="mx-4">
       <View className="rounded-t bg-paper px-6 pt-6">
         <T mono className="text-center text-[15px] tracking-[3px] text-paper-ink">NEW TAB</T>
-        <T mono className="mt-1 text-center text-[11px] text-paper-2">QuickTab · opened today</T>
+        <T mono className="mt-1 text-center text-[11px] text-paper-2">EvenUp · opened today</T>
         {rule}
         {line("Opened by", name || "You")}
         {line("People", String(people))}

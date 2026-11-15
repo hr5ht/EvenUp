@@ -18,7 +18,7 @@ let mode;
 function show(next, note = "") {
   mode = next;
   const m = MODES[mode];
-  document.title = `${m.title} · QuickTab`;
+  document.title = `${m.title} · EvenUp`;
   $("title").textContent = m.title;
   $("sub").textContent = m.sub || "";
   $("submit").textContent = m.button;

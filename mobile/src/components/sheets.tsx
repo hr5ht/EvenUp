@@ -474,7 +474,7 @@ export function ShareSheet({ c, open, onClose, onImage }: { c: Ctx; open: boolea
         <MenuRow icon={copied ? Icon.Check : Icon.Link} title={copied ? "Copied" : "Copy link"} sub="Anyone with it can join and add expenses"
           onPress={async () => { await Clipboard.setStringAsync(link); setCopied(true); setTimeout(() => setCopied(false), 1500); }} />
         <MenuRow icon={Icon.Share} title="Send link" sub="WhatsApp, Telegram, anything on your phone"
-          onPress={() => Share.share({ message: `Add what you paid on QuickTab, we'll settle up with UPI. ${link}`, url: link }).catch(() => {})} />
+          onPress={() => Share.share({ message: `Add what you paid on EvenUp, we'll settle up with UPI. ${link}`, url: link }).catch(() => {})} />
         <MenuRow icon={Icon.Image} title="Summary image" sub="Balances and payments as one picture" onPress={() => { onClose(); onImage(); }} />
         <MenuRow icon={Icon.File} title="Export CSV" sub="Every expense and share, for a spreadsheet"
           onPress={() => shareCsv(c.data).catch((e) => c.toast({ text: `Couldn't export: ${e?.message || e}`, error: true }))} />
@@ -496,11 +496,11 @@ export async function shareCsv(data: Tab) {
       amount(e.amount_paise), ...data.members.map((m) => (e.shares[m.id] ? amount(e.shares[m.id]) : ""))]);
   }
   rows.push([], [text("Balance (+ gets back, - owes)"), "", "", "", "", ...data.members.map((m) => amount(data.balances[m.id] || 0))]);
-  const file = new File(Paths.cache, "quicktab.csv");
+  const file = new File(Paths.cache, "evenup.csv");
   if (file.exists) file.delete();
   file.create();
   file.write("﻿" + rows.map((r) => r.join(",")).join("\r\n")); // BOM so Excel reads ₹ as UTF-8
-  await Sharing.shareAsync(file.uri, { mimeType: "text/csv", dialogTitle: "QuickTab expenses", UTI: "public.comma-separated-values-text" });
+  await Sharing.shareAsync(file.uri, { mimeType: "text/csv", dialogTitle: "EvenUp expenses", UTI: "public.comma-separated-values-text" });
 }
 
 // The website's summary receipt, drawn as a view and shared as a PNG. Always light, like the website's image.
@@ -520,7 +520,7 @@ export function SummarySheet({ data, open, onClose }: { data: Tab; open: boolean
     setBusy(true);
     try {
       const uri = await captureRef(ref, { format: "png", quality: 1 });
-      await Sharing.shareAsync(uri, { mimeType: "image/png", dialogTitle: "QuickTab summary" });
+      await Sharing.shareAsync(uri, { mimeType: "image/png", dialogTitle: "EvenUp summary" });
     } catch (err) {
       setError(`Couldn't make the image: ${(err as Error)?.message || err}`);
     } finally {
@@ -572,7 +572,7 @@ export function SummarySheet({ data, open, onClose }: { data: Tab; open: boolean
           ))}
         </>}
         <View style={{ height: 1, backgroundColor: R.line, marginVertical: 16 }} />
-        <T style={t(11, R.muted)}>Split with QuickTab</T>
+        <T style={t(11, R.muted)}>Split with EvenUp</T>
       </View>
       <Err>{error}</Err>
     </Sheet>

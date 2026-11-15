@@ -215,7 +215,7 @@ def test_demo():
         g = c.get(f"/api/splits/{r['slug']}").json()
         assert g["admin_id"] == r["admin_id"] == g["members"][0]["id"]
         assert len(g["expenses"]) == 5 and sum(g["balances"].values()) == 0
-        assert all(m["upi_id"].endswith("@quicktab") for m in g["members"])
+        assert all(m["upi_id"].endswith("@evenup") for m in g["members"])
         assert c.delete(f"/api/splits/{r['slug']}", headers={"X-Admin-Token": r["admin_token"]}).status_code == 200
 
 
@@ -442,7 +442,7 @@ def test_friends(monkeypatch):
         known = c.post("/api/friends", json={"email": "B@Friends.test"}, headers=a)
         unknown = c.post("/api/friends", json={"email": "new@friends.test"}, headers=a)
         assert known.json() == unknown.json() == {"ok": True} and known.status_code == unknown.status_code
-        assert [s[0] for s in sent] == ["b@friends.test", "new@friends.test"] and sent[0][1] == "Asha wants to split bills with you on QuickTab"
+        assert [s[0] for s in sent] == ["b@friends.test", "new@friends.test"] and sent[0][1] == "Asha wants to split bills with you on EvenUp"
         # the sender sees only the address they typed, never a name, until it's accepted
         assert get(a)["sent"] == [{"id": get(a)["sent"][0]["id"], "email": "new@friends.test"}, {"id": get(a)["sent"][1]["id"], "email": "b@friends.test"}]
         rid = get(b)["requests"][0]["id"]
@@ -505,7 +505,7 @@ def test_send_email_never_fails_a_request(monkeypatch):
     monkeypatch.delenv("RESEND_API_KEY", raising=False)
     main.send_email("a@b.co", "s", "t")  # no key: nothing happens
     monkeypatch.setenv("RESEND_API_KEY", "k")
-    monkeypatch.setenv("EMAIL_FROM", "QuickTab <hi@example.com>")
+    monkeypatch.setenv("EMAIL_FROM", "EvenUp <hi@example.com>")
 
     def down(*a, **k):
         raise OSError

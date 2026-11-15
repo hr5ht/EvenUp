@@ -71,7 +71,7 @@ input:focus { border-color: rgb(227 199 155 / 0.6); box-shadow: 0 0 0 4px rgb(22
 /* your bill, printed on paper */
 .lift { filter: drop-shadow(0 40px 40px rgb(0 0 0 / 0.55)) drop-shadow(0 4px 6px rgb(0 0 0 / 0.4)); }
 .bill { padding: 28px 28px 0; border-radius: 4px 4px 0 0; color: var(--ink-p); background: linear-gradient(180deg, #f6f3ec, #ebe6db); animation: print 1.3s var(--ease) .15s both; }
-.bill::before { content: "QUICKTAB · YOUR SHARE"; display: block; padding-bottom: 16px; margin-bottom: 20px; border-bottom: 1px dashed var(--rule-p);
+.bill::before { content: "EVENUP · YOUR SHARE"; display: block; padding-bottom: 16px; margin-bottom: 20px; border-bottom: 1px dashed var(--rule-p);
   text-align: center; font: 600 12px/16px var(--mono); letter-spacing: 0.12em; color: var(--ink-p2); }
 .bill::after { content: ""; display: block; height: 24px; margin-top: 24px; opacity: .8;
   background: repeating-linear-gradient(90deg, var(--ink-p) 0 1px, transparent 1px 3px, var(--ink-p) 3px 5px, transparent 5px 6px, var(--ink-p) 6px 7px, transparent 7px 10px); }

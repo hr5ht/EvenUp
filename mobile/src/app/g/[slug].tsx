@@ -241,7 +241,7 @@ export default function TabScreen() {
             <View className="items-center gap-2 rounded-[20px] border border-dashed border-line-2 px-6 py-8">
               <View className="mb-1 h-12 w-12 items-center justify-center rounded-2xl bg-surface-2"><Icon.Receipt color={colors.accent} size={22} /></View>
               <T className="text-[22px] font-bold">No expenses yet</T>
-              <T className="text-center text-sm leading-5 text-muted">Add what you paid for, and QuickTab splits it between everyone on the tab.</T>
+              <T className="text-center text-sm leading-5 text-muted">Add what you paid for, and EvenUp splits it between everyone on the tab.</T>
             </View>
           ) : (
             <View>
@@ -313,7 +313,7 @@ function Bill({ c, onSettle }: { c: Ctx; onSettle: (p: Payment) => void }) {
   return (
     <View>
       <View className="rounded-t bg-paper px-6 pt-6">
-        <T mono className="border-b border-dashed border-rule pb-4 text-center text-[11px] tracking-[2px] text-paper-2">QUICKTAB · YOUR SHARE</T>
+        <T mono className="border-b border-dashed border-rule pb-4 text-center text-[11px] tracking-[2px] text-paper-2">EVENUP · YOUR SHARE</T>
         <View className="mt-5 flex-row items-center gap-2">
           <View className={`h-1.5 w-1.5 rounded-full ${b > 0 ? "bg-pos-p" : b < 0 ? "bg-neg-p" : "bg-paper-2"}`} />
           <T className="text-sm text-paper-2">{b > 0 ? "You get back" : b < 0 ? "You owe" : "You're all settled"}</T>

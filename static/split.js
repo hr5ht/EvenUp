@@ -80,7 +80,7 @@ async function load() {
   } catch (err) {
     // Polling keeps a tab that's already showing; only a first load that fails is "gone".
     if (data) return;
-    document.title = "Tab not found · QuickTab";
+    document.title = "Tab not found · EvenUp";
     $("page").hidden = true;
     $("gone").hidden = false;
     $("gone-group").hidden = $("gone-signin").hidden = signedIn();
@@ -95,7 +95,7 @@ async function load() {
 
 function render() {
   $("title").textContent = data.name;
-  document.title = `${data.name} · QuickTab`;
+  document.title = `${data.name} · EvenUp`;
   // Nothing of the split shows until you've said who you are.
   $("content").hidden = !known();
   $("fab").hidden = !known();
@@ -556,7 +556,7 @@ function renderExpenses() {
     $("expenses").replaceChildren(el("div", { className: "empty" },
       el("span", { className: "ic" }, icon("receipt")),
       el("h3", { textContent: "No expenses yet" }),
-      el("p", { textContent: "Add what you paid for, and QuickTab splits it between everyone on the tab." }),
+      el("p", { textContent: "Add what you paid for, and EvenUp splits it between everyone on the tab." }),
       known() && !data.ended ? add : null));
     return;
   }
@@ -896,7 +896,7 @@ $("add-member").onclick = async () => {
   $("admin-error").textContent = "";
   try {
     if (data.group) {
-      // Someone not on QuickTab yet gets a friend request by email and a place in the group right away.
+      // Someone not on EvenUp yet gets a friend request by email and a place in the group right away.
       const email = $("invite-email").value.trim();
       if (!email && !$("new-friend").value) return ($("admin-error").textContent = "Pick a friend or enter an email.");
       await call("POST", `/api/groups/${slug}/members`, email ? { email } : { friend_id: Number($("new-friend").value) });
@@ -1047,7 +1047,7 @@ $("download-png").onclick = async (ev) => {
 
       rule();
       y += 24;
-      text("Split with QuickTab", PAD, y, C.muted, 12);
+      text("Split with EvenUp", PAD, y, C.muted, 12);
       return y + PAD - 8;
     };
     const H = draw(el("canvas").getContext("2d"), 0);
@@ -1066,7 +1066,7 @@ $("download-png").onclick = async (ev) => {
 };
 
 async function saveFile(blob, ext, type) {
-  const file = new File([blob], `${data.name.replace(/[^\w -]/g, "").trim() || "quicktab"}.${ext}`, { type });
+  const file = new File([blob], `${data.name.replace(/[^\w -]/g, "").trim() || "evenup"}.${ext}`, { type });
   // Phones get the share sheet (straight to WhatsApp). Laptops download, even where they could share (macOS).
   if (IS_PHONE && navigator.canShare && navigator.canShare({ files: [file] })) {
     await navigator.share({ files: [file], title: data.name }).catch(() => {});
