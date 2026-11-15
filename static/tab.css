@@ -28,7 +28,7 @@
 /* the bill */
 .bill { padding-bottom: 10px; animation: print .7s var(--ease) .05s both; }
 @keyframes print { from { clip-path: inset(0 0 100% 0); transform: translateY(-16px); } to { clip-path: inset(0 0 -20px 0); transform: none; } }
-.hero-label { display: flex; align-items: center; gap: 8px; margin-top: 18px; font-size: 13px; color: var(--paper-2); }
+.hero-label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--paper-2); }
 .hero-label .dot.pos { background: var(--pos-p); box-shadow: none; }
 .hero-amount { font-size: 56px; line-height: 1.05; margin-top: 6px; color: var(--paper-ink); font-family: var(--serif); }
 .hero-amount small { font-size: .5em; color: var(--paper-2); }
