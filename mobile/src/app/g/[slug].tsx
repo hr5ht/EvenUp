@@ -9,7 +9,7 @@ import {
   shareCsv, ShareSheet, SummarySheet, type Ctx, type Editing,
 } from "@/components/sheets";
 import Svg, { Path } from "react-native-svg";
-import { Anim, Avatar, Tap, Btn, Err, Field, Icon, Label, T, Tag, Toast, useCountUp, type ToastMsg } from "@/components/ui";
+import { Anim, Avatar, Tap, Btn, Err, Field, Icon, initials, Label, T, Tag, Toast, useCountUp, type ToastMsg } from "@/components/ui";
 import { Who } from "@/components/who";
 import { api, ApiError, forgetTab, lifeOf, loadIdentity, plural, rupees, saveIdentity, UPI_HINT, type Expense, type Identity, type Payment, type Tab } from "@/lib/api";
 import { useTheme } from "@/lib/theme";
@@ -161,15 +161,30 @@ export default function TabScreen() {
     <SafeAreaView edges={["top"]} className="flex-1 bg-bg">
       <View className="flex-row items-center justify-between px-5 py-2">
         <Tap accessibilityRole="button" accessibilityLabel="Back to my tabs" onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
-          className="h-10 w-10 items-center justify-center rounded-full border border-line-2 bg-surface-2">
+          className="h-11 w-11 items-center justify-center rounded-full border border-line-2 bg-surface-2">
           <Icon.Back color={colors.text} size={18} />
         </Tap>
-        <Tap accessibilityRole="button" onPress={() => setPicker(true)}
-          className="h-10 max-w-[64%] flex-row items-center gap-2 rounded-full border border-line-2 bg-surface-2 pl-1 pr-3">
-          <Avatar name={me.name} size={32} />
-          <T className="shrink text-sm font-medium" numberOfLines={1}>{me.name}<T className="text-sm text-muted">{isAdmin ? " · admin" : ""}</T></T>
-          <T className="text-xs text-muted">▾</T>
-        </Tap>
+        <View className="max-w-[78%] flex-row items-center gap-2">
+          {/* The admin's controls, right where the admin's name is. */}
+          {isAdmin && !data.ended && (
+            <Tap accessibilityRole="button" accessibilityLabel="Admin" onPress={() => setSheet("admin")}
+              className="h-11 w-11 items-center justify-center rounded-full border border-line-2 bg-surface-2">
+              <Icon.Shield color={colors.accent} size={18} />
+            </Tap>
+          )}
+          {/* Your name: the avatar sits in the pill's round end, 4px in all round, like the site's .you-chip. */}
+          <Tap accessibilityRole="button" accessibilityLabel={`You're ${me.name}. Switch person`} onPress={() => setPicker(true)}
+            className="h-11 shrink flex-row items-center gap-2.5 rounded-full border border-line-2 bg-surface-2 p-1 pr-3.5">
+            <View className="h-9 w-9 items-center justify-center rounded-full" style={{ backgroundColor: "rgba(227,199,155,0.14)" }}>
+              <T className="text-[13px] font-medium text-accent">{initials(me.name)}</T>
+            </View>
+            <View className="shrink">
+              <T className="text-sm font-medium leading-4" numberOfLines={1}>{me.name}</T>
+              {isAdmin && <T className="text-[11px] leading-3 text-muted">Admin</T>}
+            </View>
+            <Icon.Down color={colors.muted} size={14} />
+          </Tap>
+        </View>
       </View>
 
       {/* A focused field (your UPI ID) scrolls into view above the keyboard: iOS through the scroll insets, Android by shrinking the page. */}
@@ -197,7 +212,6 @@ export default function TabScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2">
             <Pill icon={<Icon.Chart color={colors.accent} size={16} />} title="Balances" onPress={() => setSheet("balances")} />
             <Pill icon={<Icon.History color={colors.accent} size={16} />} title="Activity" count={data.activity.length} onPress={() => setSheet("activity")} />
-            {isAdmin && !data.ended && <Pill icon={<Icon.Shield color={colors.accent} size={16} />} title="Admin" onPress={() => setSheet("admin")} />}
             <Pill primary icon={<Icon.Share color={colors["ink-text"]} size={16} />} title="Share" onPress={() => setSheet("share")} />
           </ScrollView>
         </Anim>
