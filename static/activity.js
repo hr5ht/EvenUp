@@ -1,13 +1,15 @@
 const $ = (id) => document.getElementById(id);
 
 // What one change says, from the activity log's action and details.
-const ICONS = { added: "plus", edited: "receipt", deleted: "x", restored: "history", created: "users", member_added: "userplus", member_removed: "x", upi_set: "wallet" };
+const ICONS = { added: "plus", edited: "receipt", deleted: "x", restored: "history", created: "users", member_added: "userplus", member_removed: "x", upi_set: "wallet",
+  member_left: "x", renamed: "receipt", owner_changed: "shield", group_deleted: "x", group_restored: "history" };
 function sentence(a) {
   const d = a.details, by = d.by || "Someone", what = d.description ? `${d.description} · ${rupees(d.amount_paise)}` : "";
   return {
     added: [by, " added ", what], edited: [by, " edited ", what], deleted: [by, " deleted ", what], restored: [by, " brought back ", what],
     created: [by, " started the group", ""], member_added: [by, " added ", d.name], member_removed: [by, " removed ", d.name],
-    upi_set: [d.name, " added a UPI ID", ""],
+    upi_set: [d.name, " added a UPI ID", ""], member_left: [by, " left the group", ""], renamed: [by, " renamed the group to ", d.name],
+    owner_changed: [by, " handed the group to ", d.name], group_deleted: [by, " deleted the group", ""], group_restored: [by, " restored the group", ""],
   }[a.action] || [by, ` ${a.action.replace("_", " ")}`, ""];
 }
 

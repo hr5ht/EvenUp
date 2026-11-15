@@ -28,7 +28,7 @@ function row({ href, name, kind, tag, people, spent, balance, closed }) {
 
 async function loadGroups(me) {
   return (await authed("GET", "/api/groups")).map((g) => row({
-    href: `/g/${g.slug}`, name: g.name, kind: "group", tag: "Group",
+    href: `/g/${g.slug}`, name: g.name, kind: "group", tag: g.ended ? "Group · deleted" : "Group", closed: g.ended,
     people: g.members.map((n) => (n === me.name ? "You" : n)), spent: g.spent, balance: g.balance,
   }));
 }
@@ -68,7 +68,7 @@ function openGroupSheet() {
   $("group-error").textContent = "";
   $("group-friends").replaceChildren(...friendList.map((f) =>
     el("label", {}, el("input", { type: "checkbox", value: f.id }), el("span", {}, avatar(f.name), f.name))));
-  $("group-hint").textContent = friendList.length ? "You can add more people later." : "Add friends first to put them in a group. You can still start it on your own.";
+  $("group-hint").textContent = "Anyone not on QuickTab yet gets an invite, and joins when they say yes. You can add more people later.";
   $("group-sheet").showModal();
   $("group-name").focus();
 }
@@ -82,10 +82,11 @@ $("group-form").onsubmit = async (ev) => {
   $("group-save").disabled = true;
   try {
     const friend_ids = [...document.querySelectorAll("#group-friends input:checked")].map((i) => Number(i.value));
-    const { slug } = await authed("POST", "/api/groups", { name: $("group-name").value.trim(), friend_ids });
+    const emails = $("group-emails").value.split(/[\s,;]+/).filter(Boolean);
+    const { slug } = await authed("POST", "/api/groups", { name: $("group-name").value.trim(), friend_ids, emails });
     location.href = `/g/${slug}`;
   } catch (err) {
-    $("group-error").textContent = err.message;
+    $("group-error").textContent = err.status === 422 ? "One of those emails doesn't look right." : err.message;
     $("group-save").disabled = false;
   }
 };

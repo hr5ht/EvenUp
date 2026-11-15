@@ -84,6 +84,7 @@ async function load() {
     $("page").hidden = true;
     $("gone").hidden = false;
     $("gone-group").hidden = $("gone-signin").hidden = signedIn();
+    $("gone-signin").href = `/login?next=${encodeURIComponent(location.pathname)}`; // and back here after
     return;
   }
   if (data.group) {
@@ -98,14 +99,19 @@ function render() {
   // Nothing of the split shows until you've said who you are.
   $("content").hidden = !known();
   $("fab").hidden = !known();
-  $("admin-tile").hidden = !isAdmin();
+  // A group's sheet is for every member: the owner runs it, the rest can add people and leave.
+  $("admin-tile").hidden = !(isAdmin() || (data.group && known()));
+  $("admin-label").textContent = $("admin-title").textContent = data.group ? "Group" : "Admin";
 
   // Open 48h from creation, then read-only for a day (the server decides which), then deleted.
   const when = (t) => new Date(t * 1000).toLocaleString("en-IN", { weekday: "short", hour: "numeric", minute: "2-digit" });
   document.body.classList.toggle("ended", data.ended);
   $("ended-card").hidden = !data.ended;
-  $("ended-title").textContent = `This tab closed ${when(data.expires_at)}`;
-  $("ended-text").textContent = `Nothing can be added now. Save the summary before ${when(data.deletes_at)}, when it's deleted for good.`;
+  $("ended-title").textContent = data.group ? "This group was deleted" : `This tab closed ${when(data.expires_at)}`;
+  $("ended-text").textContent = data.group && isAdmin()
+    ? `You can restore it until ${when(data.deletes_at)}. After that it's gone for good.`
+    : `Nothing can be added now. Save the summary before ${when(data.deletes_at)}, when it's deleted for good.`;
+  $("ended-restore").hidden = !(data.group && data.ended && isAdmin());
   const hours = Math.max(0, Math.round((data.expires_at * 1000 - Date.now()) / 3600000));
   const people = data.members.length === 1 ? "Just one person so far" : `${data.members.length} people`;
   $("meta").hidden = false;
@@ -135,7 +141,7 @@ function render() {
   renderBalances();
   renderExpenses();
   renderActivity();
-  if (isAdmin()) renderAdminMembers();
+  if (!$("admin-tile").hidden) renderAdminMembers();
 
   // Only rebuild member inputs when members change, so polling doesn't wipe a half-filled form.
   const key = data.members.map((m) => m.id).join(",");
@@ -167,7 +173,7 @@ function renderHero() {
     $("my-payments").replaceChildren(...paymentsOf(me.id).map(paymentRow));
     if (!b) {
       $("hero-done").hidden = false;
-      $("hero-done-text").textContent = live.length ? "Nothing to pay or collect" : "Nothing spent yet. Share the link so others can join";
+      $("hero-done-text").textContent = live.length ? "Nothing to pay or collect" : data.group ? "Nothing spent yet" : "Nothing spent yet. Share the link so others can join";
     }
   } else {
     $("hero-label").textContent = "Total spent";
@@ -198,7 +204,7 @@ function renderYou() {
     $("my-upi").value = "";
     $("upi-error").textContent = "";
   }
-  $("you-text").replaceChildren(me ? me.name : "Who are you?", isAdmin() ? el("span", { className: "role", textContent: " · admin" }) : "");
+  $("you-text").replaceChildren(me ? me.name : "Who are you?", isAdmin() ? el("span", { className: "role", textContent: data.group ? " · owner" : " · admin" }) : "");
   $("you-avatar").hidden = !me;
   if (me) $("you-avatar").textContent = initials(me.name);
   // Saved: one line with Edit. Not saved yet, or editing: the form.
@@ -771,7 +777,12 @@ const ACTIONS = {
   restored: "Restored",
   member_added: "Member added:",
   member_removed: "Member removed:",
+  member_left: "Left the group:",
   upi_set: "UPI ID updated for",
+  renamed: "Renamed to",
+  owner_changed: "Owner is now",
+  group_deleted: "Group deleted:",
+  group_restored: "Group restored:",
 };
 
 function renderActivity() {
@@ -805,10 +816,11 @@ function renderAdminMembers() {
   $("admin-members").replaceChildren(...data.members.map((m) => {
     const remove = el("button", { type: "button", className: "small danger", textContent: "Remove" });
     remove.onclick = async () => {
-      if (!(await askConfirm(`Remove ${m.name}?`, "They can join again from the link if they need to.", "Remove"))) return;
+      const again = data.group ? "They stop seeing this group. You can add them again later." : "They can join again from the link if they need to.";
+      if (!(await askConfirm(`Remove ${m.name}?`, again, "Remove"))) return;
       $("admin-error").textContent = "";
       try {
-        await adminApi("DELETE", `${base}/members/${m.id}`);
+        await (data.group ? call : adminApi)("DELETE", `${base}/members/${m.id}`);
         await load();
       } catch (err) {
         $("admin-error").textContent = err.message;
@@ -826,24 +838,49 @@ function renderAdminMembers() {
         $("admin-error").textContent = err.status === 422 ? UPI_HINT : err.message;
       }
     };
+    if (data.group) {
+      const owner = el("button", { type: "button", className: "small", textContent: "Make owner" });
+      owner.onclick = async () => {
+        if (!(await askConfirm(`Make ${m.name} the owner?`, "They'll run the group: rename it, remove people and delete it. You stay in as a member.", "Make owner"))) return;
+        groupAct(() => call("POST", `/api/groups/${slug}/owner`, { member_id: m.id }));
+      };
+      const sub = m.id === data.admin_id ? "Owner" : m.invited ? "Invited, waiting for them to say yes" : !m.account ? "Not in the group any more" : m.upi_id || "No UPI ID";
+      const mine = isAdmin() && m.id !== data.admin_id;
+      return el("li", {}, avatar(m.name),
+        el("span", { className: "grow" }, el("span", { textContent: m.name }), el("span", { className: "muted", textContent: sub })),
+        mine ? el("span", { className: "row" }, m.account ? owner : null, remove) : null);
+    }
     return el("li", {},
       avatar(m.name),
       el("span", { className: "grow" }, el("span", { textContent: m.name }),
         el("span", { className: "muted", textContent: m.upi_id || "No UPI ID" })),
-      el("span", { className: "row" }, data.group ? null : editUpi, m.id === data.admin_id ? null : remove),
+      el("span", { className: "row" }, editUpi, m.id === data.admin_id ? null : remove),
     );
   }));
   if (data.group) loadFriendPicker();
+}
+
+// Group changes from its sheet: show the error there, or reload.
+async function groupAct(fn) {
+  $("admin-error").textContent = "";
+  try {
+    await fn();
+    await load();
+  } catch (err) {
+    $("admin-error").textContent = err.message;
+  }
 }
 
 // Groups add people from your friends, not by typing a name.
 let pickerLoaded = false;
 async function loadFriendPicker() {
   for (const id of ["new-member", "new-member-upi"]) $(id).hidden = true;
-  $("new-friend").hidden = false;
+  $("new-friend").hidden = $("invite-email").hidden = $("leave-group").hidden = false;
   $("delete-split").textContent = "Delete this group";
-  document.querySelector("label[for=new-member]").textContent = "Add a friend";
-  document.querySelector("label[for=new-member]").htmlFor = "new-friend";
+  $("delete-split").hidden = !isAdmin();
+  $("rename-form").hidden = !isAdmin();
+  if (document.activeElement !== $("group-rename")) $("group-rename").value = data.name;
+  $("add-label").htmlFor = "new-friend";
   $("add-member").textContent = "Add to group";
   if (pickerLoaded) return;
   pickerLoaded = true;
@@ -851,7 +888,7 @@ async function loadFriendPicker() {
   const inGroup = new Set(data.members.map((m) => m.name));
   const free = friends.filter((f) => !inGroup.has(f.name));
   $("new-friend").replaceChildren(...(free.length
-    ? free.map((f) => el("option", { value: f.id, textContent: `${f.name} · ${f.email}` }))
+    ? [el("option", { value: "", textContent: "Pick a friend" }), ...free.map((f) => el("option", { value: f.id, textContent: `${f.name} · ${f.email}` }))]
     : [el("option", { value: "", textContent: "All your friends are in this group" })]));
 }
 
@@ -859,8 +896,11 @@ $("add-member").onclick = async () => {
   $("admin-error").textContent = "";
   try {
     if (data.group) {
-      if (!$("new-friend").value) return;
-      await call("POST", `/api/groups/${slug}/members`, { friend_id: Number($("new-friend").value) });
+      // Someone not on QuickTab yet gets a friend request by email and a place in the group right away.
+      const email = $("invite-email").value.trim();
+      if (!email && !$("new-friend").value) return ($("admin-error").textContent = "Pick a friend or enter an email.");
+      await call("POST", `/api/groups/${slug}/members`, email ? { email } : { friend_id: Number($("new-friend").value) });
+      $("invite-email").value = "";
       pickerLoaded = false;
       return await load();
     }
@@ -876,8 +916,33 @@ $("add-member").onclick = async () => {
   }
 };
 
+$("rename-form").onsubmit = (ev) => {
+  ev.preventDefault();
+  groupAct(() => call("PATCH", `/api/groups/${slug}`, { name: $("group-rename").value.trim() }));
+};
+
+$("leave-group").onclick = async () => {
+  if (!(await askConfirm("Leave this group?", "You'll stop seeing it. Your name stays on past expenses so everyone's balances still add up.", "Leave"))) return;
+  $("admin-error").textContent = "";
+  try {
+    await call("POST", `/api/groups/${slug}/leave`);
+    location.href = "/dashboard";
+  } catch (err) {
+    $("admin-error").textContent = err.message;
+  }
+};
+
+$("ended-restore").onclick = () => act(() => call("POST", `/api/groups/${slug}/restore`));
+
 $("delete-split").onclick = async () => {
-  const what = data.group ? "group" : "tab";
+  if (data.group) { // typing the name makes sure it's this group, on purpose
+    const typed = prompt(`Type the group's name to delete it for everyone:\n${data.name}`);
+    if (typed === null) return;
+    if (typed.trim() !== data.name) return ($("admin-error").textContent = "That's not the group's name, so nothing was deleted.");
+    $("admin-sheet").close();
+    return act(() => call("DELETE", base));
+  }
+  const what = "tab";
   if (!(await askConfirm(`Delete this ${what}?`, "It's deleted for everyone, with all its expenses and payments. This can't be undone.", `Delete ${what}`))) return;
   try {
     await adminApi("DELETE", base);

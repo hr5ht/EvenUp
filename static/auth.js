@@ -18,7 +18,7 @@ async function authToken(fresh) {
 function needAccount(err) {
   if (err.status !== 401) return false;
   remember(false);
-  location.replace("/login");
+  location.replace(`/login?next=${encodeURIComponent(location.pathname)}`);
   return true;
 }
 

@@ -38,7 +38,7 @@
     <nav class="tab-actions" aria-label="Tab actions">
       <button type="button" class="act" data-open="balances-sheet"><svg class="i"><use href="/static/icons.svg#chart"/></svg>Balances</button>
       <button type="button" class="act" data-open="activity-sheet"><svg class="i"><use href="/static/icons.svg#history"/></svg>Activity<span class="c" id="tile-activity"></span></button>
-      <button type="button" class="act live-only" data-open="admin-sheet" id="admin-tile" hidden><svg class="i"><use href="/static/icons.svg#shield"/></svg>Admin</button>
+      <button type="button" class="act live-only" data-open="admin-sheet" id="admin-tile" hidden><svg class="i"><use href="/static/icons.svg#shield"/></svg><span id="admin-label">Admin</span></button>
       <button type="button" class="act primary" data-open="share-sheet"><svg class="i"><use href="/static/icons.svg#share"/></svg>Share</button>
     </nav>
   </header>
@@ -48,7 +48,7 @@
   <section class="notice" id="ended-card" hidden>
     <span class="ic"><svg class="i"><use href="/static/icons.svg#clock"/></svg></span>
     <span class="grow"><strong id="ended-title">This tab has closed</strong><span id="ended-text"></span></span>
-    <span class="row"><button type="button" id="ended-png">Save image</button><button type="button" id="ended-csv" class="primary">Download CSV</button></span>
+    <span class="row"><button type="button" id="ended-restore" class="primary" hidden>Restore group</button><button type="button" id="ended-png">Save image</button><button type="button" id="ended-csv" class="primary">Download CSV</button></span>
   </section>
 
   <div id="content" class="tab-grid" hidden>
@@ -119,16 +119,21 @@
 </dialog>
 
 <dialog class="sheet" id="admin-sheet">
-  <div class="sheet-head"><h2>Admin</h2><button type="button" class="icon-btn" data-close aria-label="Close"><svg class="i"><use href="/static/icons.svg#x"/></svg></button></div>
+  <div class="sheet-head"><h2 id="admin-title">Admin</h2><button type="button" class="icon-btn" data-close aria-label="Close"><svg class="i"><use href="/static/icons.svg#x"/></svg></button></div>
   <div class="sheet-body">
+    <form id="rename-form" hidden>
+      <label for="group-rename">Name</label>
+      <div class="add-row"><input type="text" id="group-rename" maxlength="40" required><button type="submit">Save</button></div>
+    </form>
     <ul class="list" id="admin-members"></ul>
-    <label for="new-member">Add someone</label>
+    <label for="new-member" id="add-label">Add someone</label>
     <select id="new-friend" hidden></select>
     <input type="text" id="new-member" maxlength="40" placeholder="Name">
     <input type="text" id="new-member-upi" maxlength="100" placeholder="UPI ID (optional)" class="stack" autocapitalize="off" spellcheck="false">
+    <input type="email" id="invite-email" maxlength="254" placeholder="Or anyone by email" class="stack" autocomplete="off" hidden>
     <div class="actions"><button type="button" id="add-member" class="primary block">Add person</button></div>
     <p class="error" id="admin-error"></p>
-    <div class="danger-zone"><button type="button" id="delete-split" class="danger block">Delete this tab now</button></div>
+    <div class="danger-zone"><button type="button" id="leave-group" class="block" hidden>Leave group</button><button type="button" id="delete-split" class="danger block">Delete this tab now</button></div>
   </div>
 </dialog>
 
