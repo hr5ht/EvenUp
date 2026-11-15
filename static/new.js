@@ -18,7 +18,27 @@ function setSize(n) {
   $("size-down").disabled = people === MIN;
   $("size-up").disabled = people === MAX;
   syncNames();
+  preview();
 }
+
+// The receipt on the right fills in as you go: your name, the headcount as seats, and how people join.
+function preview() {
+  const name = $("my-name").value.trim();
+  $("r-name").textContent = name || "You";
+  $("r-size").textContent = people;
+  $("r-join").textContent = $("protect").checked ? "Name + password" : "Pick a name";
+  const seats = $("r-seats"), shown = Math.min(people, 12);
+  if (seats.dataset.n != people) { // rebuild only when the headcount changes, so typing doesn't replay the pop-in
+    seats.dataset.n = people;
+    seats.replaceChildren(
+      el("span", { className: "seat you" }),
+      ...Array.from({ length: shown - 1 }, () => el("span", { className: "seat" })),
+      ...(people > shown ? [el("span", { className: "seat more", textContent: `+${people - shown}` })] : []),
+    );
+  }
+  seats.firstChild.textContent = name ? initials(name) : "You";
+}
+$("my-name").oninput = preview;
 $("size-down").onclick = () => setSize(people - 1);
 $("size-up").onclick = () => setSize(people + 1);
 $("add-names").onchange = (e) => { $("names-box").hidden = !e.target.checked; syncNames(); };
@@ -27,11 +47,12 @@ function showProtect() {
   $("protect-box").hidden = !on;
   $("admin-password").required = on;
   $("protect-sub").textContent = on ? "Everyone signs in with their own password" : "Off: anyone can pick any name";
+  preview();
 }
 $("protect").onchange = () => { showProtect(); if ($("protect").checked) $("admin-password").focus(); };
+$("my-name").value = new URLSearchParams(location.search).get("name") || ""; // from a /new?name= link
 showProtect();
 setSize(MIN);
-$("my-name").value = new URLSearchParams(location.search).get("name") || ""; // from the landing command bar
 
 $("create").onsubmit = async (e) => {
   e.preventDefault();
@@ -55,7 +76,8 @@ $("create").onsubmit = async (e) => {
     $("created-note").textContent = protect
       ? "Everyone opens the same link, picks their name and creates a password. Yours asks for the one you just set."
       : "Everyone opens the same link and picks their name.";
-    $("copy-share").onclick = (ev) => copyText(share, ev.target);
+    $("copy-share").onclick = (ev) => copyText(share, ev.currentTarget);
+    $("open-tab").href = share;
     // The phone's share sheet (WhatsApp, Telegram…). Without one, as on most laptops: WhatsApp Web.
     $("share").onclick = async () => {
       const text = "Add what you paid on QuickTab, we'll settle up with UPI.";
@@ -67,6 +89,7 @@ $("create").onsubmit = async (e) => {
     };
     $("create").hidden = true;
     $("created").hidden = false;
+    $("slip").classList.add("opened"); // stamp the receipt
   } catch (err) {
     $("error").textContent = err.message;
     button.disabled = false;
