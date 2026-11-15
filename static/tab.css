@@ -79,7 +79,6 @@
 .pick.current { background: rgb(227 199 155 / .08); }
 .pick .grow > span { display: block; font-size: 13px; color: var(--muted); }
 .pick > .i:last-child { color: var(--dim); }
-#who-list .pick + .pick { border-top: 1px solid var(--line); border-radius: 0; }
 
 /* the expense form */
 .amount-input { width: 100%; border: 0; border-bottom: 1px solid var(--line-2); background: transparent; outline: none; padding: 4px 0 10px; font-size: 56px; line-height: 1.1; }
