@@ -1,12 +1,51 @@
-// Home and Profile share a bottom bar, like the website on phones: Home on the left, a round + in the middle
-// that opens a new tab, Profile on the right.
+// Home and Profile share a bottom bar, like the website on phones: Home on the left, Profile on the right, and a
+// raised + floating over the middle that opens a new tab.
 import { router } from "expo-router";
 import { Tabs } from "expo-router/js-tabs";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
+import Reanimated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
+import Svg, { Circle, Defs, LinearGradient, Stop } from "react-native-svg";
 import { Icon, T, Tap } from "@/components/ui";
 import { useTheme } from "@/lib/theme";
 
 const ITEMS = { index: { title: "Home", icon: Icon.Home }, profile: { title: "Profile", icon: Icon.User } } as const;
+const BAR = "#0d0d0f";
+const SIZE = 62;
+
+// The + : a pearl-white disc with a soft light from above, a ring the colour of the bar so it looks set into it,
+// a faint glow under it, and a small spring when pressed.
+function NewButton() {
+  const { colors } = useTheme();
+  const scale = useSharedValue(1);
+  const press = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  return (
+    <View pointerEvents="box-none" className="absolute left-0 right-0 items-center" style={{ top: -SIZE / 2 - 4 }}>
+      <View className="items-center justify-center rounded-full" style={{ width: SIZE + 12, height: SIZE + 12, backgroundColor: BAR }}>
+        <Reanimated.View style={[{
+          width: SIZE, height: SIZE, borderRadius: SIZE / 2,
+          shadowColor: colors.accent, shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 10,
+        }, press]}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Open a new tab" onPress={() => router.push("/new")}
+            onPressIn={() => scale.set(withSpring(0.9, { damping: 15, stiffness: 400 }))}
+            onPressOut={() => scale.set(withSpring(1, { damping: 12, stiffness: 300 }))}
+            className="h-full w-full items-center justify-center">
+            <Svg width={SIZE} height={SIZE} style={{ position: "absolute" }}>
+              <Defs>
+                <LinearGradient id="pearl" x1="0" y1="0" x2="0" y2="1">
+                  <Stop offset="0" stopColor="#ffffff" />
+                  <Stop offset="1" stopColor="#e4e1d8" />
+                </LinearGradient>
+              </Defs>
+              <Circle cx={SIZE / 2} cy={SIZE / 2} r={SIZE / 2} fill="url(#pearl)" />
+              <Circle cx={SIZE / 2} cy={SIZE / 2} r={SIZE / 2 - 0.75} fill="none" stroke={colors.accent} strokeOpacity={0.55} strokeWidth={1.5} />
+            </Svg>
+            <View style={{ zIndex: 1 }}><Icon.Plus color={colors["ink-text"]} size={26} /></View>
+          </Pressable>
+        </Reanimated.View>
+      </View>
+    </View>
+  );
+}
 
 export default function TabsLayout() {
   const { colors } = useTheme();
@@ -27,16 +66,11 @@ export default function TabsLayout() {
           );
         };
         return (
-          <View className="flex-row items-center border-t border-line px-6 pt-1.5" style={{ paddingBottom: insets.bottom + 6, backgroundColor: "rgba(13,13,15,0.96)" }}>
+          <View className="flex-row items-center border-t border-line px-8 pt-1.5" style={{ paddingBottom: insets.bottom + 6, backgroundColor: BAR }}>
             {item(0)}
-            <View className="flex-1 items-center">
-              <Tap accessibilityRole="button" accessibilityLabel="Open a new tab" onPress={() => router.push("/new")}
-                className="h-14 w-14 items-center justify-center rounded-full bg-ink"
-                style={{ shadowColor: "#fff", shadowOpacity: 0.18, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 6 }}>
-                <Icon.Plus color={colors["ink-text"]} size={24} />
-              </Tap>
-            </View>
+            <View style={{ width: SIZE + 24 }} />
             {item(1)}
+            <NewButton />
           </View>
         );
       }}

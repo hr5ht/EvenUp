@@ -29,13 +29,14 @@ export async function api<T = any>(method: string, path: string, body?: unknown,
       method,
       headers: { "Content-Type": "application/json", ...headers },
       body: body ? JSON.stringify(body) : undefined,
+      credentials: "include", // the sign-in session is a cookie on /auth, kept by the phone's own cookie store
     });
   } catch {
     throw new ApiError("No connection. Check your internet and try again.", 0);
   }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    let msg = data.detail;
+    let msg = data.detail || data.message; // message: from Neon Auth, through /auth
     if (Array.isArray(msg)) msg = msg.map((d: any) => d.msg).join(", ");
     throw new ApiError(msg || `Request failed (${res.status})`, res.status);
   }
