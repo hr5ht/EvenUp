@@ -3,7 +3,7 @@
 import * as Clipboard from "expo-clipboard";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { ScrollView, Share, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, Share, View } from "react-native";
 import Reanimated, { FadeInDown, Keyframe, ZoomIn } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
@@ -108,7 +108,8 @@ export default function NewTab() {
   return (
     <SafeAreaView className="flex-1 bg-bg">
       {head}
-      <ScrollView contentContainerClassName="gap-7 px-5 pb-8 pt-6" keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView behavior={Platform.OS === "android" ? "height" : undefined} className="flex-1">
+      <ScrollView contentContainerClassName="gap-7 px-5 pb-8 pt-6" keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <Anim entering={FadeInDown.duration(450)} className="gap-3">
           <Eyebrow>New tab</Eyebrow>
           <T className="text-[44px] font-bold leading-[48px]">Open a tab for the group</T>
@@ -176,6 +177,7 @@ export default function NewTab() {
           <T className="text-sm text-muted">Want your tabs on every device? <T className="text-sm font-medium text-accent">Create an account</T></T>
         </Tap>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -204,8 +206,8 @@ function Opt({ title, sub, line, children }: { title: string; sub: string; line?
 // The website's live receipt: who opened it, the headcount as seats (you first), how people join, the rules, and
 // an OPEN stamp that lands once the tab exists.
 const stampIn = new Keyframe({
-  0: { opacity: 0, transform: [{ scale: 1.8 }, { rotate: "-14deg" }] },
-  100: { opacity: 1, transform: [{ scale: 1 }, { rotate: "-14deg" }], easing: EASE },
+  0: { opacity: 0, transform: [{ scale: 1.8 }] },
+  100: { opacity: 1, transform: [{ scale: 1 }], easing: EASE },
 }).duration(420);
 
 function Slip({ name, people, protect, opened }: { name: string; people: number; protect: boolean; opened: boolean }) {
@@ -244,9 +246,11 @@ function Slip({ name, people, protect, opened }: { name: string; people: number;
           {[2, 1, 3, 1, 2, 1, 1, 3, 2, 1, 2, 1, 3, 1, 1, 2, 3, 1, 2, 1, 1, 3, 1, 2, 2, 1, 3, 1, 2, 1].map((w, i) => <View key={i} className="h-5 bg-paper-ink" style={{ width: w }} />)}
         </View>
         {opened && (
-          <Reanimated.View entering={stampIn} style={{ position: "absolute", right: 20, top: 210, borderRadius: 6, borderWidth: 2, borderColor: colors["neg-p"],
-            paddingHorizontal: 12, paddingVertical: 4 }}>
-            <T mono className="text-[22px] tracking-[4px]" style={{ color: colors["neg-p"] }}>OPEN</T>
+          // Lands with a scale on the outer view; the tilt lives on the inner one, so it stays after the landing.
+          <Reanimated.View entering={stampIn} style={{ position: "absolute", right: 20, top: 210 }}>
+            <View style={{ borderRadius: 6, borderWidth: 2, borderColor: colors["neg-p"], paddingHorizontal: 12, paddingVertical: 4, transform: [{ rotate: "-14deg" }] }}>
+              <T mono className="text-[22px] tracking-[4px]" style={{ color: colors["neg-p"] }}>OPEN</T>
+            </View>
           </Reanimated.View>
         )}
       </View>

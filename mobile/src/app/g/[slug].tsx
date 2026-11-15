@@ -1,7 +1,7 @@
 // One tab, opened from My tabs or straight from a link (quicktab://g/<slug> or https://quicktabapp.vercel.app/g/<slug>).
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AppState, RefreshControl, ScrollView, View } from "react-native";
+import { AppState, Keyboard, KeyboardAvoidingView, Platform, RefreshControl, ScrollView, View } from "react-native";
 import { FadeInDown } from "react-native-reanimated";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import {
@@ -32,6 +32,7 @@ export default function TabScreen() {
   const [toast, setToast] = useState<ToastMsg>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [formKey, setFormKey] = useState(0); // new key per opening: the form starts fresh
+  const [typing, setTyping] = useState(false); // keyboard up: the Add expense button steps aside
   const latest = useRef<Tab | null>(null);
   const idRef = useRef<Identity>({});
 
@@ -66,6 +67,12 @@ export default function TabScreen() {
     });
 
   }, [slug, load]);
+
+  useEffect(() => {
+    const show = Keyboard.addListener("keyboardDidShow", () => setTyping(true));
+    const hide = Keyboard.addListener("keyboardDidHide", () => setTyping(false));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
 
   // Live: reload every 15s while this screen is open and the app is in front, like the website.
   useFocusEffect(useCallback(() => {
@@ -165,7 +172,11 @@ export default function TabScreen() {
         </Tap>
       </View>
 
+      {/* A focused field (your UPI ID) scrolls into view above the keyboard: iOS through the scroll insets, Android by shrinking the page. */}
+      <KeyboardAvoidingView behavior={Platform.OS === "android" ? "height" : undefined} className="flex-1">
       <ScrollView
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
         contentContainerClassName="gap-5 px-5"
         contentContainerStyle={{ paddingBottom: insets.bottom + 110 }}
         refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.muted}
@@ -248,8 +259,9 @@ export default function TabScreen() {
         </Anim>
         <T className="text-center text-xs text-dim">{plural(live.length, "expense")} · updates every few seconds</T>
       </ScrollView>
+      </KeyboardAvoidingView>
 
-      {!data.ended && (
+      {!data.ended && !typing && (
         <Tap accessibilityRole="button" onPress={() => { setEditing(null); setFormKey((k) => k + 1); setSheet("form"); }}
           className="absolute right-5 h-14 flex-row items-center gap-2.5 rounded-full bg-ink px-6"
           style={{ bottom: insets.bottom + 16, shadowColor: "#000", shadowOpacity: 0.5, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: 8 }}>
