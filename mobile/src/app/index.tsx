@@ -53,49 +53,55 @@ export default function Home() {
 
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-bg">
-      <View className="flex-row items-center justify-between border-b border-line px-5 py-3">
+      <View className="flex-row items-center justify-between px-5 py-3">
         <Logo />
       </View>
 
       <ScrollView
-        contentContainerClassName="gap-6 px-5 pb-8 pt-5"
+        contentContainerClassName="gap-8 px-5 pb-8 pt-4"
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.muted}
           onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
       >
+        <Anim entering={FadeInDown.duration(450)} className="gap-3">
+          <View className="flex-row items-center gap-2.5">
+            <View className="h-px w-4 bg-accent" />
+            <T className="text-sm text-accent">{new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}</T>
+          </View>
+          <T className="text-[48px] font-bold leading-[52px]">Your tabs</T>
+        </Anim>
+
         <View className="gap-2.5">
           <Label>Got a link?</Label>
-          <View className="flex-row border border-text bg-surface">
-            <View className="justify-center pl-3"><T mono className="text-accent">&gt;</T></View>
+          <View className="h-14 flex-row items-center rounded-full border border-line-2 bg-surface pl-5 pr-1.5">
             <Field
               value={link} onChangeText={setLink} onSubmitEditing={open}
               placeholder="Paste a tab link" autoCapitalize="none" autoCorrect={false} returnKeyType="go"
-              className="flex-1 border-0" style={{ borderWidth: 0 }}
+              className="h-12 flex-1 border-0 bg-transparent px-0" style={{ borderWidth: 0 }}
             />
-            <Tap accessibilityRole="button" onPress={open} className="justify-center bg-ink px-4">
-              <T className="font-semibold text-ink-text">Open</T>
-            </Tap>
+            <Btn small variant="ink" title="Open" onPress={open} className="h-11" />
           </View>
           <Err>{error}</Err>
         </View>
 
-        <View className="gap-2.5">
-          <View className="flex-row items-center justify-between">
-            <Label>[ Saved on this phone ]</Label>
-            {rows && <T mono className="text-[11px] text-muted">{String(rows.length).padStart(2, "0")}</T>}
+        <View className="gap-4">
+          <View className="flex-row items-baseline gap-2.5">
+            <T className="text-[30px] font-bold leading-9">Saved on this phone</T>
+            {!!rows?.length && <T mono className="text-[13px] text-muted">{rows.length}</T>}
           </View>
           {rows === null ? (
             <T className="text-sm text-muted">Loading…</T>
           ) : rows.length === 0 ? (
-            <View className="gap-1 border border-dashed border-line-2 p-5">
-              <T className="font-semibold">No tabs yet</T>
-              <T className="text-sm leading-5 text-muted">Open a new tab, or open a link a friend sent. It's saved here with who you are, so you never have to keep the link.</T>
+            <View className="items-center gap-2 rounded-[20px] border border-dashed border-line-2 px-6 py-8">
+              <View className="mb-2 h-12 w-12 items-center justify-center rounded-2xl bg-surface-2"><Icon.Receipt color={colors.accent} size={22} /></View>
+              <T className="text-[22px] font-bold">No tabs yet</T>
+              <T className="text-center text-sm leading-5 text-muted">Open a new tab, or open a link a friend sent. It's saved here with who you are, so you never have to keep the link.</T>
             </View>
           ) : (
-            <View className="gap-px border border-line bg-line">
+            <View className="overflow-hidden rounded-[20px] border border-line bg-surface p-1.5">
               {rows.map((r, i) => (
                 <Anim key={r.slug} entering={FadeInDown.delay(i * 50).duration(350)}>
-                  <TabCard row={r} onPress={() => router.push(`/g/${r.slug}`)} onLongPress={() => remove(r.slug)} />
+                  <TabCard row={r} first={i === 0} onPress={() => router.push(`/g/${r.slug}`)} onLongPress={() => remove(r.slug)} />
                 </Anim>
               ))}
             </View>
@@ -104,8 +110,8 @@ export default function Home() {
         </View>
       </ScrollView>
 
-      <SafeAreaView edges={["bottom"]} className="border-t border-line bg-bg">
-        <View className="gap-2.5 px-5 pb-2 pt-4">
+      <SafeAreaView edges={["bottom"]} className="bg-bg">
+        <View className="px-5 pb-2 pt-3">
           <Btn variant="ink" title="Open a new tab" icon={<Icon.Plus color={colors["ink-text"]} size={16} />} onPress={() => router.push("/new")} />
         </View>
       </SafeAreaView>
@@ -114,36 +120,45 @@ export default function Home() {
   );
 }
 
-function TabCard({ row, onPress, onLongPress }: { row: Row; onPress: () => void; onLongPress: () => void }) {
+// One tab as a list row, like the website's Home: a receipt icon, the name with a time-left tag, who you are,
+// and where you stand in serif, green or red.
+function TabCard({ row, first, onPress, onLongPress }: { row: Row; first: boolean; onPress: () => void; onLongPress: () => void }) {
+  const { colors } = useTheme();
   const t = row.data;
+  const line = first ? "" : "border-t border-line";
   if (!t) {
     return (
-      <Tap onPress={onPress} onLongPress={onLongPress} className="gap-1 bg-surface p-4">
-        <T className="font-semibold">Tab {row.slug.slice(0, 6)}</T>
+      <Tap onPress={onPress} onLongPress={onLongPress} className={`gap-1 rounded-2xl px-3.5 py-4 ${line}`}>
+        <T className="font-medium">Tab {row.slug.slice(0, 6)}</T>
         <T className="text-sm text-muted">{row.error}</T>
       </Tap>
     );
   }
   const me = t.members.find((m) => m.id === row.identity.me);
   const b = me ? t.balances[me.id] || 0 : 0;
-  const { hours, pct: life } = lifeOf(t);
+  const { hours } = lifeOf(t);
   return (
-    <Tap onPress={onPress} onLongPress={onLongPress} className="gap-2.5 bg-surface p-4">
-      <View className="flex-row items-center justify-between gap-3">
-        <T className={`flex-1 text-base font-semibold ${t.ended ? "text-muted" : ""}`} numberOfLines={1}>{tabTitle(t)}</T>
-        {t.ended ? <Tag>closed</Tag> : <Tag live>{hours}h left</Tag>}
+    <Tap onPress={onPress} onLongPress={onLongPress} className={`flex-row items-center gap-3.5 px-3.5 py-4 ${line} ${t.ended ? "opacity-60" : ""}`}>
+      <View className="h-11 w-11 items-center justify-center rounded-full border border-line-2 bg-surface-2">
+        <Icon.Receipt color={colors.accent} size={19} />
       </View>
-      <View className="flex-row items-baseline justify-between gap-3">
-        <T className="flex-1 text-[13px] text-muted" numberOfLines={1}>
-          {me ? `You're ${me.name}${me.id === t.admin_id ? " · admin" : ""}` : "Pick your name to open it"}
-        </T>
-        {me && (
-          <T mono className={`text-[15px] ${b > 0 ? "text-owed" : b < 0 ? "text-owe" : "text-muted"}`}>
-            {b > 0 ? `get ${rupees(b)}` : b < 0 ? `owe ${rupees(-b)}` : "settled"}
+      <View className="flex-1 gap-1.5">
+        <T className="text-[20px] font-bold leading-6" numberOfLines={1}>{tabTitle(t)}</T>
+        <View className="flex-row items-center gap-2">
+          {t.ended ? <Tag>closed</Tag> : <Tag live>{hours}h left</Tag>}
+          <T className="flex-1 text-[13px] text-muted" numberOfLines={1}>
+            {me ? `${me.name}${me.id === t.admin_id ? " · admin" : ""}` : "Pick your name"}
           </T>
-        )}
+        </View>
       </View>
-      {!t.ended && <View className="h-0.5 bg-surface-3"><View className="h-0.5 bg-accent" style={{ width: `${life}%` }} /></View>}
+      {me && (
+        <View className="items-end gap-0.5">
+          {!!b && <T className="text-xs text-muted">{b > 0 ? "You get back" : "You owe"}</T>}
+          <T className={`font-bold ${b ? "text-[20px]" : "text-base text-muted"} ${b > 0 ? "text-owed" : b < 0 ? "text-owe" : ""}`}>
+            {b ? rupees(Math.abs(b)) : "Settled"}
+          </T>
+        </View>
+      )}
     </Tap>
   );
 }

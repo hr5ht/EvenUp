@@ -11,11 +11,10 @@ module.exports = {
   theme: {
     extend: {
       colors: Object.fromEntries(
-        ["bg", "surface", "surface-2", "surface-3", "line", "line-2", "text", "muted", "dim", "accent", "accent-text", "ink", "ink-text", "owe", "owed"]
+        ["bg", "surface", "surface-2", "surface-3", "line", "line-2", "text", "muted", "dim", "accent", "accent-text", "ink", "ink-text", "owe", "owed",
+          "paper", "paper-ink", "paper-2", "rule", "pos-p", "neg-p"]
           .map((n) => [n, token(n)]),
       ),
-      // Sharp corners everywhere, like the site.
-      borderRadius: { none: "0", DEFAULT: "0" },
     },
   },
   plugins: [],

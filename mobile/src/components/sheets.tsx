@@ -100,7 +100,7 @@ export function ExpenseForm({ c, open, editing, onClose }: { c: Ctx; open: boole
       <View className="gap-1.5">
         <Label>Amount (₹)</Label>
         {/* Same size for both, centred: baseline alignment is unreliable on a TextInput. Android's font padding would push the digits off centre. */}
-        <View className="flex-row items-center gap-2 border-b-2 border-accent">
+        <View className="flex-row items-center gap-2 border-b border-accent">
           <T className="text-[40px] font-bold text-muted" style={{ includeFontPadding: false }}>₹</T>
           <Field value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="0" autoFocus={!editing}
             className="h-14 min-w-0 flex-1 border-0 bg-transparent px-0 text-[40px] font-bold"
@@ -113,10 +113,10 @@ export function ExpenseForm({ c, open, editing, onClose }: { c: Ctx; open: boole
       </View>
       <View className="gap-2">
         <Label>Split</Label>
-        <View className="flex-row gap-px border border-line-2 bg-line-2">
+        <View className="flex-row gap-1 rounded-full border border-line-2 bg-surface-2 p-1">
           {(["equal", "exact"] as const).map((s) => (
             <Tap key={s} accessibilityRole="radio" accessibilityState={{ checked: split === s }} onPress={() => setSplit(s)}
-              className={`h-11 flex-1 items-center justify-center ${split === s ? "bg-ink" : "bg-surface"}`}>
+              className={`h-10 flex-1 items-center justify-center rounded-full ${split === s ? "bg-ink" : ""}`}>
               <T className={`text-sm font-medium ${split === s ? "text-ink-text" : ""}`}>{s === "equal" ? "Equally" : "Exact amounts"}</T>
             </Tap>
           ))}
@@ -128,7 +128,7 @@ export function ExpenseForm({ c, open, editing, onClose }: { c: Ctx; open: boole
               return (
                 <Tap key={m.id} accessibilityRole="checkbox" accessibilityState={{ checked: on }}
                   onPress={() => setPicked(on ? picked.filter((x) => x !== m.id) : [...picked, m.id])}
-                  className={`h-11 max-w-full justify-center border px-4 ${on ? "border-ink bg-ink" : "border-line-2 bg-surface"}`}>
+                  className={`h-11 max-w-full justify-center rounded-full border px-4 ${on ? "border-ink bg-ink" : "border-line-2 bg-surface"}`}>
                   <T className={`text-sm ${on ? "font-semibold text-ink-text" : "text-muted"}`} numberOfLines={1}>{m.name}</T>
                 </Tap>
               );
@@ -171,7 +171,7 @@ export function ExpenseDetail({ c, e: next, onClose, onEdit }: { c: Ctx; e: Expe
         <Btn variant="danger" className="flex-1" title="Delete" onPress={del} />
         {!payment && <Btn variant="ink" className="flex-1" title="Edit" onPress={() => { onClose(); onEdit(e); }} />}
       </>}>
-      <T className="text-4xl font-bold tracking-tight">{rupees(e.amount_paise)}</T>
+      <T className="text-[48px] font-bold leading-[52px]">{rupees(e.amount_paise)}</T>
       {payment ? (
         <T className="text-sm text-muted">{c.label(e.paid_by)} paid {c.label(payee(e))} · {payMethod(e)} · {when(e.created_at)}</T>
       ) : (
@@ -284,7 +284,7 @@ export function PaySheet({ c, p: next, onClose }: { c: Ctx; p: Payment | null; o
           )}
           <View className="gap-1.5">
             <T className="text-sm text-muted">Or pay by hand to this UPI ID</T>
-            <View className="flex-row items-center gap-2 border border-line-2 bg-surface py-1.5 pl-3.5 pr-1.5">
+            <View className="h-14 flex-row items-center gap-2 rounded-full border border-line-2 bg-surface pl-5 pr-1.5">
               <T mono className="flex-1 text-sm" numberOfLines={1}>{to.upi_id}</T>
               <Btn small title={copied ? "Copied" : "Copy"} onPress={async () => { await Clipboard.setStringAsync(to.upi_id!); setCopied(true); setTimeout(() => setCopied(false), 1500); }} />
             </View>

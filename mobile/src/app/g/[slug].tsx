@@ -8,7 +8,8 @@ import {
   ActivitySheet, AdminSheet, BalancesSheet, ExpenseDetail, ExpenseForm, liveExpenses, PaySheet, payee, payMethod,
   shareCsv, ShareSheet, SummarySheet, type Ctx, type Editing,
 } from "@/components/sheets";
-import { Anim, Tap, Btn, Err, Field, Icon, Label, T, Tag, Toast, useCountUp, type ToastMsg } from "@/components/ui";
+import Svg, { Path } from "react-native-svg";
+import { Anim, Avatar, Tap, Btn, Err, Field, Icon, Label, T, Tag, Toast, useCountUp, type ToastMsg } from "@/components/ui";
 import { Who } from "@/components/who";
 import { api, ApiError, forgetTab, lifeOf, loadIdentity, plural, rupees, saveIdentity, UPI_HINT, type Expense, type Identity, type Payment, type Tab } from "@/lib/api";
 import { useTheme } from "@/lib/theme";
@@ -79,7 +80,7 @@ export default function TabScreen() {
         {/* Padding lives on an inner view: SafeAreaView sets its own and overrides className padding. */}
         <Anim entering={FadeInDown.duration(450)} className="gap-4 px-5 pt-16">
           <Tag>not found</Tag>
-          <T className="text-[30px] font-bold tracking-tight">Tab not found</T>
+          <T className="text-[44px] font-bold leading-[48px]">Tab not found</T>
           <T className="leading-6 text-muted">{loadError}</T>
           <Btn variant="ink" title="Back to my tabs" onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))} />
         </Anim>
@@ -151,37 +152,49 @@ export default function TabScreen() {
 
   return (
     <SafeAreaView edges={["top"]} className="flex-1 bg-bg">
-      <View className="flex-row items-center justify-between px-3 py-1">
+      <View className="flex-row items-center justify-between px-5 py-2">
         <Tap accessibilityRole="button" accessibilityLabel="Back to my tabs" onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
-          className="h-11 w-11 items-center justify-center">
-          <Icon.Back color={colors.text} />
+          className="h-10 w-10 items-center justify-center rounded-full border border-line-2 bg-surface-2">
+          <Icon.Back color={colors.text} size={18} />
         </Tap>
-        <Tap accessibilityRole="button" onPress={() => setPicker(true)} className="h-10 max-w-[60%] flex-row items-center border border-line-2 bg-surface px-3">
-          <T mono className="text-[13px]" numberOfLines={1}>{me.name}{isAdmin ? " · admin" : ""} ▾</T>
+        <Tap accessibilityRole="button" onPress={() => setPicker(true)}
+          className="h-10 max-w-[64%] flex-row items-center gap-2 rounded-full border border-line-2 bg-surface-2 pl-1 pr-3">
+          <Avatar name={me.name} size={32} />
+          <T className="shrink text-sm font-medium" numberOfLines={1}>{me.name}<T className="text-sm text-muted">{isAdmin ? " · admin" : ""}</T></T>
+          <T className="text-xs text-muted">▾</T>
         </Tap>
       </View>
 
       <ScrollView
-        contentContainerClassName="gap-3 px-5"
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
+        contentContainerClassName="gap-5 px-5"
+        contentContainerStyle={{ paddingBottom: insets.bottom + 110 }}
         refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.muted}
           onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
       >
-        <Anim entering={FadeInDown.duration(450)} className="gap-2 pb-2">
-          {data.ended ? <Tag>closed</Tag> : <Tag live>live tab</Tag>}
-          <T className="text-[30px] font-bold tracking-tight">{data.name}</T>
-          {!data.ended && <>
-            <T className="text-sm text-muted">Open until {when(data.expires_at)} ({hours}h left), then read-only for a day.</T>
-            <View className="h-0.5 bg-surface-3"><View className="h-0.5 bg-accent" style={{ width: `${life}%` }} /></View>
-          </>}
+        <Anim entering={FadeInDown.duration(450)} className="gap-3 pt-3">
+          <T className="text-[48px] font-bold leading-[52px]">{data.name}</T>
+          <View className="flex-row items-center gap-2">
+            <View className={`h-1.5 w-1.5 rounded-full ${data.ended ? "bg-dim" : "bg-owed"}`} />
+            <T className="flex-1 text-sm text-muted" numberOfLines={1}>
+              {data.ended ? `Closed · ${(data.members.length === 1 ? "1 person" : `${data.members.length} people`)}` : `Open until ${when(data.expires_at)} · ${hours}h left · ${(data.members.length === 1 ? "1 person" : `${data.members.length} people`)}`}
+            </T>
+          </View>
+          {!data.ended && <View className="mt-1 h-px bg-line-2"><View className="h-px bg-accent" style={{ width: `${life}%` }} /></View>}
+        </Anim>
+
+        <Anim entering={FadeInDown.delay(60).duration(450)}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2">
+            <Pill icon={<Icon.Chart color={colors.accent} size={16} />} title="Balances" onPress={() => setSheet("balances")} />
+            <Pill icon={<Icon.History color={colors.accent} size={16} />} title="Activity" count={data.activity.length} onPress={() => setSheet("activity")} />
+            {isAdmin && !data.ended && <Pill icon={<Icon.Shield color={colors.accent} size={16} />} title="Admin" onPress={() => setSheet("admin")} />}
+            <Pill primary icon={<Icon.Share color={colors["ink-text"]} size={16} />} title="Share" onPress={() => setSheet("share")} />
+          </ScrollView>
         </Anim>
 
         {data.ended && (
-          <View className="gap-3 border border-line bg-surface p-4">
-            <Label>Tab closed</Label>
-            <T className="text-sm leading-5 text-muted">
-              It closed {when(data.expires_at)}, so nothing can be added. Save the summary before {when(data.deletes_at)}, when it's deleted for good.
-            </T>
+          <View className="gap-3 rounded-[20px] border border-line bg-surface p-5">
+            <T className="text-[22px] font-bold">This tab closed {when(data.expires_at)}</T>
+            <T className="text-sm leading-5 text-muted">Nothing can be added now. Save the summary before {when(data.deletes_at)}, when it's deleted for good.</T>
             <View className="flex-row gap-2.5">
               <Btn className="flex-1" title="Save image" onPress={() => setSheet("summary")} />
               <Btn variant="ink" className="flex-1" title="Export CSV" onPress={() => shareCsv(data).catch((e) => setToast({ text: `Couldn't export: ${e?.message || e}`, error: true }))} />
@@ -189,53 +202,59 @@ export default function TabScreen() {
           </View>
         )}
 
+        <Anim entering={FadeInDown.delay(120).duration(500)}><Bill c={c} onSettle={setPaying} /></Anim>
+
         {/* keyed by person: another person's form starts empty */}
         {!data.ended && <UpiBox key={me.id} c={c} />}
 
-        <Anim entering={FadeInDown.delay(80).duration(450)}><Hero c={c} onSettle={setPaying} /></Anim>
-
-        <Anim entering={FadeInDown.delay(140).duration(450)} className="flex-row flex-wrap gap-px border border-line bg-line">
-          <Tile icon={<Icon.Chart color={colors.text} size={18} />} title="Balances" sub={`${data.members.length} of ${data.capacity} people`} onPress={() => setSheet("balances")} />
-          <Tile icon={<Icon.Share color={colors.text} size={18} />} title="Share" sub="Link, image" onPress={() => setSheet("share")} />
-          <Tile icon={<Icon.Clock color={colors.text} size={18} />} title="Activity" sub="History" onPress={() => setSheet("activity")} />
-          {isAdmin && !data.ended && (
-            <Tile wide icon={<Icon.Shield color={colors.text} size={18} />} title="Admin" sub="Members, UPI IDs, delete tab" onPress={() => setSheet("admin")} />
-          )}
-        </Anim>
-
-        <Anim entering={FadeInDown.delay(200).duration(450)} className="mt-2 border border-line bg-surface">
-          <View className="h-11 flex-row items-center justify-between border-b border-line px-4">
-            <Label>Expenses</Label>
-            {!!shown.length && <T mono className="text-[11px] text-muted">[ {String(shown.length).padStart(2, "0")} ]</T>}
+        <Anim entering={FadeInDown.delay(200).duration(450)} className="mt-2 gap-3">
+          <View className="flex-row items-baseline gap-2.5">
+            <T className="text-[34px] font-bold leading-10">Expenses</T>
+            {!!shown.length && <T mono className="text-[13px] text-muted">{shown.length}</T>}
           </View>
           {shown.length === 0 ? (
-            <T className="p-4 text-sm text-muted">No expenses yet. Tap + Add expense.</T>
-          ) : shown.map((e, i) => {
-            const mine = e.shares[identity.me!];
-            const payment = e.kind === "payment";
-            return (
-              <Tap key={e.id} onPress={() => setDetail(e)}
-                className={`flex-row items-center gap-3 px-4 py-3.5 ${i ? "border-t border-line" : ""}`}>
-                <View className="flex-1 gap-0.5">
-                  <T className="text-[15px] font-medium" numberOfLines={1}>{payment ? `${label(e.paid_by)} paid ${label(payee(e))}` : e.description}</T>
-                  <T className="text-xs text-muted" numberOfLines={1}>
-                    {payment ? `Settled up · ${payMethod(e)}` : `${label(e.paid_by)} paid${mine ? ` · your share ${rupees(mine)}` : ""}`}
-                  </T>
-                </View>
-                <T mono className="text-sm">{rupees(e.amount_paise)}</T>
-              </Tap>
-            );
-          })}
+            <View className="items-center gap-2 rounded-[20px] border border-dashed border-line-2 px-6 py-8">
+              <View className="mb-1 h-12 w-12 items-center justify-center rounded-2xl bg-surface-2"><Icon.Receipt color={colors.accent} size={22} /></View>
+              <T className="text-[22px] font-bold">No expenses yet</T>
+              <T className="text-center text-sm leading-5 text-muted">Add what you paid for, and QuickTab splits it between everyone on the tab.</T>
+            </View>
+          ) : (
+            <View>
+              {shown.map((e, i) => {
+                const mine = e.shares[identity.me!];
+                const payment = e.kind === "payment";
+                const owes = !payment && mine && e.paid_by !== identity.me;
+                return (
+                  <Tap key={e.id} onPress={() => setDetail(e)} className={`flex-row items-center gap-3.5 py-3.5 ${i ? "border-t border-line" : ""}`}>
+                    {payment
+                      ? <View className="h-10 w-10 items-center justify-center rounded-full border border-line-2 bg-surface-2"><Icon.Cash color={colors.owed} size={18} /></View>
+                      : <Avatar name={nameOf(e.paid_by)} size={40} />}
+                    <View className="flex-1 gap-0.5">
+                      <T className="text-[15px] font-medium" numberOfLines={1}>{payment ? `${label(e.paid_by)} paid ${label(payee(e))}` : e.description}</T>
+                      <T className="text-[13px] text-muted" numberOfLines={1}>
+                        {payment ? `Settled up · ${payMethod(e)}` : `${label(e.paid_by)} paid · split ${Object.keys(e.shares).length} ways`}
+                      </T>
+                    </View>
+                    <View className="items-end gap-0.5">
+                      <T className="text-[15px] font-medium" style={{ fontVariant: ["tabular-nums"] }}>{rupees(e.amount_paise)}</T>
+                      {owes ? <T className="text-xs text-owe">You owe {rupees(mine)}</T>
+                        : !payment && e.paid_by === identity.me ? <T className="text-xs text-owed">You paid</T> : null}
+                    </View>
+                  </Tap>
+                );
+              })}
+            </View>
+          )}
         </Anim>
         <T className="text-center text-xs text-dim">{plural(live.length, "expense")} · updates every few seconds</T>
       </ScrollView>
 
       {!data.ended && (
         <Tap accessibilityRole="button" onPress={() => { setEditing(null); setFormKey((k) => k + 1); setSheet("form"); }}
-          className="absolute right-5 h-[54px] flex-row items-center gap-2.5 bg-accent px-5"
-          style={{ bottom: insets.bottom + 16, shadowColor: colors.accent, shadowOpacity: 0.3, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 6 }}>
-          <Icon.Plus color={colors["accent-text"]} size={16} />
-          <T className="text-[15px] font-semibold text-accent-text">Add expense</T>
+          className="absolute right-5 h-14 flex-row items-center gap-2.5 rounded-full bg-ink px-6"
+          style={{ bottom: insets.bottom + 16, shadowColor: "#000", shadowOpacity: 0.5, shadowRadius: 20, shadowOffset: { width: 0, height: 10 }, elevation: 8 }}>
+          <Icon.Plus color={colors["ink-text"]} size={18} />
+          <T className="text-[15px] font-medium text-ink-text">Add expense</T>
         </Tap>
       )}
 
@@ -252,35 +271,66 @@ export default function TabScreen() {
   );
 }
 
-// Your balance, counting up from 0 for each person, and the payments that involve you.
-function Hero({ c, onSettle }: { c: Ctx; onSettle: (p: Payment) => void }) {
+// Your share on cream paper, like the website's bill: a printed header, your balance counting up from 0 for each
+// person, the payments that involve you, a barcode and a torn foot.
+const BARS = [3, 1, 2, 1, 1, 3, 1, 2, 2, 1, 3, 1, 1, 2, 1, 3, 2, 1, 1, 2, 3, 1, 2, 1, 1, 3, 1, 2, 1, 2, 3, 1, 1, 2, 1, 3, 2, 1, 2, 1];
+function Bill({ c, onSettle }: { c: Ctx; onSettle: (p: Payment) => void }) {
+  const { colors } = useTheme();
   const { data, identity } = c;
   const me = c.member(identity.me!)!;
   const b = data.balances[me.id] || 0;
   const live = liveExpenses(data);
-  const total = live.reduce((a, e) => a + e.amount_paise, 0);
+  const total = live.filter((e) => e.kind !== "payment").reduce((a, e) => a + e.amount_paise, 0);
   const shown = useCountUp(Math.abs(b), me.id);
   const mine = data.settlement.filter((p) => p.from === me.id || p.to === me.id);
+  const [whole, paise] = rupees(shown).split(".");
   return (
-    <View className="gap-3.5 border border-line bg-surface p-5">
-      <View className="gap-1">
-        <Label>{b > 0 ? "You get back" : b < 0 ? "You owe" : "You're all settled"}</Label>
-        <T className={`text-[40px] font-bold tracking-tight ${b > 0 ? "text-owed" : b < 0 ? "text-owe" : ""}`}>{rupees(shown)}</T>
-        <T className="text-[13px] text-muted">{rupees(total)} spent · {plural(live.length, "expense")}</T>
-      </View>
-      {mine.map((p, i) => {
-        const to = c.member(p.to);
-        return (
-          <View key={i} className="flex-row items-center justify-between gap-3 border-t border-line pt-3.5">
-            <View className="flex-1">
-              <T className="text-[13px] text-muted">{c.label(p.from)} → {c.label(p.to)}</T>
-              <T mono className="text-base">{rupees(p.amount_paise)}</T>
+    <View>
+      <View className="rounded-t bg-paper px-6 pt-6">
+        <T mono className="border-b border-dashed border-rule pb-4 text-center text-[11px] tracking-[2px] text-paper-2">QUICKTAB · YOUR SHARE</T>
+        <View className="mt-5 flex-row items-center gap-2">
+          <View className={`h-1.5 w-1.5 rounded-full ${b > 0 ? "bg-pos-p" : b < 0 ? "bg-neg-p" : "bg-paper-2"}`} />
+          <T className="text-sm text-paper-2">{b > 0 ? "You get back" : b < 0 ? "You owe" : "You're all settled"}</T>
+        </View>
+        <T className="mt-2 text-[56px] font-bold leading-[60px] text-paper-ink">{whole}<T className="text-[28px] font-bold text-paper-2">.{paise ?? "00"}</T></T>
+        <T className="mt-1 text-[13px] text-paper-2">{rupees(total)} spent · {plural(live.filter((e) => e.kind !== "payment").length, "expense")}</T>
+        <View className="mt-4">
+          {mine.map((p, i) => {
+            const other = c.member(p.from === me.id ? p.to : p.from);
+            const paying = p.from === me.id;
+            return (
+              <View key={i} className="flex-row items-center gap-3 border-t border-dashed border-rule py-3.5">
+                <Avatar name={other?.name ?? "?"} size={36} paper />
+                <View className="flex-1">
+                  <T className="text-[15px] font-medium text-paper-ink" numberOfLines={1}>{paying ? `To ${c.label(p.to)}` : `From ${c.label(p.from)}`}</T>
+                  <T className="text-xs text-paper-2" numberOfLines={1}>
+                    {paying ? (other?.upi_id ? "Pay by UPI or cash" : "No UPI ID yet, cash only") : me.upi_id ? "They can pay you by UPI" : "Add your UPI ID to get paid"}
+                  </T>
+                </View>
+                <T className="text-[15px] font-medium text-paper-ink" style={{ fontVariant: ["tabular-nums"] }}>{rupees(p.amount_paise)}</T>
+                {paying && !data.ended && (
+                  <Tap accessibilityRole="button" onPress={() => onSettle(p)} className="h-9 justify-center rounded-full bg-paper-ink px-4">
+                    <T className="text-sm font-medium text-paper">Pay</T>
+                  </Tap>
+                )}
+              </View>
+            );
+          })}
+          {!mine.length && (
+            <View className="flex-row items-center gap-2.5 border-t border-dashed border-rule py-3.5">
+              <Icon.Check color={colors["pos-p"]} size={16} />
+              <T className="flex-1 text-sm text-paper-2">{live.length ? "Nothing to pay or collect" : "Nothing spent yet. Share the link so others can join"}</T>
             </View>
-            {p.from === me.id && !data.ended && <Btn small variant="ink" title="Settle up" onPress={() => onSettle(p)} />}
-            {p.to === me.id && !to?.upi_id && !data.ended && <T className="text-xs text-muted">Add your UPI ID to get paid</T>}
-          </View>
-        );
-      })}
+          )}
+        </View>
+        <View className="mb-1 mt-3 h-6 flex-row justify-between opacity-80">
+          {BARS.map((w, i) => <View key={i} className="h-6 bg-paper-ink" style={{ width: w }} />)}
+        </View>
+      </View>
+      {/* torn foot */}
+      <Svg width="100%" height={10} viewBox="0 0 240 10" preserveAspectRatio="none">
+        <Path d={`M0 0H240V2${Array.from({ length: 24 }, (_, i) => `L${240 - i * 10 - 5} 10L${240 - i * 10 - 10} 2`).join("")}Z`} fill={colors.paper} />
+      </Svg>
     </View>
   );
 }
@@ -294,10 +344,10 @@ function UpiBox({ c }: { c: Ctx }) {
   const [busy, setBusy] = useState(false);
   if (me.upi_id && !editing) {
     return (
-      <View className="h-11 flex-row items-center gap-2 border border-line bg-surface pl-3 pr-1">
-        <T mono className="text-[11px] uppercase text-muted">UPI ID:</T>
+      <View className="h-14 flex-row items-center gap-2.5 rounded-full border border-line bg-surface pl-5 pr-1.5">
+        <T className="text-[13px] text-muted">Your UPI ID</T>
         <T mono className="flex-1 text-[13px]" numberOfLines={1}>{me.upi_id}</T>
-        <Btn small title="Edit" onPress={() => { setValue(me.upi_id!); setEditing(true); }} className="h-9" />
+        <Btn small title="Edit" onPress={() => { setValue(me.upi_id!); setEditing(true); }} className="h-11" />
       </View>
     );
   }
@@ -316,7 +366,7 @@ function UpiBox({ c }: { c: Ctx }) {
     }
   };
   return (
-    <View className="gap-2 border border-line bg-surface p-4">
+    <View className="gap-3 rounded-[20px] border border-line bg-surface p-5">
       <Label>{editing ? "Change your UPI ID" : "Add your UPI ID so people can pay you"}</Label>
       {/* First time: input and Save on one row. Editing: the input gets the full width, Cancel and Save share a row. */}
       <View className={editing ? "gap-2" : "flex-row gap-2"}>
@@ -331,15 +381,14 @@ function UpiBox({ c }: { c: Ctx }) {
   );
 }
 
-function Tile({ icon, title, sub, onPress, wide }: { icon: React.ReactNode; title: string; sub: string; onPress: () => void; wide?: boolean }) {
+// The site's .act pills: a faint fill with a brass icon, Share in white.
+function Pill({ icon, title, count, onPress, primary }: { icon: React.ReactNode; title: string; count?: number; onPress: () => void; primary?: boolean }) {
   return (
     <Tap accessibilityRole="button" onPress={onPress}
-      className={`gap-2 bg-surface p-3 ${wide ? "w-full flex-row items-center" : "min-w-[30%] flex-1"}`}>
-      <View className="h-8 w-8 items-center justify-center border border-line">{icon}</View>
-      <View className={wide ? "flex-1" : ""}>
-        <T className="text-[13px] font-semibold">{title}</T>
-        <T className="text-[11px] text-muted" numberOfLines={1}>{sub}</T>
-      </View>
+      className={`h-10 flex-row items-center gap-2 rounded-full border px-4 ${primary ? "border-ink bg-ink" : "border-line-2 bg-surface-2"}`}>
+      {icon}
+      <T className={`text-sm font-medium ${primary ? "text-ink-text" : ""}`}>{title}</T>
+      {!!count && <T mono className="text-xs text-muted">{count}</T>}
     </Tap>
   );
 }

@@ -98,7 +98,7 @@ export function Who({ slug, data, identity, known, setIdentity, reload, onClose 
             <Icon.Link color={colors.muted} size={14} />
             <Label>{data.ended ? "Closed tab" : "Live tab"}</Label>
           </View>
-          <T className="text-[34px] font-bold leading-10 tracking-tight">{title}</T>
+          <T className="text-[44px] font-bold leading-[48px]">{title}</T>
           {step === "list" && (
             <T className="text-[15px] leading-6 text-muted">
               {data.protected && !data.ended
@@ -110,20 +110,20 @@ export function Who({ slug, data, identity, known, setIdentity, reload, onClose 
 
         {step === "list" && (
           <>
-            <View className="gap-px border border-line bg-line">
+            <View className="gap-px overflow-hidden rounded-[20px] border border-line bg-line">
               {data.members.map((m, i) => {
                 const current = m.id === identity.me && known;
                 return (
                   <Anim key={m.id} entering={FadeInDown.delay(80 + Math.min(i, 5) * 50).duration(400)}>
                     <Tap accessibilityRole="button" onPress={() => pick(m)}
                       className={`h-[60px] flex-row items-center gap-3 bg-surface px-4 ${current ? "border-l-2 border-accent" : ""}`}>
-                      <View className={`h-8 w-8 items-center justify-center ${current ? "bg-accent" : m.id === data.admin_id ? "bg-ink" : "bg-surface-3"}`}>
+                      <View className={`h-9 w-9 items-center justify-center rounded-full ${current ? "bg-accent" : m.id === data.admin_id ? "bg-ink" : "bg-surface-3"}`}>
                         <T mono className={`text-[13px] ${current ? "text-accent-text" : m.id === data.admin_id ? "text-ink-text" : ""}`}>
                           {m.name.slice(0, 2).toUpperCase()}
                         </T>
                       </View>
                       <T className={`flex-1 text-base font-medium ${current ? "text-accent" : ""}`} numberOfLines={1}>{m.name}</T>
-                      {m.id === data.admin_id && <T mono className="border border-line-2 px-2 py-0.5 text-[11px] uppercase text-muted">admin</T>}
+                      {m.id === data.admin_id && <T mono className="rounded-full border border-line-2 px-2 py-0.5 text-[11px] text-muted">admin</T>}
                       {current && <Icon.Check color={colors.accent} size={18} />}
                     </Tap>
                   </Anim>
@@ -135,7 +135,7 @@ export function Who({ slug, data, identity, known, setIdentity, reload, onClose 
                 title={full ? `This tab is full (${data.capacity} people)` : "I'm not on the list"} />
             )}
             {data.protected && !data.ended && (
-              <View className="flex-row gap-3 border border-line bg-surface p-3.5">
+              <View className="flex-row gap-3 rounded-2xl border border-line bg-surface p-4">
                 <Icon.Lock color={colors.muted} size={18} />
                 <T className="flex-1 text-[13px] leading-5 text-muted">This tab has passwords. After you pick your name, enter yours, or create one the first time.</T>
               </View>
@@ -145,7 +145,7 @@ export function Who({ slug, data, identity, known, setIdentity, reload, onClose 
 
         {step === "join" && (
           <Anim entering={FadeInDown.duration(400)} className="gap-4">
-            <View className="gap-2 border border-line bg-surface p-5">
+            <View className="gap-2 rounded-[20px] border border-line bg-surface p-5">
               <Label>Your name</Label>
               <Field value={joinName} onChangeText={setJoinName} maxLength={40} placeholder="As your friends know you" autoComplete="given-name" autoCapitalize="words" autoFocus />
               {data.protected && (
@@ -165,7 +165,7 @@ export function Who({ slug, data, identity, known, setIdentity, reload, onClose 
 
         {step === "enter" && picking && (
           <Anim entering={FadeInDown.duration(400)} className="gap-4">
-            <View className="gap-2 border border-line bg-surface p-5">
+            <View className="gap-2 rounded-[20px] border border-line bg-surface p-5">
               <Label>{picking.legacy ? "Admin password" : create ? "Create a password" : "Your password"}</Label>
               <Field value={pw} onChangeText={setPw} secureTextEntry maxLength={100} autoFocus onSubmitEditing={enter}
                 placeholder={create ? "At least 4 characters" : ""} autoComplete={create ? "new-password" : "current-password"} />
