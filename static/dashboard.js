@@ -33,18 +33,27 @@ async function loadGroups(me) {
   }));
 }
 
-async function loadTabs() {
-  const tabs = (await Promise.all(savedSlugs().map((slug) =>
-    api("GET", `/api/splits/${encodeURIComponent(slug)}`).then((t) => ({ slug, t })).catch(() => null)))).filter(Boolean); // deleted ones are gone
-  return tabs.map(({ slug, t }) => {
-    const me = loadIdentity(slug).me;
+// Your tabs live on your account. Ones this browser opened before you signed in are added to it first.
+// ponytail: a tab that can't be added (someone else's account took that name) is retried on every visit
+async function loadTabs(me) {
+  let tabs = await authed("GET", "/api/tabs");
+  const linked = new Set(tabs.map((t) => t.slug));
+  const claims = savedSlugs().filter((slug) => !linked.has(slug) && loadIdentity(slug).me != null).map((slug) => {
+    const { me: id, token } = loadIdentity(slug);
+    return authed("POST", `/api/splits/${encodeURIComponent(slug)}/claim`, { member_id: id }, token ? { "X-Member-Token": token } : {});
+  });
+  if (claims.length) {
+    await Promise.allSettled(claims);
+    tabs = await authed("GET", "/api/tabs");
+  }
+  return tabs.map((t) => {
+    // Opened on another device: this one learns who you are in it, so the tab opens as you.
+    if (loadIdentity(t.slug).me !== t.me) saveIdentity(t.slug, { me: t.me, token: t.token, adminToken: t.admin_token });
     const hours = Math.max(0, Math.round((t.expires_at - Date.now() / 1000) / 3600));
     return row({
-      href: `/g/${slug}`, name: t.name, kind: "quick", closed: t.ended,
+      href: `/g/${t.slug}`, name: t.name, kind: "quick", closed: t.ended,
       tag: t.ended ? "Tab · closed" : `Tab · ${hours}h left`,
-      people: t.members.map((m) => (m.id === me ? "You" : m.name)),
-      spent: t.expenses.filter((e) => !e.deleted && e.kind === "expense").reduce((a, e) => a + e.amount_paise, 0),
-      balance: t.members.some((m) => m.id === me) ? t.balances[me] || 0 : null,
+      people: t.members.map((n) => (n === me.name ? "You" : n)), spent: t.spent, balance: t.balance,
     });
   });
 }
@@ -96,7 +105,7 @@ $("group-form").onsubmit = async (ev) => {
   try {
     const me = await authed("GET", "/api/me");
     $("upi-prompt").hidden = !!me.upi_id;
-    const [groups, tabs, { friends }] = await Promise.all([loadGroups(me), loadTabs(), authed("GET", "/api/friends")]);
+    const [groups, tabs, { friends }] = await Promise.all([loadGroups(me), loadTabs(me), authed("GET", "/api/friends")]);
     friendList = friends;
     renderList([...groups, ...tabs]);
     $("page").hidden = false;

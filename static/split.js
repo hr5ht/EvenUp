@@ -189,7 +189,14 @@ function renderHero() {
 function setIdentity(next) {
   identity = next;
   saveIdentity(slug, identity);
+  claim();
   render();
+}
+
+// Signed in, who you are in a tab goes on your account, so the tab is on your Home on every device.
+function claim() {
+  if (!signedIn() || data.group || identity.me == null) return;
+  authed("POST", `${base}/claim`, { member_id: identity.me }, identity.token ? { "X-Member-Token": identity.token } : {}).catch(() => {});
 }
 
 let upiEditing = false; // the saved UPI ID's Edit was tapped
@@ -362,6 +369,7 @@ $("join-form").onsubmit = async (ev) => {
     $("join-form").reset();
     identity = { me: id, adminToken: identity.adminToken, token };
     saveIdentity(slug, identity);
+    claim();
     await load();
     $("who-dialog").close();
   } catch (err) {

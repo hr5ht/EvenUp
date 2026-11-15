@@ -659,3 +659,38 @@ def test_group_invites_and_leaving(monkeypatch):
         assert c.get(base, headers=n).json()["admin_id"] == newp["id"]
         assert c.post(f"/api/groups/{slug}/leave", headers=n).status_code == 400
         assert "member_left" in [a["action"] for a in c.get(base, headers=n).json()["activity"]]
+
+
+def test_tabs_follow_your_account(monkeypatch):
+    use_neon(monkeypatch)
+    main.HITS.clear()
+    with TestClient(app) as c:
+        a = person(c, "t-a", "a@tabs.test", "Asha")
+        b = person(c, "t-b", "b@tabs.test", "Bilal")
+        assert c.get("/api/tabs").status_code == 401
+        # open tab: picking a name is all it takes, so claiming is too
+        r = c.post("/api/splits", json={"members": [{"name": "Asha"}, {"name": "Bilal"}], "name": "Tab 1"}).json()
+        url = f"/api/splits/{r['slug']}"
+        asha, bilal = [m["id"] for m in c.get(url).json()["members"]]
+        assert c.post(f"{url}/claim", json={"member_id": asha}).status_code == 401
+        assert c.post(f"{url}/claim", json={"member_id": asha}, headers=a).status_code == 200
+        assert c.post(f"{url}/claim", json={"member_id": asha}, headers=b).status_code == 409  # Asha is taken
+        assert c.post(f"{url}/claim", json={"member_id": 999}, headers=b).status_code == 404
+        [t] = c.get("/api/tabs", headers=a).json()
+        assert t["slug"] == r["slug"] and t["name"] == "Tab 1" and t["me"] == asha and t["token"] is None and t["members"] == ["Asha", "Bilal"]
+        assert c.get("/api/groups", headers=a).json() == []  # tabs and groups stay apart
+        # one of you per tab: switching name moves the tie
+        assert c.post(f"{url}/claim", json={"member_id": bilal}, headers=a).status_code == 200
+        assert c.get("/api/tabs", headers=a).json()[0]["me"] == bilal
+        assert c.post(f"{url}/claim", json={"member_id": asha}, headers=b).status_code == 200
+        # protected tab: only with that person's session, and the list hands it to your other devices
+        p = c.post("/api/splits", json={"members": [{"name": "Asha"}], "admin_password": "pass1234"}).json()
+        purl = f"/api/splits/{p['slug']}"
+        me = p["admin_id"]
+        assert c.post(f"{purl}/claim", json={"member_id": me}, headers=b).status_code == 403
+        assert c.post(f"{purl}/claim", json={"member_id": me}, headers={**a, "X-Member-Token": p["admin_token"]}).status_code == 200
+        t = next(t for t in c.get("/api/tabs", headers=a).json() if t["slug"] == p["slug"])
+        assert t["token"] == t["admin_token"] == p["admin_token"]
+        # groups can't be claimed
+        g = c.post("/api/groups", json={"name": "Flat"}, headers=a).json()["slug"]
+        assert c.post(f"/api/splits/{g}/claim", json={"member_id": 1}, headers=b).status_code == 404

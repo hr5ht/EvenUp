@@ -23,8 +23,8 @@ function needAccount(err) {
 }
 
 // api() as the signed-in user. A token can go stale in the gap before it expires, so a 401 gets one fresh try.
-async function authed(method, url, body) {
-  const send = async (fresh) => api(method, url, body, { Authorization: `Bearer ${await authToken(fresh)}` });
+async function authed(method, url, body, headers = {}) {
+  const send = async (fresh) => api(method, url, body, { ...headers, Authorization: `Bearer ${await authToken(fresh)}` });
   try {
     return await send(false);
   } catch (err) {

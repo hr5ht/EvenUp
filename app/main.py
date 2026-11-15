@@ -699,16 +699,54 @@ def create_group(body: GroupIn, u=Depends(current_user), con=Depends(db.get_db))
     return {"slug": slug}
 
 
-@app.get("/api/groups")
-def list_groups(u=Depends(current_user), con=Depends(db.get_db)):
+def my_splits(con, u, groups):
+    """Your groups, or your tabs (the ones you're tied to), newest first, with what was spent and where you stand."""
     out = []
-    for g in con.execute("SELECT s.id, s.slug, s.name, s.created_at, s.expires_at, m.id AS me FROM splits s JOIN members m ON m.split_id = s.id "
-                         "WHERE m.user_id = ? AND s.owner_user_id IS NOT NULL ORDER BY s.created_at DESC", (u["id"],)).fetchall():
+    for g in con.execute("SELECT s.id, s.slug, s.name, s.created_at, s.expires_at, s.admin_member_id, m.id AS me, m.pw_hash FROM splits s "
+                         "JOIN members m ON m.split_id = s.id WHERE m.user_id = ? AND (s.owner_user_id IS NOT NULL) = ? "
+                         "AND s.expires_at + ? > ? ORDER BY s.created_at DESC", (u["id"], groups, GRACE, now())).fetchall():
         spent, bal = money_of(con, g["id"])
         last = con.execute("SELECT MAX(created_at) AS t FROM activity WHERE split_id = ?", (g["id"],)).fetchone()["t"]
-        out.append({"slug": g["slug"], "name": g["name"], "ended": g["expires_at"] < now(), "spent": spent, "balance": bal.get(g["me"], 0), "updated_at": last or g["created_at"],
-                    "members": [r["name"] for r in con.execute("SELECT name FROM members WHERE split_id = ? ORDER BY id", (g["id"],))]})
+        row = {"slug": g["slug"], "name": g["name"], "ended": g["expires_at"] < now(), "spent": spent, "balance": bal.get(g["me"], 0),
+               "updated_at": last or g["created_at"], "members": [r["name"] for r in con.execute("SELECT name FROM members WHERE split_id = ? ORDER BY id", (g["id"],))]}
+        if not groups:  # a tab knows you by its own session, so a new device gets that from your account
+            token = g["pw_hash"] and admin_token(g["id"], g["pw_hash"])
+            row.update(expires_at=g["expires_at"], me=g["me"], token=token, admin_token=token if g["me"] == g["admin_member_id"] else None)
+        out.append(row)
     return out
+
+
+@app.get("/api/groups")
+def list_groups(u=Depends(current_user), con=Depends(db.get_db)):
+    return my_splits(con, u, True)
+
+
+@app.get("/api/tabs")
+def list_tabs(u=Depends(current_user), con=Depends(db.get_db)):
+    return my_splits(con, u, False)
+
+
+class ClaimIn(BaseModel):
+    member_id: int
+
+
+@app.post("/api/splits/{slug}/claim")
+def claim(slug: str, body: ClaimIn, x_member_token: Optional[str] = Header(None), u=Depends(current_user), con=Depends(db.get_db)):
+    """Ties who you are in a tab to your account, so it's on your list on every device. It takes what acting as them
+    takes: nothing in a tab without passwords, their session in a protected one."""
+    s = load_split(con, slug, ended_ok=True)  # groups 404 here: they're tied to accounts already
+    m = con.execute("SELECT * FROM members WHERE id = ? AND split_id = ?", (body.member_id, s["id"])).fetchone()
+    if not m:
+        raise HTTPException(404, "Member not found")
+    protected, who = member_auth(con, s, x_member_token)
+    if protected and who != m["id"]:
+        raise HTTPException(403, "Enter your password first")
+    if m["user_id"] and m["user_id"] != u["id"]:
+        raise HTTPException(409, "Someone else's account has that name in this tab")
+    con.execute("UPDATE members SET user_id = NULL WHERE split_id = ? AND user_id = ?", (s["id"], u["id"]))  # one of you per tab
+    con.execute("UPDATE members SET user_id = ? WHERE id = ?", (u["id"], m["id"]))
+    con.commit()
+    return {"ok": True}
 
 
 @app.post("/api/groups/{slug}/members")
