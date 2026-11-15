@@ -7,97 +7,45 @@
   <meta name="theme-color" content="#070708">
   <meta name="color-scheme" content="dark">
   <title>Sign in · EvenUp</title>
-  <link rel="preload" href="/static/fonts/serif-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/static/home.css">
+  <link rel="stylesheet" href="/static/app.css">
   <script src="/static/common.js" defer></script>
   <script src="/static/auth.js" defer></script>
   <script src="/static/login.js" defer></script>
 </head>
 <body>
-<main class="auth">
-  <section class="auth-side">
-    <header class="auth-top">
-      <a class="logo" href="/"><span class="logo-mark"></span>EvenUp</a>
-      <a class="back" href="/"><svg class="i"><use href="/static/icons.svg#chevleft"/></svg>Home</a>
-    </header>
+<header class="top">
+  <a href="/" class="logo"><span class="logo-mark"></span>EvenUp</a>
+  <a href="/" class="btn small"><svg class="i sm"><use href="/static/icons.svg#chevleft"/></svg>Home</a>
+</header>
 
-    <div class="auth-form">
-      <span class="eyebrow">Your account</span>
-      <h1 id="title">Sign in</h1>
-      <p class="sub" id="sub"></p>
-      <form id="auth">
-        <div class="field" data-field="name">
-          <label for="name">Your name</label>
-          <input type="text" id="name" maxlength="40" autocomplete="name" placeholder="As your friends know you">
-        </div>
-        <div class="field" data-field="email">
-          <label for="email">Email</label>
-          <input type="email" id="email" maxlength="254" autocomplete="email" placeholder="you@example.com">
-        </div>
-        <div class="field" data-field="password">
-          <label for="password" id="password-label">Password</label>
-          <input type="password" id="password" minlength="8" maxlength="128" placeholder="At least 8 characters">
-        </div>
-        <p class="note" id="note" role="status"></p>
-        <p class="error" id="error" role="alert"></p>
-        <button class="btn white block" type="submit" id="submit">Sign in</button>
-        <div class="auth-alt">
-          <button type="button" class="alt" id="alt-1"></button>
-          <button type="button" class="alt" id="alt-2"></button>
-        </div>
-      </form>
+<main class="page">
+  <div class="head">
+    <p class="eyebrow">Your account</p>
+    <h1 id="title">Sign in</h1>
+    <p class="muted" id="sub"></p>
+  </div>
+  <form id="auth" class="stack-lg">
+    <div class="stack" data-field="name">
+      <label class="label" for="name">Your name</label>
+      <input class="field" type="text" id="name" maxlength="40" autocomplete="name" placeholder="As your friends know you">
     </div>
-
-    <p class="auth-foot">Tabs work without an account. <a href="/new">Open one now</a></p>
-  </section>
-
-  <aside class="auth-art" aria-hidden="true">
-    <div class="stage">
-      <div class="rcpt-wrap">
-        <div class="rcpt">
-          <div class="rcpt-h">FLAT 4B</div>
-          <div class="rcpt-s">Groceries · November</div>
-          <hr>
-          <div class="l"><span>Vegetables</span><span>1,240.00</span></div>
-          <div class="l"><span>Milk, 30 days</span><span>1,800.00</span></div>
-          <div class="l"><span>Rice, atta, dal</span><span>1,420.00</span></div>
-          <div class="l"><span>Cleaning</span><span>400.00</span></div>
-          <hr>
-          <div class="l t"><span>Total</span><span>₹4,860.00</span></div>
-          <div class="split"><span>Split 3 ways</span><b>₹1,620 each</b></div>
-          <div class="bar"></div>
-        </div>
-      </div>
-
-      <div class="phone">
-        <div class="screen">
-          <div class="island"></div>
-          <div class="sbar"><span>9:41</span><i></i></div>
-          <div class="app-top">
-            <span class="av c">AM</span>
-            <div><b>Arjun Mehta</b><small><span class="dot"></span>2 open tabs · 3 friends</small></div>
-          </div>
-          <div class="owe">
-            <div class="lbl">Overall, you get back</div>
-            <div class="amt num">₹860<small>.00</small></div>
-            <div class="meta">Across everyone you split with</div>
-            <div class="prow"><span class="av a">RS</span><span class="who"><b>Riya Sen</b><span>4 tabs together</span></span><span class="v num pos">₹1,240</span></div>
-            <div class="prow"><span class="av d">KB</span><span class="who"><b>Kabir Bose</b><span>2 tabs together</span></span><span class="v num neg">₹380</span><span class="paybtn">Pay</span></div>
-          </div>
-          <div class="sec"><span>Tabs</span><span>2 open</span></div>
-          <div class="exp">
-            <div class="erow"><span class="ic"><svg class="i"><use href="/static/icons.svg#home"/></svg></span><span class="w"><b>Goa trip</b><span>4 people · 46h left</span></span><span class="v num">₹23,000<span class="neg">you owe ₹2,550</span></span></div>
-            <div class="erow"><span class="ic"><svg class="i"><use href="/static/icons.svg#fork"/></svg></span><span class="w"><b>Flat groceries</b><span>3 people · 31h left</span></span><span class="v num">₹4,860<span class="pos">you get ₹1,620</span></span></div>
-            <div class="erow"><span class="ic"><svg class="i"><use href="/static/icons.svg#receipt"/></svg></span><span class="w"><b>Diwali dinner</b><span>Closed · deleted in 9h</span></span><span class="v num">₹7,350<span>settled</span></span></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="chip"><b class="num">3</b>friends, one<br>balance each</div>
-      <div class="toast"><span class="ok"><svg class="i" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span><b>Riya paid you ₹1,240.00</b><span>Paid with PhonePe · just now</span></span></div>
+    <div class="stack" data-field="email">
+      <label class="label" for="email">Email</label>
+      <input class="field" type="email" id="email" maxlength="254" autocomplete="email" placeholder="you@example.com">
     </div>
-    <p class="auth-quote">Your tabs, friends and UPI ID <span>in one place, on any device.</span></p>
-  </aside>
+    <div class="stack" data-field="password">
+      <label class="label" for="password" id="password-label">Password</label>
+      <input class="field" type="password" id="password" minlength="8" maxlength="128" placeholder="At least 8 characters">
+    </div>
+    <p class="note" id="note" role="status"></p>
+    <p class="error" id="error" role="alert"></p>
+    <button class="btn ink block" type="submit" id="submit">Sign in</button>
+    <div class="stack center">
+      <button type="button" class="link-btn" id="alt-1"></button>
+      <button type="button" class="link-btn" id="alt-2"></button>
+    </div>
+  </form>
+  <p class="center muted small-text">Tabs work without an account. <a class="link-btn" href="/new">Open one now</a></p>
 </main>
 </body>
 </html>

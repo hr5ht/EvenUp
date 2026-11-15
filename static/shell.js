@@ -1,12 +1,9 @@
-// Signed-in pages: your name and email at the foot of the sidebar.
-authed("GET", "/api/me").then((me) => {
-  document.getElementById("side-name").textContent = me.name;
-  document.getElementById("side-email").textContent = me.email;
-  document.getElementById("side-avatar").textContent = initials(me.name);
-}).catch(() => {}); // a signed-out visitor is the page script's job
-
-// + New, in the sidebar or the phone's bottom bar, asks which: a tab or a group.
-const newSheet = document.getElementById("new-sheet");
-document.querySelectorAll("[data-open=new-sheet], .tab-plus").forEach((b) => (b.onclick = (ev) => { ev.preventDefault(); newSheet.showModal(); }));
+// Pages with the bottom bar. Signed in, + asks what to start (a tab or a group); signed out it opens a new tab.
+// data-open / data-close buttons open and close sheets, and tapping the dimmed backdrop closes one.
+document.querySelectorAll("[data-open]").forEach((b) => (b.onclick = () => document.getElementById(b.dataset.open).showModal()));
 document.querySelectorAll("[data-close]").forEach((b) => (b.onclick = () => b.closest("dialog").close()));
 document.querySelectorAll("dialog").forEach((d) => d.addEventListener("click", (ev) => ev.target === d && d.close()));
+const plus = document.getElementById("plus");
+if (plus && signedIn() && document.getElementById("new-sheet")) {
+  plus.onclick = (ev) => { ev.preventDefault(); document.getElementById("new-sheet").showModal(); };
+}

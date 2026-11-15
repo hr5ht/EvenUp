@@ -7,7 +7,7 @@ const size = () => people;
 function syncNames() {
   const box = $("members");
   while (box.children.length < size() - 1) {
-    box.append(el("input", { type: "text", placeholder: "Name", maxLength: 40, className: "m-name" }));
+    box.append(el("input", { type: "text", placeholder: `Person ${box.children.length + 2}`, maxLength: 40, className: "field m-name" }));
   }
   while (box.children.length > size() - 1) box.lastChild.remove();
 }

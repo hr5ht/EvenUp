@@ -7,62 +7,72 @@
   <meta name="theme-color" content="#070708">
   <meta name="color-scheme" content="dark">
   <title>Profile · EvenUp</title>
-  <link rel="preload" href="/static/fonts/serif-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/static/style.css">
   <link rel="stylesheet" href="/static/app.css">
   <script src="/static/common.js" defer></script>
   <script src="/static/auth.js" defer></script>
   <script src="/static/shell.js" defer></script>
   <script src="/static/profile.js" defer></script>
 </head>
-<body class="shell">
-<div class="app">
-  <aside class="sidebar">
-    <a href="/" class="logo"><span class="logo-mark"></span>EvenUp</a>
-    <button type="button" class="primary side-cta" data-open="new-sheet"><svg class="i"><use href="/static/icons.svg#plus"/></svg>New</button>
-    <nav class="side-nav" aria-label="Your account"><a href="/dashboard"><svg class="i"><use href="/static/icons.svg#home"/></svg>Home</a><a href="/activity"><svg class="i"><use href="/static/icons.svg#history"/></svg>Activity</a><a href="/friends"><svg class="i"><use href="/static/icons.svg#users"/></svg>Friends</a></nav>
-    <a class="side-user" href="/profile" aria-current="page"><span class="avatar" id="side-avatar"></span><span class="grow"><b id="side-name"></b><span id="side-email"></span></span></a>
-  </aside>
-  <main class="main">
-    <div class="main-bar"><a href="/" class="logo"><span class="logo-mark"></span>EvenUp</a></div>
-    <header class="page-title"><p class="eyebrow">Your account</p><h1>Profile</h1></header>
-    <div id="page" class="content-narrow" hidden>
-      <section class="card who-card"><span class="avatar big" id="big-avatar"></span><span class="grow"><b id="who-name"></b><span id="email"></span></span></section>
-      <form id="profile" class="card">
-        <h2 class="card-title">Your details</h2>
-        <label for="name">Your name</label>
-        <input type="text" id="name" maxlength="40" autocomplete="name" required>
-        <label for="upi">Your UPI ID <span class="optional">Optional</span></label>
-        <input type="text" id="upi" maxlength="321" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="name@bank">
-        <p class="hint">So friends can pay you by UPI. It's printed on your bill in every group and tab you're in.</p>
-        <p class="error" id="error" role="alert"></p>
-        <button class="primary save" type="submit" id="save">Save</button>
-      </form>
-      <section class="card">
-        <h2 class="card-title">Session</h2>
-        <p class="hint">Signed in on this browser.</p>
-        <button type="button" id="sign-out"><svg class="i"><use href="/static/icons.svg#logout"/></svg>Sign out</button>
-      </section>
-      <section class="card danger-card">
-        <h2 class="card-title">Delete account</h2>
-        <p class="hint">This can't be undone. Your profile and friends go. Your groups pass to another member, and your part in their expenses stays so their balances still add up.</p>
-        <label for="delete-password">Enter your password to confirm</label>
-        <input type="password" id="delete-password" maxlength="128" autocomplete="current-password" placeholder="Your password">
-        <p class="error" id="delete-error" role="alert"></p>
-        <button type="button" class="danger" id="delete">Delete my account</button>
-      </section>
+<body>
+<header class="top"><a href="/" class="logo"><span class="logo-mark"></span>EvenUp</a></header>
+
+<main class="page with-bar">
+  <div class="head"><p class="eyebrow">Your account</p><h1>Profile</h1></div>
+
+  <section class="card stack-lg" id="signed-out" hidden>
+    <div class="row">
+      <span class="round-ic big-ic"><svg class="i lg"><use href="/static/icons.svg#user"/></svg></span>
+      <span class="grow"><h3>You're not signed in</h3><span class="muted small-text">Tabs work without an account.</span></span>
     </div>
-  </main>
-</div>
-<nav class="tabbar" aria-label="Your account"><a href="/dashboard"><svg class="i"><use href="/static/icons.svg#home"/></svg>Home</a><a href="/activity"><svg class="i"><use href="/static/icons.svg#history"/></svg>Activity</a><a href="/new" class="tab-plus" aria-label="New"><svg class="i"><use href="/static/icons.svg#plus"/></svg></a><a href="/friends"><svg class="i"><use href="/static/icons.svg#users"/></svg>Friends</a><a href="/profile" aria-current="page"><svg class="i"><use href="/static/icons.svg#user"/></svg>Profile</a></nav>
-<dialog class="sheet" id="new-sheet">
-  <div class="sheet-head"><h2>New</h2><button type="button" class="icon-btn" data-close aria-label="Close"><svg class="i"><use href="/static/icons.svg#x"/></svg></button></div>
-  <div class="sheet-body">
-    <div class="menu">
-      <a class="choice" href="/new"><span class="ic"><svg class="i"><use href="/static/icons.svg#receipt"/></svg></span><span class="grow">Tab<span>One trip or dinner. Closes on its own</span></span></a>
-      <a class="choice" href="/dashboard#new-group" data-open="group-sheet"><span class="ic"><svg class="i"><use href="/static/icons.svg#users"/></svg></span><span class="grow">Group<span>People you split with often. Never expires</span></span></a>
+    <ul class="perks">
+      <li><svg class="i sm"><use href="/static/icons.svg#check"/></svg><span><b class="w5">Groups that stay</b><span>For a flat, a team or family. They never expire.</span></span></li>
+      <li><svg class="i sm"><use href="/static/icons.svg#check"/></svg><span><b class="w5">Friends</b><span>Add people by email and split with them again and again.</span></span></li>
+      <li><svg class="i sm"><use href="/static/icons.svg#check"/></svg><span><b class="w5">Your tabs everywhere</b><span>Every tab and group, on every device you sign in on.</span></span></li>
+    </ul>
+    <div class="stack"><a class="btn ink" href="/login?next=/profile">Sign in</a><a class="btn" href="/login?mode=signup&amp;next=/profile">Create an account</a></div>
+  </section>
+
+  <div class="stack-lg" id="signed-in" hidden>
+    <section class="card who"><span class="avatar big" id="big-avatar"></span><h2 id="who-name"></h2><span class="muted small-text" id="email"></span></section>
+
+    <div class="list">
+      <a class="menu-row" href="/friends"><span class="sq-ic"><svg class="i"><use href="/static/icons.svg#users"/></svg></span><span class="grow"><b>Friends</b><span>Requests, and people you split with</span></span><svg class="i sm"><use href="/static/icons.svg#chev"/></svg></a>
+      <a class="menu-row" href="/activity"><span class="sq-ic"><svg class="i"><use href="/static/icons.svg#history"/></svg></span><span class="grow"><b>Activity</b><span>Every change in your groups</span></span><svg class="i sm"><use href="/static/icons.svg#chev"/></svg></a>
     </div>
+
+    <form id="profile" class="card stack">
+      <h3>Your details</h3>
+      <label class="label" for="name">Your name</label>
+      <input class="field" type="text" id="name" maxlength="40" autocomplete="name" required>
+      <label class="label" for="upi">Your UPI ID · optional</label>
+      <input class="field" type="text" id="upi" maxlength="321" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="name@bank">
+      <p class="muted small-text">So friends can pay you by UPI. It's printed on your bill in every group and tab you're in.</p>
+      <p class="error" id="error" role="alert"></p>
+      <button class="btn ink" type="submit" id="save">Save</button>
+    </form>
+
+    <section class="card stack">
+      <h3>Session</h3>
+      <p class="muted small-text">Signed in on this browser.</p>
+      <button type="button" class="btn" id="sign-out"><svg class="i"><use href="/static/icons.svg#logout"/></svg>Sign out</button>
+    </section>
+
+    <section class="card danger stack">
+      <h3>Delete account</h3>
+      <p class="muted small-text">This can't be undone. Your profile and friends go. Your groups pass to another member, and your part in their expenses stays so their balances still add up.</p>
+      <label class="label" for="delete-password">Enter your password to confirm</label>
+      <input class="field" type="password" id="delete-password" maxlength="128" autocomplete="current-password" placeholder="Your password">
+      <p class="error" id="delete-error" role="alert"></p>
+      <button type="button" class="btn danger" id="delete">Delete my account</button>
+    </section>
   </div>
-</dialog>
+</main>
+
+<nav class="tabbar" aria-label="EvenUp">
+  <a href="/"><svg class="i"><use href="/static/icons.svg#home"/></svg>Home</a>
+  <span class="plus-ring"><a href="/new" class="plus" id="plus" aria-label="New"><svg class="i"><use href="/static/icons.svg#plus"/></svg></a></span>
+  <span></span>
+  <a href="/profile" aria-current="page"><svg class="i"><use href="/static/icons.svg#user"/></svg>Profile</a>
+</nav>
 </body>
 </html>

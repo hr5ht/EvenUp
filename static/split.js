@@ -436,7 +436,7 @@ function payStep(step) {
   // Phones get Pay now (straight into the UPI app); then I've paid is the secondary step.
   const payNow = step === "UPI" && IS_PHONE;
   $("pay-now").hidden = !payNow;
-  $("pay-done").classList.toggle("primary", !payNow);
+  $("pay-done").classList.toggle("ink", !payNow);
   $("pay-error").textContent = "";
 }
 
@@ -521,7 +521,7 @@ function paymentRow(p) {
   const sub = paying ? other.upi_id || "No UPI ID yet, cash only" : me.upi_id ? "Pays you" : "Pays you · add your UPI ID to get paid";
   let pay = null;
   if (paying) {
-    pay = el("button", { type: "button", className: "small accent live-only", textContent: "Pay" });
+    pay = el("button", { type: "button", className: "btn tiny ink live-only", textContent: "Pay" });
     pay.onclick = () => openSettle(p);
   }
   return el("li", { className: "pay-row" },
@@ -559,10 +559,10 @@ function renderExpenses() {
   const live = data.expenses.filter((e) => !e.deleted);
   $("exp-count").textContent = live.length || "";
   if (!live.length) {
-    const add = el("button", { type: "button", className: "primary live-only" }, icon("plus"), "Add the first expense");
+    const add = el("button", { type: "button", className: "btn ink small live-only" }, icon("plus"), "Add the first expense");
     add.onclick = () => $("fab").click();
     $("expenses").replaceChildren(el("div", { className: "empty" },
-      el("span", { className: "ic" }, icon("receipt")),
+      el("span", { className: "sq-ic" }, icon("receipt")),
       el("h3", { textContent: "No expenses yet" }),
       el("p", { textContent: "Add what you paid for, and EvenUp splits it between everyone on the tab." }),
       known() && !data.ended ? add : null));
@@ -805,7 +805,7 @@ function renderActivity() {
     let undo = null;
     // Only the latest change to each expense can be undone; the server checks this too.
     if (a.expense_id && data.activity.find((x) => x.expense_id === a.expense_id) === a) {
-      undo = el("button", { type: "button", className: "small live-only", textContent: "Undo" });
+      undo = el("button", { type: "button", className: "btn tiny live-only", textContent: "Undo" });
       undo.onclick = () => act(() => call("POST", `${base}/activity/${a.id}/undo`));
     }
     return el("li", {},
@@ -822,7 +822,7 @@ function renderActivity() {
 
 function renderAdminMembers() {
   $("admin-members").replaceChildren(...data.members.map((m) => {
-    const remove = el("button", { type: "button", className: "small danger", textContent: "Remove" });
+    const remove = el("button", { type: "button", className: "btn tiny danger", textContent: "Remove" });
     remove.onclick = async () => {
       const again = data.group ? "They stop seeing this group. You can add them again later." : "They can join again from the link if they need to.";
       if (!(await askConfirm(`Remove ${m.name}?`, again, "Remove"))) return;
@@ -834,7 +834,7 @@ function renderAdminMembers() {
         $("admin-error").textContent = err.message;
       }
     };
-    const editUpi = el("button", { type: "button", className: "small", textContent: "UPI" });
+    const editUpi = el("button", { type: "button", className: "btn tiny", textContent: "UPI" });
     editUpi.onclick = async () => {
       const value = prompt(`UPI ID for ${m.name} (leave empty to clear)`, m.upi_id || "");
       if (value === null) return;
@@ -847,7 +847,7 @@ function renderAdminMembers() {
       }
     };
     if (data.group) {
-      const owner = el("button", { type: "button", className: "small", textContent: "Make owner" });
+      const owner = el("button", { type: "button", className: "btn tiny", textContent: "Make owner" });
       owner.onclick = async () => {
         if (!(await askConfirm(`Make ${m.name} the owner?`, "They'll run the group: rename it, remove people and delete it. You stay in as a member.", "Make owner"))) return;
         groupAct(() => call("POST", `/api/groups/${slug}/owner`, { member_id: m.id }));

@@ -3,108 +3,97 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="robots" content="noindex">
   <meta name="theme-color" content="#070708">
   <meta name="color-scheme" content="dark">
   <title>Open a tab · EvenUp</title>
-  <link rel="preload" href="/static/fonts/serif-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/static/home.css">
+  <link rel="stylesheet" href="/static/app.css">
   <script src="/static/common.js" defer></script>
   <script src="/static/new.js" defer></script>
 </head>
 <body>
-<main class="auth">
-  <section class="auth-side">
-    <header class="auth-top">
-      <a class="logo" href="/"><span class="logo-mark"></span>EvenUp</a>
-      <a class="back" href="/"><svg class="i"><use href="/static/icons.svg#chevleft"/></svg>Home</a>
-    </header>
+<header class="top">
+  <a href="/" class="logo"><span class="logo-mark"></span>EvenUp</a>
+  <a href="/" class="btn small"><svg class="i sm"><use href="/static/icons.svg#chevleft"/></svg>Home</a>
+</header>
 
-    <div class="auth-form new-form">
-      <form id="create">
-        <span class="eyebrow">New tab</span>
-        <h1>Open a tab for the group</h1>
-        <p class="sub">No account needed. Open for 48 hours, read-only for a day, then deleted.</p>
-
-        <div class="field">
-          <label for="my-name">Your name <span class="hint">You'll be the admin</span></label>
-          <input type="text" id="my-name" maxlength="40" placeholder="As your friends know you" autocomplete="name" required>
-        </div>
-
-        <div class="opts">
-          <div class="opt">
-            <span class="opt-text"><b>People</b><span>Including you, up to 50</span></span>
-            <span class="stepper" role="group" aria-label="People splitting">
-              <button type="button" id="size-down" aria-label="One less"><svg class="i"><use href="/static/icons.svg#minus"/></svg></button>
-              <output id="size" aria-live="polite">2</output>
-              <button type="button" id="size-up" aria-label="One more"><svg class="i"><use href="/static/icons.svg#plus"/></svg></button>
-            </span>
-          </div>
-
-          <label class="opt" for="add-names">
-            <span class="opt-text"><b>Add names now</b><span>Or everyone adds themselves from the link</span></span>
-            <input type="checkbox" class="switch" id="add-names">
-          </label>
-          <div id="names-box" class="opt-body" hidden>
-            <div id="members"></div>
-            <p>Leave any blank. They tap "I'm not on the list" and add themselves.</p>
-          </div>
-
-          <label class="opt" for="protect">
-            <span class="opt-text"><b>Password protect</b><span id="protect-sub"></span></span>
-            <input type="checkbox" class="switch" id="protect">
-          </label>
-          <div id="protect-box" class="opt-body" hidden>
-            <input type="password" id="admin-password" minlength="4" maxlength="100" autocomplete="new-password" placeholder="Your password, at least 4 characters">
-            <p>You need it to open the tab as the admin, on this phone too. Everyone else creates their own the first time they pick their name.</p>
-          </div>
-        </div>
-
-        <input type="text" name="website" id="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
-
-        <p class="error" id="error" role="alert"></p>
-        <button class="btn white block" type="submit">Open tab<svg class="i"><use href="/static/icons.svg#arrow"/></svg></button>
-      </form>
-
-      <section id="created" hidden>
-        <span class="done-ic"><svg class="i"><use href="/static/icons.svg#check"/></svg></span>
-        <span class="eyebrow">Tab opened</span>
-        <h1>Send this link to the group</h1>
-        <div class="share-link" id="share-link"></div>
-        <p class="sub" id="created-note"></p>
-        <div class="two">
-          <button type="button" class="btn" id="copy-share">Copy link</button>
-          <button type="button" class="btn white" id="share"><svg class="i"><use href="/static/icons.svg#share"/></svg>Share link</button>
-        </div>
-        <a class="open-tab" id="open-tab" href="/">Open the tab<svg class="i"><use href="/static/icons.svg#arrow"/></svg></a>
-      </section>
+<main class="page">
+  <form id="create" class="stack-lg">
+    <div class="head">
+      <p class="eyebrow">New tab</p>
+      <h1>Open a tab for the group</h1>
+      <p class="muted">No account needed. Open for 48 hours, read-only for a day, then deleted.</p>
     </div>
 
-    <p class="auth-foot">Want your tabs on every device? <a href="/login?mode=signup">Create an account</a></p>
+    <div class="stack">
+      <label class="label" for="my-name">Your name · you'll be the admin</label>
+      <input class="field" type="text" id="my-name" maxlength="40" placeholder="As your friends know you" autocomplete="name" required>
+    </div>
+
+    <div class="card opts">
+      <div class="opt">
+        <span class="grow"><b class="w5">People</b><span>Including you, up to 50</span></span>
+        <span class="stepper" role="group" aria-label="People splitting">
+          <button type="button" class="icon-btn sm" id="size-down" aria-label="One less"><svg class="i"><use href="/static/icons.svg#minus"/></svg></button>
+          <output id="size" class="num" aria-live="polite">2</output>
+          <button type="button" class="icon-btn sm" id="size-up" aria-label="One more"><svg class="i"><use href="/static/icons.svg#plus"/></svg></button>
+        </span>
+      </div>
+      <label class="opt" for="add-names">
+        <span class="grow"><b class="w5">Add names now</b><span>Or everyone adds themselves from the link</span></span>
+        <input type="checkbox" class="toggle" id="add-names">
+      </label>
+      <div id="names-box" class="opt-body" hidden>
+        <div id="members" class="stack"></div>
+        <p class="dim small-text">Leave any blank. They tap "I'm not on the list" and add themselves.</p>
+      </div>
+      <label class="opt" for="protect">
+        <span class="grow"><b class="w5">Password protect</b><span id="protect-sub"></span></span>
+        <input type="checkbox" class="toggle" id="protect">
+      </label>
+      <div id="protect-box" class="opt-body" hidden>
+        <input class="field" type="password" id="admin-password" minlength="4" maxlength="100" autocomplete="new-password" placeholder="Your password, at least 4 characters">
+        <p class="dim small-text">You need it to open the tab as the admin, on this device too. Everyone else creates their own the first time they pick their name.</p>
+      </div>
+    </div>
+
+    <input type="text" name="website" id="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <p class="error" id="error" role="alert"></p>
+    <button class="btn ink block" type="submit">Open tab<svg class="i"><use href="/static/icons.svg#arrow"/></svg></button>
+  </form>
+
+  <section id="created" class="stack-lg" hidden>
+    <span class="done-ic"><svg class="i lg"><use href="/static/icons.svg#check"/></svg></span>
+    <div class="head"><p class="eyebrow">Tab opened</p><h1>Send this link to the group</h1></div>
+    <div class="linkbox mono" id="share-link"></div>
+    <p class="muted small-text" id="created-note"></p>
+    <div class="row two">
+      <button type="button" class="btn" id="copy-share">Copy link</button>
+      <button type="button" class="btn ink" id="share"><svg class="i"><use href="/static/icons.svg#share"/></svg>Share link</button>
+    </div>
+    <a class="btn ghost block" id="open-tab" href="/">Open the tab<svg class="i"><use href="/static/icons.svg#arrow"/></svg></a>
   </section>
 
-  <aside class="auth-art" aria-hidden="true">
+  <div class="stack">
+    <p class="label">Your tab, as it'll print</p>
     <div class="slip" id="slip">
-      <div class="rcpt">
-        <div class="rcpt-h">NEW TAB</div>
-        <div class="rcpt-s">EvenUp · opened today</div>
-        <hr>
+      <div class="paper">
+        <div class="rcpt-h">NEW TAB · EVENUP</div>
         <div class="l"><span>Opened by</span><span id="r-name">You</span></div>
         <div class="l"><span>People</span><span id="r-size">2</span></div>
         <div class="l"><span>Joining</span><span id="r-join">Pick a name</span></div>
         <div class="l"><span>Open for</span><span>48 hours</span></div>
         <div class="l"><span>Then</span><span>Read-only, 1 day</span></div>
         <hr>
-        <div class="rcpt-s left">Seats</div>
         <div class="seats" id="r-seats"></div>
         <hr>
         <div class="l t"><span>Spent so far</span><span>₹0.00</span></div>
-        <div class="bar"></div>
+        <div class="barcode"></div>
         <div class="stamp">OPEN</div>
       </div>
     </div>
-    <p class="auth-quote">One link for everyone. <span>Each person adds what they paid, and EvenUp says who pays whom.</span></p>
-  </aside>
+  </div>
+
+  <p class="center muted small-text">Want your tabs on every device? <a class="link-btn" href="/login?mode=signup">Create an account</a></p>
 </main>
 </body>
 </html>

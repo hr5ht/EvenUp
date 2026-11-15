@@ -36,9 +36,9 @@ function day(t) {
         icon("chev")));
     }
     $("feed").replaceChildren(...(rows.length ? rows : [el("div", { className: "empty" },
-      el("span", { className: "ic" }, icon("history")), el("h3", { textContent: "Nothing here yet" }),
+      el("span", { className: "sq-ic" }, icon("history")), el("h3", { textContent: "Nothing here yet" }),
       el("p", { textContent: "When anyone in your groups adds, edits or settles an expense, it shows up here." }),
-      el("a", { className: "button primary", href: "/dashboard" }, icon("users"), "Start a group"))]));
+      el("a", { className: "btn ink small", href: "/#new-group" }, icon("users"), "Start a group"))]));
     $("page").hidden = false;
   } catch (err) {
     if (!needAccount(err)) {

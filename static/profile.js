@@ -1,8 +1,5 @@
 const $ = (id) => document.getElementById(id);
-function toLogin() {
-  remember(false);
-  location.replace("/login");
-}
+const value = (id) => $(id).value.trim();
 
 function fill(me) {
   $("email").textContent = me.email;
@@ -12,12 +9,20 @@ function fill(me) {
   $("upi").value = me.upi_id || "";
 }
 
+function signedOut() {
+  remember(false);
+  $("signed-in").hidden = true;
+  $("signed-out").hidden = false;
+}
+
 (async () => {
+  if (!signedIn()) return signedOut();
   try {
     fill(await authed("GET", "/api/me"));
-    $("page").hidden = false;
+    $("signed-in").hidden = false;
   } catch (err) {
-    if (!needAccount(err)) $("email").textContent = err.message;
+    if (err.status === 401) signedOut();
+    else ($("signed-out").hidden = false), ($("signed-out").querySelector(".muted").textContent = err.message);
   }
 })();
 
@@ -35,22 +40,21 @@ $("profile").onsubmit = async (e) => {
   $("save").disabled = false;
 };
 
-function value(id) { return $(id).value.trim(); }
-
 $("sign-out").onclick = async () => {
   await api("POST", "/auth/sign-out", {}).catch(() => {});
-  toLogin();
+  signedOut();
 };
 
 $("delete").onclick = async () => {
   $("delete-error").textContent = "";
   if (!$("delete-password").value) return ($("delete-error").textContent = "Enter your password");
+  if (!confirm("Delete your account? This can't be undone.")) return;
   $("delete").disabled = true;
   try {
     await authToken(true); // the session ends with the account, so take the token for our own delete first
     await api("POST", "/auth/delete-user", { password: $("delete-password").value });
     await authed("DELETE", "/api/me");
-    toLogin();
+    signedOut();
   } catch (err) {
     $("delete-error").textContent = err.message;
     $("delete").disabled = false;

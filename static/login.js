@@ -45,7 +45,7 @@ function show(next, note = "") {
 }
 
 // Back to the page that sent you here (a group's link), or your dashboard. Only paths on this site.
-const next = /^\/(?![/\\])/.test(pending.get("next") || "") ? pending.get("next") : "/dashboard";
+const next = /^\/(?![/\\])/.test(pending.get("next") || "") ? pending.get("next") : "/";
 
 function goIn() {
   remember(true);

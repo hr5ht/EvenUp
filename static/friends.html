@@ -7,50 +7,27 @@
   <meta name="theme-color" content="#070708">
   <meta name="color-scheme" content="dark">
   <title>Friends · EvenUp</title>
-  <link rel="preload" href="/static/fonts/serif-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/static/style.css">
   <link rel="stylesheet" href="/static/app.css">
   <script src="/static/common.js" defer></script>
   <script src="/static/auth.js" defer></script>
-  <script src="/static/shell.js" defer></script>
   <script src="/static/friends.js" defer></script>
 </head>
-<body class="shell">
-<div class="app">
-  <aside class="sidebar">
-    <a href="/" class="logo"><span class="logo-mark"></span>EvenUp</a>
-    <button type="button" class="primary side-cta" data-open="new-sheet"><svg class="i"><use href="/static/icons.svg#plus"/></svg>New</button>
-    <nav class="side-nav" aria-label="Your account"><a href="/dashboard"><svg class="i"><use href="/static/icons.svg#home"/></svg>Home</a><a href="/activity"><svg class="i"><use href="/static/icons.svg#history"/></svg>Activity</a><a href="/friends" aria-current="page"><svg class="i"><use href="/static/icons.svg#users"/></svg>Friends</a></nav>
-    <a class="side-user" href="/profile"><span class="avatar" id="side-avatar"></span><span class="grow"><b id="side-name"></b><span id="side-email"></span></span></a>
-  </aside>
-  <main class="main">
-    <div class="main-bar"><a href="/" class="logo"><span class="logo-mark"></span>EvenUp</a></div>
-    <header class="page-title"><p class="eyebrow">People</p><h1>Friends</h1><p>Add a friend by email. If they're new to EvenUp, your request waits until they sign up.</p></header>
-    <div id="page" class="content-narrow" hidden>
-      <form id="add" class="card add-card">
-        <label for="email">Their email</label>
-        <div class="add-row">
-          <input type="email" id="email" maxlength="254" autocomplete="off" placeholder="friend@example.com" required>
-          <button class="primary" type="submit" id="send"><svg class="i"><use href="/static/icons.svg#userplus"/></svg>Add friend</button>
-        </div>
-        <p class="note" id="note" role="status"></p>
-        <p class="error" id="error" role="alert"></p>
-      </form>
-      <section class="panel" id="requests-card" hidden><h2>Requests</h2><div id="requests"></div></section>
-      <section class="panel"><h2>Your friends <span class="count" id="n-friends"></span></h2><div id="friends"></div></section>
-      <section class="panel" id="sent-card" hidden><h2>Sent, waiting for an answer</h2><div id="sent"></div></section>
-    </div>
-  </main>
-</div>
-<nav class="tabbar" aria-label="Your account"><a href="/dashboard"><svg class="i"><use href="/static/icons.svg#home"/></svg>Home</a><a href="/activity"><svg class="i"><use href="/static/icons.svg#history"/></svg>Activity</a><a href="/new" class="tab-plus" aria-label="New"><svg class="i"><use href="/static/icons.svg#plus"/></svg></a><a href="/friends" aria-current="page"><svg class="i"><use href="/static/icons.svg#users"/></svg>Friends</a><a href="/profile"><svg class="i"><use href="/static/icons.svg#user"/></svg>Profile</a></nav>
-<dialog class="sheet" id="new-sheet">
-  <div class="sheet-head"><h2>New</h2><button type="button" class="icon-btn" data-close aria-label="Close"><svg class="i"><use href="/static/icons.svg#x"/></svg></button></div>
-  <div class="sheet-body">
-    <div class="menu">
-      <a class="choice" href="/new"><span class="ic"><svg class="i"><use href="/static/icons.svg#receipt"/></svg></span><span class="grow">Tab<span>One trip or dinner. Closes on its own</span></span></a>
-      <a class="choice" href="/dashboard#new-group" data-open="group-sheet"><span class="ic"><svg class="i"><use href="/static/icons.svg#users"/></svg></span><span class="grow">Group<span>People you split with often. Never expires</span></span></a>
-    </div>
-  </div>
-</dialog>
+<body>
+<header class="top">
+  <a href="/profile" class="icon-btn" aria-label="Back"><svg class="i"><use href="/static/icons.svg#chevleft"/></svg></a>
+</header>
+<main class="page" id="page" hidden>
+  <div class="head"><p class="eyebrow">People</p><h1>Friends</h1><p class="muted">Add a friend by email. If they're new to EvenUp, your request waits until they sign up.</p></div>
+  <form id="add" class="card stack">
+    <label class="label" for="email">Their email</label>
+    <input class="field" type="email" id="email" maxlength="254" autocomplete="off" placeholder="friend@example.com" required>
+    <button class="btn ink" type="submit" id="send"><svg class="i"><use href="/static/icons.svg#userplus"/></svg>Add friend</button>
+    <p class="note" id="note" role="status"></p>
+    <p class="error" id="error" role="alert"></p>
+  </form>
+  <section class="stack" id="requests-card" hidden><h2>Requests</h2><div class="list" id="requests"></div></section>
+  <section class="stack"><div class="sec-title"><h2>Your friends</h2><span class="count" id="n-friends"></span></div><div class="list" id="friends"></div></section>
+  <section class="stack" id="sent-card" hidden><h2>Sent, waiting</h2><div class="list" id="sent"></div></section>
+</main>
 </body>
 </html>

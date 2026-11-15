@@ -5,253 +5,91 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#070708">
   <meta name="color-scheme" content="dark">
-  <title>EvenUp · Split bills, settle with UPI</title>
-  <meta name="description" content="Split bills with friends and settle up with UPI in one tap. No account needed for a tab.">
+  <meta name="description" content="Split bills with friends and settle up with UPI in one tap. No account needed.">
+  <title>EvenUp</title>
   <link rel="preload" href="/static/fonts/serif-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/static/home.css">
+  <link rel="stylesheet" href="/static/app.css">
   <script src="/static/common.js" defer></script>
+  <script src="/static/auth.js" defer></script>
+  <script src="/static/shell.js" defer></script>
   <script src="/static/home.js" defer></script>
 </head>
 <body>
-<header class="nav" id="nav">
-  <div class="wrap nav-in">
-    <a class="logo" href="/"><span class="logo-mark"></span>EvenUp</a>
-    <nav class="nav-links"><a href="#how">How it works</a><a href="#features">Features</a><a href="#faq">FAQ</a></nav>
-    <div class="nav-end"><a class="link" id="account" href="/login">Sign in</a><a class="btn white sm" href="/new">Open a tab</a></div>
-  </div>
-</header>
+<header class="top"><a href="/" class="logo"><span class="logo-mark"></span>EvenUp</a></header>
 
-<main>
-<section class="hero">
-  <div class="wrap hero-grid">
-    <div class="hero-text">
-      <a class="pill rv" id="announce" href="/login?mode=signup"><b>New</b>Keep a running balance with friends<svg class="i"><use href="/static/icons.svg#arrow"/></svg></a>
-      <h1 class="rv d1">Split the bill.<br> <span>Settle it with UPI<br> in one tap.</span></h1>
-      <p class="lead rv d2">Open a tab, share one link and add what everyone paid. EvenUp works out the fewest payments and opens your UPI app with the amount filled in.</p>
-      <div class="cta-row rv d3">
-        <a class="btn white" href="/new">Open a tab<svg class="i"><use href="/static/icons.svg#arrow"/></svg></a>
-        <button type="button" class="btn" id="demo">Try the demo</button>
-      </div>
-      <p class="error" id="demo-error"></p>
-      <div class="assure rv d4">
-        <span><svg class="i"><use href="/static/icons.svg#phone"/></svg>No app to install</span>
-        <span><svg class="i"><use href="/static/icons.svg#lock"/></svg>No sign-up to join</span>
-        <span><svg class="i"><use href="/static/icons.svg#clock"/></svg>Gone in 48 hours</span>
-      </div>
-    </div>
-
-    <div class="stage" aria-hidden="true">
-      <div class="rcpt-wrap">
-        <div class="rcpt">
-          <div class="rcpt-h">SEA SHACK</div>
-          <div class="rcpt-s">Baga, Goa · Table 7</div>
-          <hr>
-          <div class="l"><span>Fish thali ×4</span><span>1,600.00</span></div>
-          <div class="l"><span>Prawn balchão</span><span>720.00</span></div>
-          <div class="l"><span>Kingfish rava fry</span><span>560.00</span></div>
-          <div class="l"><span>Lime soda ×4</span><span>320.00</span></div>
-          <hr>
-          <div class="l t"><span>Total</span><span>₹3,200.00</span></div>
-          <div class="split"><span>Split 4 ways</span><b>₹800.00 each</b></div>
-          <div class="bar"></div>
-        </div>
-      </div>
-
-      <div class="phone">
-        <div class="screen">
-          <div class="island"></div>
-          <div class="sbar"><span>9:41</span><i></i></div>
-          <div class="app-top">
-            <span class="back"><svg class="i"><use href="/static/icons.svg#chevleft"/></svg></span>
-            <div><b>Goa trip</b><small><span class="dot"></span>4 people · closes in 46h</small></div>
-          </div>
-          <div class="owe">
-            <div class="lbl">You owe</div>
-            <div class="amt num"><span data-to="2550">₹2,550</span><small>.00</small></div>
-            <div class="meta">Two payments settle you up</div>
-            <div class="prow"><span class="av a">RS</span><span class="who"><b>Riya Sen</b><span>riya@okhdfcbank</span></span><span class="v num">₹2,300</span><span class="paybtn">Pay</span></div>
-            <div class="prow"><span class="av b">AK</span><span class="who"><b>Aman Khanna</b><span>aman@ybl</span></span><span class="v num">₹250</span><span class="paybtn">Pay</span></div>
-          </div>
-          <div class="sec"><span>Expenses</span><span class="num">₹23,000 spent</span></div>
-          <div class="exp">
-            <div class="erow"><span class="ic"><svg class="i"><use href="/static/icons.svg#home"/></svg></span><span class="w"><b>Villa, 2 nights</b><span>Riya paid</span></span><span class="v num">₹12,000<span class="neg">you owe ₹3,000</span></span></div>
-            <div class="erow"><span class="ic"><svg class="i"><use href="/static/icons.svg#bike"/></svg></span><span class="w"><b>Scooters and fuel</b><span>Aman paid</span></span><span class="v num">₹6,000<span class="neg">you owe ₹1,500</span></span></div>
-            <div class="erow"><span class="ic"><svg class="i"><use href="/static/icons.svg#fork"/></svg></span><span class="w"><b>Sea Shack</b><span>You paid</span></span><span class="v num">₹3,200<span class="pos">you lent ₹2,400</span></span></div>
-            <div class="erow"><span class="ic"><svg class="i"><use href="/static/icons.svg#car"/></svg></span><span class="w"><b>Cab to the airport</b><span>Kabir paid</span></span><span class="v num">₹1,800<span class="neg">you owe ₹450</span></span></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="chip"><b class="num">3</b>payments settle<br>the whole trip</div>
-      <div class="toast"><span class="ok"><svg class="i" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span><span><b>Riya got ₹2,300.00</b><span>Paid with Google Pay · just now</span></span></div>
-    </div>
-  </div>
-</section>
-
-<div class="apps" aria-label="Works with any UPI app">
-  <div class="wrap apps-in">
-    <p>Opens the UPI app<br>you already use</p>
-    <div class="marquee"><div class="track">
-      <span>Google Pay</span><span>PhonePe</span><span>Paytm</span><span>BHIM</span><span>Amazon Pay</span><span>CRED</span><span>Navi</span>
-      <span>Google Pay</span><span>PhonePe</span><span>Paytm</span><span>BHIM</span><span>Amazon Pay</span><span>CRED</span><span>Navi</span>
-    </div></div>
-  </div>
-</div>
-
-<section class="section" id="features">
-  <div class="wrap">
-    <div class="head-row">
-      <div><span class="eyebrow rv">Why it's quick</span><h2 class="h2 rv d1">Built for the minute <span>the bill arrives</span></h2></div>
-      <p class="rv d2">No spreadsheets and no chasing people for days. One link, everyone adds what they paid, and the tab tells each person exactly who to pay.</p>
-    </div>
-
-    <div class="tix">
-      <article class="tk w2 rv">
-        <div class="tk-vis"><div class="net">
-          <svg viewBox="0 0 600 380" preserveAspectRatio="none">
-            <path class="tangle" d="M110 90 L490 90 M110 90 L110 290 M110 90 L490 290 M490 90 L110 290 M490 90 L490 290 M110 290 L490 290 M116 96 L484 284 M484 96 L116 284 M110 98 L490 98 M118 290 L118 90 M482 90 L482 290 M110 282 L490 282"/>
-            <path class="clean k0" d="M512 268 C 550 220, 550 160, 512 112"/>
-            <path class="clean k1" d="M134 90 C 250 70, 360 70, 466 90"/>
-            <path class="clean k2" d="M88 268 C 50 220, 50 160, 88 112"/>
-          </svg>
-          <div class="node n-tl"><span class="av c">Yo</span>You</div>
-          <div class="node n-tr"><span class="av a">RS</span>Riya</div>
-          <div class="node n-bl"><span class="av b">AK</span>Aman</div>
-          <div class="node n-br"><span class="av d">KB</span>Kabir</div>
-          <span class="amt-tag num k1 t-top">₹2,300</span>
-          <span class="amt-tag num k0 t-right">₹3,950</span>
-          <span class="amt-tag num k2 t-left">₹250</span>
-        </div></div>
-        <div class="perf"></div>
-        <div class="tk-stub"><div class="tk-meta"><span>No. 01</span><b><s>12</s> 3 payments</b></div><h3>Twelve payments become three</h3><p>Paying back every expense one by one is twelve transfers for this trip. EvenUp nets it out, so each person pays at most twice.</p></div>
-      </article>
-
-      <article class="tk rv d1">
-        <div class="tk-vis"><div class="sheet">
-          <div class="sheet-h"><span class="av a">RS</span><span><b>Pay Riya Sen</b>riya@okhdfcbank</span><em class="num">₹2,300.00</em></div>
-          <div class="apps-list">
-            <div class="app k0"><i>G</i>Google Pay<span class="go">Opening</span></div>
-            <div class="app k1"><i>P</i>PhonePe</div>
-            <div class="app k2"><i>₹</i>Paytm</div>
-          </div>
-        </div></div>
-        <div class="perf"></div>
-        <div class="tk-stub"><div class="tk-meta"><span>No. 02</span><b>1 tap</b></div><h3>Pay from any UPI app</h3><p>Tap Pay and your UPI app opens with the name and amount filled in.</p></div>
-      </article>
-
-      <article class="tk rv">
-        <div class="tk-vis"><div class="paise">
-          <div class="top"><span>Cab, split 3 ways</span><b class="num">₹1,000.00</b></div>
-          <div class="rows">
-            <div class="r"><span class="av a">RS</span>Riya<span class="v num">₹333.<small>34</small></span></div>
-            <div class="r"><span class="av b">AK</span>Aman<span class="v num">₹333.33</span></div>
-            <div class="r"><span class="av c">Yo</span>You<span class="v num">₹333.33</span></div>
-          </div>
-          <div class="bar"><i class="k0"></i><i class="k1"></i><i class="k2"></i></div>
-        </div></div>
-        <div class="perf"></div>
-        <div class="tk-stub"><div class="tk-meta"><span>No. 03</span><b>₹0.01</b></div><h3>Exact to the paisa</h3><p>The odd paisa goes to someone, so every share adds back to the bill.</p></div>
-      </article>
-
-      <article class="tk rv d1">
-        <div class="tk-vis"><div>
-          <div class="linkbox"><svg class="i"><use href="/static/icons.svg#link"/></svg><span class="u">getevenup.vercel.app/g/goa</span><button type="button" tabindex="-1"><svg class="i"><use href="/static/icons.svg#copy"/></svg>Copy</button></div>
-          <div class="joins">
-            <div class="join k0"><span class="av a">RS</span>Riya joined<time>2m</time></div>
-            <div class="join k1"><span class="av b">AK</span>Aman joined<time>1m</time></div>
-            <div class="join k2"><span class="av d">KB</span>Kabir joined<time>now</time></div>
-          </div>
-        </div></div>
-        <div class="perf"></div>
-        <div class="tk-stub"><div class="tk-meta"><span>No. 04</span><b>1 link</b></div><h3>No sign-up to join</h3><p>Share one link in the group chat. Friends pick their name and they're in.</p></div>
-      </article>
-
-      <article class="tk rv d2">
-        <div class="tk-vis"><div class="ring-row">
-          <div class="ring"><svg viewBox="0 0 128 128"><circle class="bgc" cx="64" cy="64" r="56"/><circle class="fg" cx="64" cy="64" r="56"/></svg><div><b class="num">46h</b><span>left</span></div></div>
-          <div class="life"><span class="on">Open, add expenses</span><span>Closed, read-only</span><span>Deleted</span></div>
-        </div></div>
-        <div class="perf"></div>
-        <div class="tk-stub"><div class="tk-meta"><span>No. 05</span><b>48h</b></div><h3>Gone in 48 hours</h3><p>A tab closes itself, then it's deleted. Nothing left to clean up.</p></div>
-      </article>
-
-      <article class="tk rv">
-        <div class="tk-vis"><div class="ledger">
-          <div><span class="av a">RS</span><span>Riya Sen<small>4 tabs together</small></span><span class="v pos num">owes you ₹1,240</span></div>
-          <div><span class="av d">KB</span><span>Kabir Bose<small>2 tabs together</small></span><span class="v neg num">you owe ₹380</span></div>
-          <div><span class="av b">AK</span><span>Aman Khanna<small>6 tabs together</small></span><span class="v num">settled</span></div>
-        </div></div>
-        <div class="perf"></div>
-        <div class="tk-stub"><div class="tk-meta"><span>No. 06</span><b>Every tab</b></div><h3>Balances that carry over</h3><p>Sign in to keep a running balance with the friends you split with most.</p></div>
-      </article>
-
-      <article class="tk w2 total-tk rv d1">
-        <div class="tk-vis"><div class="sum">
-          <div class="l"><span>App to install</span><i></i><b class="num">₹0.00</b></div>
-          <div class="l"><span>Account to join a tab</span><i></i><b class="num">₹0.00</b></div>
-          <div class="l"><span>Fees on payments</span><i></i><b class="num">₹0.00</b></div>
-          <div class="l t"><span>Total</span><i></i><b class="num">₹0.00</b></div>
-        </div></div>
-        <div class="perf"></div>
-        <div class="tk-stub"><div class="tk-meta"><span>No. 07</span><b>Free</b></div><h3>What EvenUp costs</h3><p>Nothing. Money goes straight from your UPI app to your friend's. EvenUp never holds it.</p></div>
-      </article>
-    </div>
-  </div>
-</section>
-
-<section class="section" id="how">
-  <div class="wrap">
-    <span class="eyebrow rv">How it works</span>
-    <h2 class="h2 rv d1">One link, three steps, <span>everyone settled</span></h2>
-    <div class="steps rv d2">
-      <div class="step"><span class="n">01</span><h3>Open a tab</h3><p>Type your name and how many people are splitting. No account needed.</p></div>
-      <div class="step"><span class="n">02</span><h3>Share the link</h3><p>Drop it in the group chat. Everyone adds what they paid, from any phone.</p><span class="k"><kbd>⌘</kbd><kbd>V</kbd></span></div>
-      <div class="step"><span class="n">03</span><h3>Settle with UPI</h3><p>Each person sees who to pay and how much. One tap opens their UPI app.</p></div>
-    </div>
-  </div>
-</section>
-
-<section class="section" id="faq">
-  <div class="wrap faq">
-    <div class="faq-side rv">
-      <span class="eyebrow">Questions</span>
-      <h2 class="h2">Good <span>to know</span></h2>
-      <p>Still unsure? Open the demo tab and click around. Nothing you do there is real.</p>
-      <button type="button" class="more" id="demo-2">Try a demo tab<svg class="i"><use href="/static/icons.svg#arrow"/></svg></button>
-    </div>
-    <div class="faq-list rv d1">
-      <details open><summary>Is it really free?<svg class="i"><use href="/static/icons.svg#plus"/></svg></summary><p>Yes. No fees, no ads, no premium plan. EvenUp only does the maths, and the money moves app to app over UPI.</p></details>
-      <details><summary>Does money pass through EvenUp?<svg class="i"><use href="/static/icons.svg#plus"/></svg></summary><p>Never. Pay opens your own UPI app with the amount and UPI ID filled in. You approve it there like any other payment.</p></details>
-      <details><summary>Do I need an account?<svg class="i"><use href="/static/icons.svg#plus"/></svg></summary><p>Not for a tab, just open one and share the link. An account gives you a dashboard, friends you can add by email, and one UPI ID in your profile.</p></details>
-      <details><summary>Do my friends need an account?<svg class="i"><use href="/static/icons.svg#plus"/></svg></summary><p>No. They open the link, pick their name or add it, and they're in. If you turned on passwords, they create one the first time.</p></details>
-      <details><summary>Can someone pretend to be me?<svg class="i"><use href="/static/icons.svg#plus"/></svg></summary><p>Turn on Password protect when you open the tab. Then everyone, you included, signs in with their own password.</p></details>
-      <details><summary>What happens after 48 hours?<svg class="i"><use href="/static/icons.svg#plus"/></svg></summary><p>The tab closes and turns read-only for a day so you can save the summary image or CSV. Then it's deleted for good.</p></details>
-      <details><summary>Is my UPI ID safe?<svg class="i"><use href="/static/icons.svg#plus"/></svg></summary><p>UPI IDs are encrypted before they're stored, and only people with the tab link can see them.</p></details>
-    </div>
-  </div>
-</section>
-
-<div class="wrap">
-  <section class="cta rv">
-    <span class="eyebrow">Ready when the bill is</span>
-    <h2 class="h2">The bill's on the table. <span>Split it in a minute.</span></h2>
-    <p>Open a tab now and share the link before anyone reaches for their wallet.</p>
-    <div class="cta-row"><a class="btn white" href="/new">Open a tab<svg class="i"><use href="/static/icons.svg#arrow"/></svg></a><a class="btn" id="cta-account" href="/login?mode=signup">Create an account</a></div>
+<main class="page with-bar">
+  <section class="hero" id="landing" hidden>
+    <p class="eyebrow">Split bills · settle with UPI</p>
+    <h1>Split the bill. Settle up in one tap.</h1>
+    <p class="muted">Open a tab, share one link and add what everyone paid. EvenUp works out the fewest payments and opens your UPI app with the amount filled in.</p>
+    <div class="hero-cta"><a class="btn ink" href="/new">Open a tab<svg class="i"><use href="/static/icons.svg#arrow"/></svg></a><a class="btn" href="/login">Sign in</a></div>
+    <p class="dim small-text">No account needed. A tab is open for 48 hours, then it cleans itself up.</p>
+    <ol class="steps">
+      <li><span class="mono">01</span><b>Open a tab</b><span>Your name and how many are splitting.</span></li>
+      <li><span class="mono">02</span><b>Share one link</b><span>Everyone picks their name and adds what they paid.</span></li>
+      <li><span class="mono">03</span><b>Settle with UPI</b><span>The fewest payments, with the amount filled in.</span></li>
+    </ol>
   </section>
-</div>
+
+  <div class="head" id="head" hidden>
+    <p class="eyebrow" id="today"></p>
+    <h1 id="title">Home</h1>
+  </div>
+
+  <a class="card row" id="upi-prompt" href="/profile" hidden>
+    <span class="sq-ic"><svg class="i"><use href="/static/icons.svg#wallet"/></svg></span>
+    <span class="grow"><b class="w5">Add your UPI ID</b><span class="small-text muted">So friends can pay you in one tap</span></span>
+    <svg class="i sm dim"><use href="/static/icons.svg#chev"/></svg>
+  </a>
+
+  <form class="stack" id="link-open">
+    <label class="label" for="link">Got a link?</label>
+    <div class="linkbar">
+      <input type="text" id="link" placeholder="Paste a tab link" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <button class="btn ink small" type="submit">Open</button>
+    </div>
+    <p class="error" id="link-error"></p>
+  </form>
+
+  <section class="stack-lg" id="list-sec">
+    <div class="sec-title"><h2 id="list-title">Saved here</h2><span class="count" id="n-list"></span></div>
+    <div id="list"><p class="muted">Loading…</p></div>
+    <p class="error" id="error" role="alert"></p>
+  </section>
 </main>
 
-<footer class="foot">
-  <div class="wrap">
-    <div class="foot-in">
-      <div class="about"><a class="logo" href="/"><span class="logo-mark"></span>EvenUp</a><p>Split group bills and settle up with UPI. Made in India.</p></div>
-      <div><h4>Product</h4><a href="/new">Open a tab</a><a href="#features">Features</a><a href="#how">How it works</a></div>
-      <div><h4>Account</h4><a href="/login" id="foot-signin">Sign in</a><a href="/login?mode=signup" id="foot-signup">Create an account</a><a href="/friends">Friends</a></div>
-      <div><h4>Help</h4><a href="#faq">FAQ</a><a href="#how">How it works</a></div>
-    </div>
-    <div class="foot-base"><span>© 2026 EvenUp</span><span>Payments happen in your UPI app. EvenUp never holds money.</span></div>
-  </div>
-</footer>
+<nav class="tabbar" aria-label="EvenUp">
+  <a href="/" aria-current="page"><svg class="i"><use href="/static/icons.svg#home"/></svg>Home</a>
+  <span class="plus-ring"><a href="/new" class="plus" id="plus" aria-label="New"><svg class="i"><use href="/static/icons.svg#plus"/></svg></a></span>
+  <span></span>
+  <a href="/profile"><svg class="i"><use href="/static/icons.svg#user"/></svg>Profile</a>
+</nav>
 
+<dialog class="sheet" id="new-sheet">
+  <div class="grip"></div>
+  <div class="sheet-head"><h2>New</h2><button type="button" class="icon-btn sm" data-close aria-label="Close"><svg class="i"><use href="/static/icons.svg#x"/></svg></button></div>
+  <div class="sheet-body menu">
+    <a class="choice" href="/new"><span class="sq-ic"><svg class="i"><use href="/static/icons.svg#receipt"/></svg></span><span class="grow">Tab<span>One trip or dinner. Closes on its own</span></span></a>
+    <button type="button" class="choice" id="open-group"><span class="sq-ic"><svg class="i"><use href="/static/icons.svg#users"/></svg></span><span class="grow">Group<span>People you split with often. Never expires</span></span></button>
+  </div>
+</dialog>
+
+<dialog class="sheet" id="group-sheet">
+  <form id="group-form" class="sheet-form">
+    <div class="grip"></div>
+    <div class="sheet-head"><h2>New group</h2><button type="button" class="icon-btn sm" data-close aria-label="Close"><svg class="i"><use href="/static/icons.svg#x"/></svg></button></div>
+    <div class="sheet-body">
+      <p class="muted small-text">For people you split with again and again: a flat, a team, a family. Groups don't expire.</p>
+      <div class="stack"><label class="label" for="group-name">Name</label>
+        <input class="field" type="text" id="group-name" maxlength="40" placeholder="Flat 4B, Goa crew, Office lunch" required></div>
+      <div class="stack" id="group-friends-box"><span class="label">From your friends</span><div class="chips" id="group-friends"></div></div>
+      <div class="stack"><label class="label" for="group-emails">Invite by email · not on EvenUp yet</label>
+        <input class="field" type="text" id="group-emails" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="riya@gmail.com, kabir@outlook.com"></div>
+      <p class="dim small-text">Anyone not on EvenUp yet gets an invite, and joins when they say yes. You can add more people later.</p>
+      <p class="error" id="group-error" role="alert"></p>
+    </div>
+    <div class="sheet-foot"><button class="btn ink" type="submit" id="group-save">Create group</button></div>
+  </form>
+</dialog>
 </body>
 </html>

@@ -18,7 +18,7 @@ import qrcode.image.svg
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.concurrency import run_in_threadpool
@@ -118,7 +118,7 @@ async def security_headers(request, call_next):
     # Pages and scripts revalidate every load (a cheap 304 when unchanged): a cached old common.js next to a
     # new split.js threw on picking a name and left "Who are you?" stuck.
     resp.headers.setdefault("Cache-Control", "no-cache")
-    if request.url.path not in ("/", "/static/style.css"):  # only the landing page is indexable
+    if request.url.path != "/":  # only the landing page is indexable
         resp.headers["X-Robots-Tag"] = "noindex"
     return resp
 
@@ -152,7 +152,7 @@ def profile_page():
 
 @app.get("/dashboard")
 def dashboard_page():
-    return FileResponse(STATIC / "dashboard.html")
+    return RedirectResponse("/")  # Home is the dashboard now; old links and emails still land
 
 
 @app.get("/friends")
