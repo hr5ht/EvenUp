@@ -16,14 +16,7 @@
 .dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--dim); }
 .dot.pos { background: var(--owed); box-shadow: 0 0 0 4px rgb(95 211 155 / .15); }
 .dot.neg { background: var(--neg-p); }
-.life { height: 1px; margin-top: 4px; background: var(--line-2); }
-.life span { display: block; height: 1px; background: var(--accent); transition: width .6s var(--ease); }
 
-.pills { display: flex; gap: 8px; overflow-x: auto; margin: -16px -20px 0; padding: 0 20px; scrollbar-width: none; }
-.pill { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; flex: none; border-radius: 999px; border: 1px solid var(--line-2); background: var(--surface-2); font-size: 14px; font-weight: 500; }
-.pill.ink { background: var(--ink); color: var(--ink-text); border-color: var(--ink); }
-.pill .c { font: 12px var(--mono); color: var(--muted); }
-.pill .c:empty { display: none; }
 
 /* the bill */
 .bill { padding-bottom: 10px; animation: print .7s var(--ease) .05s both; }
@@ -107,3 +100,4 @@
 /* closed: nothing that changes it */
 .ended .live-only { display: none !important; }
 .meta .dot { margin-top: 8px; }
+.menu-row .count { font: 13px var(--mono); color: var(--muted); }

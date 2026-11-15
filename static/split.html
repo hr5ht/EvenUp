@@ -17,6 +17,7 @@
 <header class="top">
   <a href="/" class="icon-btn" aria-label="Home"><svg class="i"><use href="/static/icons.svg#chevleft"/></svg></a>
   <div class="row end">
+    <button type="button" class="icon-btn" data-open="share-sheet" aria-label="Share"><svg class="i"><use href="/static/icons.svg#share"/></svg></button>
     <button type="button" class="icon-btn shield live-only" id="admin-tile" data-open="admin-sheet" hidden><svg class="i"><use href="/static/icons.svg#shield"/></svg><span class="sr" id="admin-label">Admin</span></button>
     <button type="button" id="switch" class="you-pill"><span class="avatar" id="you-avatar" hidden></span><span class="grow" id="you-text">…</span><svg class="i sm"><use href="/static/icons.svg#chevdown"/></svg></button>
   </div>
@@ -33,13 +34,7 @@
   <div class="head">
     <h1 id="title">Loading…</h1>
     <p class="meta" id="meta" hidden><span class="dot" id="state-dot"></span><span id="expiry"></span></p>
-    <div class="life" id="life" hidden><span id="life-bar"></span></div>
   </div>
-  <nav class="pills" aria-label="Tab actions">
-    <button type="button" class="pill" data-open="balances-sheet"><svg class="i sm"><use href="/static/icons.svg#chart"/></svg>Balances</button>
-    <button type="button" class="pill" data-open="activity-sheet"><svg class="i sm"><use href="/static/icons.svg#history"/></svg>Activity<span class="c" id="tile-activity"></span></button>
-    <button type="button" class="pill ink" data-open="share-sheet"><svg class="i sm"><use href="/static/icons.svg#share"/></svg>Share</button>
-  </nav>
   <p class="error" id="load-error"></p>
 
   <section class="card stack" id="ended-card" hidden>
@@ -60,6 +55,11 @@
         <div class="barcode"></div>
       </div>
     </section>
+
+    <div class="list">
+      <button type="button" class="menu-row" data-open="balances-sheet"><span class="sq-ic"><svg class="i"><use href="/static/icons.svg#chart"/></svg></span><span class="grow"><b>Balances</b><span>Who owes whom</span></span><svg class="i sm"><use href="/static/icons.svg#chev"/></svg></button>
+      <button type="button" class="menu-row" data-open="activity-sheet"><span class="sq-ic"><svg class="i"><use href="/static/icons.svg#history"/></svg></span><span class="grow"><b>Activity</b><span>Every change in this tab</span></span><span class="count" id="tile-activity"></span><svg class="i sm"><use href="/static/icons.svg#chev"/></svg></button>
+    </div>
 
     <div class="upi-line live-only" id="upi-line" hidden>
       <svg class="i"><use href="/static/icons.svg#wallet"/></svg><span class="k">Your UPI ID</span><span class="grow mono" id="upi-line-id"></span>

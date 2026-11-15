@@ -121,8 +121,6 @@ function render() {
     : `Open until ${when(data.expires_at)} · ${hours}h left · ${people}`;
   $("state-dot").className = `dot${data.ended ? "" : " pos"}`;
   // Time left of the 48 hours, as a line that empties.
-  $("life").hidden = data.ended || data.group;
-  $("life-bar").style.width = `${Math.max(2, Math.min(100, ((data.expires_at - Date.now() / 1000) / (48 * 3600)) * 100))}%`;
   // First render only: the title slides in and the expense rows arrive one by one. Polling re-renders stay still.
   if (!document.body.classList.contains("loaded")) {
     document.body.classList.add("loaded");
