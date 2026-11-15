@@ -1,27 +1,25 @@
-// Hero form: your name opens a tab (→ /new). "Join with a link" switches it to paste a tab link instead.
+// Home page: reveal on scroll, the hero amount counting up, the demo buttons, and account links once signed in.
 const $ = (id) => document.getElementById(id);
-const cmd = $("cmd");
-let joining = false;
 
-$("join").onclick = () => {
-  joining = !joining;
-  Object.assign(cmd, { value: "", placeholder: joining ? "Paste the tab link" : "Your name" });
-  cmd.setAttribute("aria-label", joining ? "Tab link" : "Your name");
-  $("go").textContent = joining ? "Join tab" : "Open a tab";
-  $("join").textContent = joining ? "Open a new tab instead" : "Join with a link";
-  $("demo-error").textContent = "";
-  cmd.focus();
-};
+const io = new IntersectionObserver((entries) => entries.forEach((e) => {
+  if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+}), { threshold: 0.15 });
+document.querySelectorAll(".rv").forEach((el) => io.observe(el));
 
-$("command").onsubmit = (e) => {
-  e.preventDefault();
-  const v = cmd.value.trim();
-  if (!joining) return (location.href = v ? `/new?name=${encodeURIComponent(v)}` : "/new");
-  // Accept a full link or just the code after /g/.
-  const slug = v.split("/g/").pop().split(/[?#/\s]/)[0];
-  if (!slug) return ($("demo-error").textContent = "Paste the link your friend shared.");
-  location.href = `/g/${encodeURIComponent(slug)}`;
-};
+addEventListener("scroll", () => $("nav").classList.toggle("scrolled", scrollY > 8), { passive: true });
+
+// The phone's "You owe" counts up once the phone has risen.
+if (!matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  for (const el of document.querySelectorAll("[data-to]")) {
+    const to = +el.dataset.to, start = performance.now() + 900, f = new Intl.NumberFormat("en-IN");
+    const tick = (t) => {
+      const p = Math.min(1, Math.max(0, (t - start) / 1400));
+      el.textContent = "₹" + f.format(Math.round(to * (1 - (1 - p) ** 4)));
+      if (p < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+}
 
 // The demo: the server makes a filled-in tab, and this device opens it as Guest, the admin.
 async function demo(button) {
