@@ -33,6 +33,7 @@ button { cursor: pointer; background: none; border: 0; }
 button:disabled { cursor: default; opacity: .4; }
 [hidden] { display: none !important; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+[tabindex="-1"]:focus { outline: none; } /* headings focused for screen readers, not keyboard targets */
 ::selection { background: rgb(227 199 155 / .3); }
 
 .i { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
@@ -164,6 +165,7 @@ dialog.sheet.full { margin: 0 auto; height: 100dvh; max-height: 100dvh; border-r
 .sheet-foot { display: flex; gap: 10px; padding: 12px 20px; border-top: 1px solid var(--line); flex: none; }
 .sheet-foot > * { flex: 1; }
 .sheet-form { display: contents; }
+.sheet.full .sheet-head { padding: calc(16px + env(safe-area-inset-top)) 20px 4px; }
 dialog.confirm { margin: auto; width: min(calc(100% - 48px), 400px); border-radius: 24px; border: 1px solid var(--line-2); background: var(--surface); color: var(--text); padding: 24px; }
 dialog.confirm[open] { animation: pop .26s var(--ease); }
 dialog.confirm::backdrop { background: rgb(0 0 0 / .65); }

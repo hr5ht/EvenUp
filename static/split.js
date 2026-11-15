@@ -133,7 +133,7 @@ function render() {
   $("tile-activity").textContent = data.activity.length || "";
   // Full: nobody new until the admin removes someone. The server refuses anyway.
   $("join-open").disabled = full;
-  $("join-open").textContent = full ? `This tab is full (${data.capacity} people)` : "I'm not on the list";
+  $("join-open").replaceChildren(icon("userplus"), full ? `This tab is full (${data.capacity} people)` : "I'm not on the list");
   $("add-member").disabled = full;
   $("add-member").textContent = full ? "Full: remove someone first" : "Add person";
   renderBalances();
