@@ -95,7 +95,7 @@ export default function Home() {
             <View className="items-center gap-2 rounded-[20px] border border-dashed border-line-2 px-6 py-8">
               <View className="mb-2 h-12 w-12 items-center justify-center rounded-2xl bg-surface-2"><Icon.Receipt color={colors.accent} size={22} /></View>
               <T className="text-[22px] font-bold">No tabs yet</T>
-              <T className="text-center text-sm leading-5 text-muted">Open a new tab, or open a link a friend sent. It's saved here with who you are, so you never have to keep the link.</T>
+              <T className="text-center text-sm leading-5 text-muted">Tap + to open a new tab, or open a link a friend sent. It's saved here with who you are, so you never have to keep the link.</T>
             </View>
           ) : (
             <View className="overflow-hidden rounded-[20px] border border-line bg-surface p-1.5">
@@ -110,11 +110,6 @@ export default function Home() {
         </View>
       </ScrollView>
 
-      <SafeAreaView edges={["bottom"]} className="bg-bg">
-        <View className="px-5 pb-2 pt-3">
-          <Btn variant="ink" title="Open a new tab" icon={<Icon.Plus color={colors["ink-text"]} size={16} />} onPress={() => router.push("/new")} />
-        </View>
-      </SafeAreaView>
       {confirmEl}
     </SafeAreaView>
   );

@@ -331,6 +331,8 @@ const svg = (draw: (p: ReturnType<typeof stroke>) => ReactNode) =>
 export const Icon = {
   Back: svg((p) => <Path d="M15 5l-7 7 7 7" {...p} />),
   Chev: svg((p) => <Path d="M9 6l6 6-6 6" {...p} />),
+  Home: svg((p) => <Path d="M4 10.5L12 4l8 6.5V20h-5v-6h-6v6H4z" {...p} />),
+  User: svg((p) => <><Circle cx={12} cy={8} r={4} {...p} /><Path d="M4 21a8 8 0 0 1 16 0" {...p} /></>),
   Receipt: svg((p) => <Path d="M5 3h14v18l-2.3-1.5L14.3 21 12 19.5 9.7 21l-2.4-1.5L5 21zM9 8h6M9 12h6M9 16h3" {...p} />),
   History: svg((p) => <><Path d="M3 12a9 9 0 1 0 3-6.7L3 8" {...p} /><Path d="M3 3v5h5M12 7v5l3 2" {...p} /></>),
   X: svg((p) => <Path d="M6 6l12 12M18 6L6 18" {...p} />),
