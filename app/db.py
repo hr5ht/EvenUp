@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS members (
     name TEXT NOT NULL,
     upi_id TEXT,
     pw_hash TEXT,  -- password protected splits only, set by the member the first time they pick their name
-    user_id TEXT  -- groups: the account this member is
+    user_id TEXT,  -- groups: the account this member is
+    invite_email TEXT  -- groups: added by email, linked to their account once they accept the friend request
 );
 CREATE TABLE IF NOT EXISTS expenses (
     id {pk},
@@ -84,7 +85,7 @@ CREATE TABLE IF NOT EXISTS stats (
 );
 """
 # Columns added after launch, for databases created before them.
-NEW_COLUMNS = {"splits": [("capacity", "INTEGER"), ("owner_user_id", "TEXT")], "members": [("pw_hash", "TEXT"), ("user_id", "TEXT")]}
+NEW_COLUMNS = {"splits": [("capacity", "INTEGER"), ("owner_user_id", "TEXT")], "members": [("pw_hash", "TEXT"), ("user_id", "TEXT"), ("invite_email", "TEXT")]}
 # After NEW_COLUMNS, since they can index a column an older database only just got.
 INDEXES = ["CREATE INDEX IF NOT EXISTS members_user ON members (user_id)"]
 

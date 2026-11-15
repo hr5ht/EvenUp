@@ -593,5 +593,69 @@ def test_groups(monkeypatch):
         assert c.delete("/api/me", headers=o).status_code == 200
         g = c.get(base, headers=f).json()
         assert g["admin_id"] == fatima and g["members"][0]["name"] == "Deleted user"
+        # deleting a group: read-only for a day, its owner can bring it back, then cleanup takes it
+        assert c.delete(base, headers=x).status_code == 403
         assert c.delete(base, headers=f).status_code == 200
+        assert c.get(base, headers=x).json()["ended"] and [gr["ended"] for gr in c.get("/api/groups", headers=x).json()] == [True]
+        milk = {**expense, "paid_by": fatima, "participants": [fatima]}
+        assert c.post(f"{base}/expenses", json=milk, headers=f).status_code == 410
+        assert c.post(f"/api/groups/{slug}/restore", headers=x).status_code == 403
+        assert c.post(f"/api/groups/{slug}/restore", headers=f).status_code == 200
+        assert not c.get(base, headers=f).json()["ended"]
+        assert c.delete(base, headers=f).status_code == 200
+        later = main.now() + main.GRACE + 10
+        monkeypatch.setattr(main, "now", lambda: later)
+        assert c.post("/cron/cleanup", headers={"X-Cron-Secret": "s3cret"}).json()["deleted"] == 1
         assert c.get(base, headers=f).status_code == 404
+
+
+def test_group_invites_and_leaving(monkeypatch):
+    use_neon(monkeypatch)
+    monkeypatch.setattr(main, "send_email", lambda *a: None)
+    main.HITS.clear()
+    with TestClient(app) as c:
+        o = person(c, "l-o", "o@life.test", "Olu")
+        f = person(c, "l-f", "f@life.test", "Fern")
+        rid = befriend(c, o, f, "f@life.test")
+        # someone with no account yet gets a named place now, and it becomes theirs when they say yes
+        slug = c.post("/api/groups", json={"name": "Trip", "friend_ids": [rid], "emails": ["New.Person@life.test", "o@life.test"]},
+                      headers=o).json()["slug"]
+        base = f"/api/splits/{slug}"
+        olu, fern, newp = c.get(base, headers=o).json()["members"]  # your own email is skipped
+        assert newp["name"] == "new.person" and newp["invited"] and not newp["account"] and "email" not in str(newp)
+        assert c.post(f"/api/groups/{slug}/members", json={"email": "new.person@life.test"}, headers=f).status_code == 400
+        assert c.post(f"/api/groups/{slug}/members", json={"email": "f@life.test"}, headers=o).status_code == 400  # already in
+        n = person(c, "l-n", "new.person@life.test", "Nia")
+        assert c.get(base, headers=n).status_code == 404  # not before they say yes
+        req = c.get("/api/friends", headers=n).json()["requests"][0]["id"]
+        assert c.post(f"/api/friends/{req}/accept", headers=n).status_code == 200
+        g = c.get(base, headers=n).json()
+        assert g["me"] == newp["id"] and (g["members"][2]["name"], g["members"][2]["account"], g["members"][2]["invited"]) == ("Nia", True, False)
+
+        # renaming and handing over are the owner's, and only an account can own a group
+        assert c.patch(f"/api/groups/{slug}", json={"name": "Goa"}, headers=f).status_code == 403
+        assert c.patch(f"/api/groups/{slug}", json={"name": "Goa"}, headers=o).status_code == 200
+        assert c.get(base, headers=f).json()["name"] == "Goa"
+        waiting = c.post(f"/api/groups/{slug}/members", json={"email": "later@life.test"}, headers=o).json()["id"]
+        assert c.post(f"/api/groups/{slug}/owner", json={"member_id": waiting}, headers=o).status_code == 404
+        assert c.post(f"/api/groups/{slug}/owner", json={"member_id": fern["id"]}, headers=f).status_code == 403
+        assert c.post(f"/api/groups/{slug}/owner", json={"member_id": fern["id"]}, headers=o).status_code == 200
+        assert c.get(base, headers=o).json()["admin_id"] == fern["id"]
+
+        # leaving needs a ₹0 balance; past expenses keep your name, but the group is no longer yours to open
+        fuel = {"paid_by": olu["id"], "amount_paise": 1000, "description": "Fuel", "split": "equal", "participants": [olu["id"], fern["id"]]}
+        assert c.post(f"{base}/expenses", json=fuel, headers=o).status_code == 200
+        assert c.post(f"/api/groups/{slug}/leave", headers=o).status_code == 400
+        pay = {"paid_by": fern["id"], "amount_paise": 500, "description": "Fern paid Olu · Cash", "split": "exact",
+               "shares": {str(olu["id"]): 500}, "kind": "payment"}
+        assert c.post(f"{base}/expenses", json=pay, headers=f).status_code == 200
+        assert c.post(f"/api/groups/{slug}/leave", headers=o).status_code == 200
+        assert c.get(base, headers=o).status_code == 404
+        left = next(m for m in c.get(base, headers=f).json()["members"] if m["id"] == olu["id"])
+        assert (left["name"], left["account"]) == ("Olu", False)
+        assert [gr["name"] for gr in c.get("/api/groups", headers=o).json()] == []
+        # the owner leaving hands the group on; the last account deletes it instead
+        assert c.post(f"/api/groups/{slug}/leave", headers=f).status_code == 200
+        assert c.get(base, headers=n).json()["admin_id"] == newp["id"]
+        assert c.post(f"/api/groups/{slug}/leave", headers=n).status_code == 400
+        assert "member_left" in [a["action"] for a in c.get(base, headers=n).json()["activity"]]
