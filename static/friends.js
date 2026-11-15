@@ -33,6 +33,7 @@ async function load() {
     action("Decline", `/api/friends/${p.id}/decline`), action("Accept", `/api/friends/${p.id}/accept`, "POST", "small primary"))));
   fill("friends", friends.map((p) => row(p, action("Remove", `/api/friends/${p.id}`, "DELETE", "small ghost"))), "No friends yet. Add one by email above.");
   fill("sent", sent.map((p) => row(p, action("Cancel", `/api/friends/${p.id}`, "DELETE", "small ghost"))));
+  $("n-friends").textContent = friends.length || "";
   $("requests-card").hidden = !requests.length;
   $("sent-card").hidden = !sent.length;
 }

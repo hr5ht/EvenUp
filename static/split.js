@@ -66,16 +66,29 @@ function toast(text, action, fn) {
 
 // ---------- load + render ----------
 
+// Groups are private to their members' accounts, so a signed-in browser sends its account with every request.
+async function authHeaders(fresh) {
+  return signedIn() ? { Authorization: `Bearer ${await authToken(fresh)}` } : {};
+}
+
 async function load() {
   try {
-    data = await api("GET", base);
+    data = await api("GET", base, null, await authHeaders()).catch(async (err) => {
+      if (err.status !== 401 || !signedIn()) throw err;
+      return api("GET", base, null, await authHeaders(true)); // a token gone stale early gets one fresh try
+    });
   } catch (err) {
     // Polling keeps a tab that's already showing; only a first load that fails is "gone".
     if (data) return;
     document.title = "Tab not found · QuickTab";
     $("page").hidden = true;
     $("gone").hidden = false;
+    $("gone-group").hidden = $("gone-signin").hidden = signedIn();
     return;
+  }
+  if (data.group) {
+    identity = { me: data.me }; // your account says who you are; nothing kept on this device
+    document.querySelector(".topbar .logo").href = "/dashboard";
   }
   render();
 }
@@ -97,12 +110,13 @@ function render() {
   const hours = Math.max(0, Math.round((data.expires_at * 1000 - Date.now()) / 3600000));
   const people = data.members.length === 1 ? "Just one person so far" : `${data.members.length} people`;
   $("meta").hidden = false;
-  $("expiry").textContent = data.ended
+  $("switch").disabled = data.group; // in a group you're your account, there's nobody else to switch to
+  $("expiry").textContent = data.group ? `Group · ${people}` : data.ended
     ? `Closed · ${people} · deleted ${when(data.deletes_at)}`
     : `Open until ${when(data.expires_at)} · ${hours}h left · ${people}`;
   $("state-dot").className = `dot${data.ended ? "" : " pos"}`;
   // Time left of the 48 hours, as a line that empties.
-  $("life").hidden = data.ended;
+  $("life").hidden = data.ended || data.group;
   $("life-bar").style.width = `${Math.max(2, Math.min(100, ((data.expires_at - Date.now() / 1000) / (48 * 3600)) * 100))}%`;
   // First render only: the title slides in and the expense rows arrive one by one. Polling re-renders stay still.
   if (!document.body.classList.contains("loaded")) {
@@ -194,9 +208,16 @@ function renderYou() {
   $("upi-line-id").textContent = saved ? me.upi_id : "";
   $("upi-form").hidden = !me || (saved && !upiEditing);
   $("upi-cancel").hidden = !upiEditing;
+  if (data.group) { // your UPI ID lives in your profile and follows you into every group
+    $("upi-form").hidden = true;
+    $("upi-line").hidden = !me;
+    $("upi-line-id").textContent = saved ? me.upi_id : "Not added yet";
+    $("upi-edit").textContent = saved ? "Change in Profile" : "Add in Profile";
+  }
 }
 
 $("upi-edit").onclick = () => {
+  if (data.group) return (location.href = "/profile");
   upiEditing = true;
   $("my-upi").value = member(identity.me).upi_id;
   $("upi-error").textContent = "";
@@ -328,13 +349,13 @@ $("join-form").onsubmit = async (ev) => {
 
 // Every change carries this device's sessions: the member one (protected splits) and the admin one.
 async function call(method, url, body) {
-  const headers = {};
+  const headers = await authHeaders();
   if (identity.token) headers["X-Member-Token"] = identity.token;
   if (identity.adminToken) headers["X-Admin-Token"] = identity.adminToken;
   try {
     return await api(method, url, body, headers);
   } catch (err) {
-    if (err.status === 401) setIdentity({}); // session no longer valid: back to "Who are you?"
+    if (err.status === 401 && !data.group) setIdentity({}); // session no longer valid: back to "Who are you?"
     throw err;
   }
 }
@@ -405,10 +426,16 @@ $("pay-cash").onclick = () => {
   payStep("Cash");
 };
 
-$("pay-upi").onclick = () => {
+$("pay-upi").onclick = async () => {
   const to = member(paying.to);
   const amount = paying.amount_paise;
-  $("pay-qr").src = `${base}/qr?to=${to.id}&amount=${amount}`;
+  const qr = `${base}/qr?to=${to.id}&amount=${amount}`;
+  $("pay-qr").src = "";
+  if (!data.group) $("pay-qr").src = qr;
+  else { // an <img> can't send the account a group needs, so fetch it and show it as a data: URL (the CSP allows those)
+    fetch(qr, { headers: await authHeaders() }).then((r) => r.text())
+      .then((svg) => ($("pay-qr").src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`));
+  }
   // Android's upi:// shows the system's app chooser; iOS gets ours (see #pay-now's click below).
   $("pay-now").href = IS_IOS ? "#" : upiLink(to, amount);
   $("app-list").replaceChildren(...IOS_APPS.map(([name, scheme]) => el("a", { className: "choice", href: upiLink(to, amount, scheme) }, el("span", { className: "grow", textContent: name }), icon("chev"))));
@@ -787,14 +814,40 @@ function renderAdminMembers() {
       avatar(m.name),
       el("span", { className: "grow" }, el("span", { textContent: m.name }),
         el("span", { className: "muted", textContent: m.upi_id || "No UPI ID" })),
-      el("span", { className: "row" }, editUpi, remove),
+      el("span", { className: "row" }, data.group ? null : editUpi, m.id === data.admin_id ? null : remove),
     );
   }));
+  if (data.group) loadFriendPicker();
+}
+
+// Groups add people from your friends, not by typing a name.
+let pickerLoaded = false;
+async function loadFriendPicker() {
+  for (const id of ["new-member", "new-member-upi"]) $(id).hidden = true;
+  $("new-friend").hidden = false;
+  $("delete-split").textContent = "Delete this group";
+  document.querySelector("label[for=new-member]").textContent = "Add a friend";
+  document.querySelector("label[for=new-member]").htmlFor = "new-friend";
+  $("add-member").textContent = "Add to group";
+  if (pickerLoaded) return;
+  pickerLoaded = true;
+  const { friends } = await authed("GET", "/api/friends").catch(() => ({ friends: [] }));
+  const inGroup = new Set(data.members.map((m) => m.name));
+  const free = friends.filter((f) => !inGroup.has(f.name));
+  $("new-friend").replaceChildren(...(free.length
+    ? free.map((f) => el("option", { value: f.id, textContent: `${f.name} · ${f.email}` }))
+    : [el("option", { value: "", textContent: "All your friends are in this group" })]));
 }
 
 $("add-member").onclick = async () => {
   $("admin-error").textContent = "";
   try {
+    if (data.group) {
+      if (!$("new-friend").value) return;
+      await call("POST", `/api/groups/${slug}/members`, { friend_id: Number($("new-friend").value) });
+      pickerLoaded = false;
+      return await load();
+    }
     await adminApi("POST", `${base}/members`, {
       name: $("new-member").value.trim(),
       upi_id: $("new-member-upi").value.trim() || null,
@@ -808,10 +861,11 @@ $("add-member").onclick = async () => {
 };
 
 $("delete-split").onclick = async () => {
-  if (!(await askConfirm("Delete this tab?", "It's deleted for everyone, with all its expenses and payments. This can't be undone.", "Delete tab"))) return;
+  const what = data.group ? "group" : "tab";
+  if (!(await askConfirm(`Delete this ${what}?`, "It's deleted for everyone, with all its expenses and payments. This can't be undone.", `Delete ${what}`))) return;
   try {
     await adminApi("DELETE", base);
-    location.href = "/";
+    location.href = data.group ? "/dashboard" : "/";
   } catch (err) {
     $("admin-error").textContent = err.message;
   }

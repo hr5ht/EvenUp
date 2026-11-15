@@ -4,28 +4,30 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex">
-  <meta name="theme-color" content="#08090a" data-fixed>
+  <meta name="theme-color" content="#070708">
   <meta name="color-scheme" content="dark">
   <title>Friends · QuickTab</title>
+  <link rel="preload" href="/static/fonts/serif-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/style.css">
-  <script src="/static/theme.js"></script>
+  <link rel="stylesheet" href="/static/app.css">
   <script src="/static/common.js" defer></script>
   <script src="/static/auth.js" defer></script>
   <script src="/static/shell.js" defer></script>
   <script src="/static/friends.js" defer></script>
 </head>
-<body class="page">
+<body class="shell">
 <div class="app">
   <aside class="sidebar">
-    <a href="/" class="logo">QuickTab</a>
-    <nav class="side-nav" aria-label="Your account"><a href="/dashboard"><svg class="i"><use href="/static/icons.svg#home"/></svg>Home</a><a href="/friends" aria-current="page"><svg class="i"><use href="/static/icons.svg#users"/></svg>Friends</a><a href="/profile"><svg class="i"><use href="/static/icons.svg#user"/></svg>Profile</a></nav>
-    <div class="side-user"><span class="avatar" id="side-avatar"></span><span class="grow"><b id="side-name"></b><span id="side-email"></span></span></div>
+    <a href="/" class="logo"><span class="logo-mark"></span>QuickTab</a>
+    <a class="button primary side-cta" href="/new"><svg class="i"><use href="/static/icons.svg#plus"/></svg>Open a tab</a>
+    <nav class="side-nav" aria-label="Your account"><a href="/dashboard"><svg class="i"><use href="/static/icons.svg#home"/></svg>Home</a><a href="/activity"><svg class="i"><use href="/static/icons.svg#history"/></svg>Activity</a><a href="/friends" aria-current="page"><svg class="i"><use href="/static/icons.svg#users"/></svg>Friends</a><a href="/profile"><svg class="i"><use href="/static/icons.svg#user"/></svg>Profile</a></nav>
+    <a class="side-user" href="/profile"><span class="avatar" id="side-avatar"></span><span class="grow"><b id="side-name"></b><span id="side-email"></span></span></a>
   </aside>
   <main class="main">
-    <div class="main-bar"><span class="crumb">Friends</span><a href="/" class="logo">QuickTab</a></div>
-    <div class="page-title rise"><h1>Friends</h1><p>Add a friend by email. If they're new to QuickTab, your request waits until they sign up.</p></div>
+    <div class="main-bar"><a href="/" class="logo"><span class="logo-mark"></span>QuickTab</a><div class="end"></div></div>
+    <header class="page-title"><p class="eyebrow">People</p><h1>Friends</h1><p>Add a friend by email. If they're new to QuickTab, your request waits until they sign up.</p></header>
     <div id="page" class="content-narrow" hidden>
-      <form id="add" class="card">
+      <form id="add" class="card add-card">
         <label for="email">Their email</label>
         <div class="add-row">
           <input type="email" id="email" maxlength="254" autocomplete="off" placeholder="friend@example.com" required>
@@ -35,11 +37,11 @@
         <p class="error" id="error" role="alert"></p>
       </form>
       <section class="panel" id="requests-card" hidden><h2>Requests</h2><div id="requests"></div></section>
-      <section class="panel"><h2>Your friends</h2><div id="friends"></div></section>
+      <section class="panel"><h2>Your friends <span class="count" id="n-friends"></span></h2><div id="friends"></div></section>
       <section class="panel" id="sent-card" hidden><h2>Sent, waiting for an answer</h2><div id="sent"></div></section>
     </div>
   </main>
 </div>
-<nav class="tabbar" aria-label="Your account"><a href="/dashboard"><svg class="i"><use href="/static/icons.svg#home"/></svg>Home</a><a href="/friends" aria-current="page"><svg class="i"><use href="/static/icons.svg#users"/></svg>Friends</a><a href="/profile"><svg class="i"><use href="/static/icons.svg#user"/></svg>Profile</a></nav>
+<nav class="tabbar" aria-label="Your account"><a href="/dashboard"><svg class="i"><use href="/static/icons.svg#home"/></svg>Home</a><a href="/activity"><svg class="i"><use href="/static/icons.svg#history"/></svg>Activity</a><a href="/new" class="tab-plus" aria-label="Open a tab"><svg class="i"><use href="/static/icons.svg#plus"/></svg></a><a href="/friends" aria-current="page"><svg class="i"><use href="/static/icons.svg#users"/></svg>Friends</a><a href="/profile"><svg class="i"><use href="/static/icons.svg#user"/></svg>Profile</a></nav>
 </body>
 </html>

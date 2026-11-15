@@ -4,51 +4,56 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex">
-  <meta name="theme-color" content="#08090a" data-fixed>
+  <meta name="theme-color" content="#070708">
   <meta name="color-scheme" content="dark">
   <title>Profile · QuickTab</title>
+  <link rel="preload" href="/static/fonts/serif-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/style.css">
-  <script src="/static/theme.js"></script>
+  <link rel="stylesheet" href="/static/app.css">
   <script src="/static/common.js" defer></script>
   <script src="/static/auth.js" defer></script>
   <script src="/static/shell.js" defer></script>
   <script src="/static/profile.js" defer></script>
 </head>
-<body class="page">
+<body class="shell">
 <div class="app">
   <aside class="sidebar">
-    <a href="/" class="logo">QuickTab</a>
-    <nav class="side-nav" aria-label="Your account"><a href="/dashboard"><svg class="i"><use href="/static/icons.svg#home"/></svg>Home</a><a href="/friends"><svg class="i"><use href="/static/icons.svg#users"/></svg>Friends</a><a href="/profile" aria-current="page"><svg class="i"><use href="/static/icons.svg#user"/></svg>Profile</a></nav>
-    <div class="side-user"><span class="avatar" id="side-avatar"></span><span class="grow"><b id="side-name"></b><span id="side-email"></span></span></div>
+    <a href="/" class="logo"><span class="logo-mark"></span>QuickTab</a>
+    <a class="button primary side-cta" href="/new"><svg class="i"><use href="/static/icons.svg#plus"/></svg>Open a tab</a>
+    <nav class="side-nav" aria-label="Your account"><a href="/dashboard"><svg class="i"><use href="/static/icons.svg#home"/></svg>Home</a><a href="/activity"><svg class="i"><use href="/static/icons.svg#history"/></svg>Activity</a><a href="/friends"><svg class="i"><use href="/static/icons.svg#users"/></svg>Friends</a><a href="/profile" aria-current="page"><svg class="i"><use href="/static/icons.svg#user"/></svg>Profile</a></nav>
+    <a class="side-user" href="/profile"><span class="avatar" id="side-avatar"></span><span class="grow"><b id="side-name"></b><span id="side-email"></span></span></a>
   </aside>
   <main class="main">
-    <div class="main-bar"><span class="crumb">Profile</span><a href="/" class="logo">QuickTab</a></div>
-    <div class="page-title rise"><h1>Profile</h1><p id="email"></p></div>
+    <div class="main-bar"><a href="/" class="logo"><span class="logo-mark"></span>QuickTab</a><div class="end"></div></div>
+    <header class="page-title"><p class="eyebrow">Your account</p><h1>Profile</h1></header>
     <div id="page" class="content-narrow" hidden>
+      <section class="card who-card"><span class="avatar big" id="big-avatar"></span><span class="grow"><b id="who-name"></b><span id="email"></span></span></section>
       <form id="profile" class="card">
+        <h2 class="card-title">Your details</h2>
         <label for="name">Your name</label>
         <input type="text" id="name" maxlength="40" autocomplete="name" required>
         <label for="upi">Your UPI ID <span class="optional">Optional</span></label>
         <input type="text" id="upi" maxlength="321" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="name@bank">
-        <p class="hint">So friends can pay you by UPI. Only people in your tabs see it.</p>
+        <p class="hint">So friends can pay you by UPI. It's printed on your bill in every group and tab you're in.</p>
         <p class="error" id="error" role="alert"></p>
-        <button class="primary block save" type="submit" id="save">Save</button>
+        <button class="primary save" type="submit" id="save">Save</button>
       </form>
       <section class="card">
         <h2 class="card-title">Session</h2>
-        <button type="button" class="block" id="sign-out"><svg class="i"><use href="/static/icons.svg#logout"/></svg>Sign out</button>
+        <p class="hint">Signed in on this browser.</p>
+        <button type="button" id="sign-out"><svg class="i"><use href="/static/icons.svg#logout"/></svg>Sign out</button>
       </section>
-      <section class="card">
+      <section class="card danger-card">
         <h2 class="card-title">Delete account</h2>
-        <p class="hint">This can't be undone. Your profile and friends list are removed.</p>
+        <p class="hint">This can't be undone. Your profile and friends go. Your groups pass to another member, and your part in their expenses stays so their balances still add up.</p>
         <label for="delete-password">Enter your password to confirm</label>
         <input type="password" id="delete-password" maxlength="128" autocomplete="current-password" placeholder="Your password">
         <p class="error" id="delete-error" role="alert"></p>
-        <button type="button" class="danger block" id="delete">Delete my account</button>
+        <button type="button" class="danger" id="delete">Delete my account</button>
       </section>
     </div>
   </main>
 </div>
-<nav class="tabbar" aria-label="Your account"><a href="/dashboard"><svg class="i"><use href="/static/icons.svg#home"/></svg>Home</a><a href="/friends"><svg class="i"><use href="/static/icons.svg#users"/></svg>Friends</a><a href="/profile" aria-current="page"><svg class="i"><use href="/static/icons.svg#user"/></svg>Profile</a></nav>
+<nav class="tabbar" aria-label="Your account"><a href="/dashboard"><svg class="i"><use href="/static/icons.svg#home"/></svg>Home</a><a href="/activity"><svg class="i"><use href="/static/icons.svg#history"/></svg>Activity</a><a href="/new" class="tab-plus" aria-label="Open a tab"><svg class="i"><use href="/static/icons.svg#plus"/></svg></a><a href="/friends"><svg class="i"><use href="/static/icons.svg#users"/></svg>Friends</a><a href="/profile" aria-current="page"><svg class="i"><use href="/static/icons.svg#user"/></svg>Profile</a></nav>
 </body>
 </html>

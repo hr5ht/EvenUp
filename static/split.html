@@ -8,9 +8,10 @@
   <meta name="color-scheme" content="dark">
   <title>QuickTab</title>
   <link rel="stylesheet" href="/static/style.css">
-  <link rel="stylesheet" href="/static/tab.css">
+  <link rel="stylesheet" href="/static/app.css">
   <script src="/static/theme.js"></script>
   <script src="/static/common.js" defer></script>
+  <script src="/static/auth.js" defer></script>
   <script src="/static/split.js" defer></script>
 </head>
 <body class="split-page">
@@ -24,7 +25,8 @@
 <main class="gone" id="gone" hidden>
   <h1>This tab is gone</h1>
   <p>Tabs are deleted a day after they close, or the link is wrong. Ask whoever shared it for a fresh one.</p>
-  <div class="row"><a class="button" href="/">Go home</a><a class="button primary" href="/new">Open a tab</a></div>
+  <p id="gone-group" hidden>If it's a group, sign in with the account it was shared with.</p>
+  <div class="row"><a class="button" href="/">Go home</a><a class="button" href="/login" id="gone-signin">Sign in</a><a class="button primary" href="/new">Open a tab</a></div>
 </main>
 
 <main class="tab-page" id="page">
@@ -121,6 +123,7 @@
   <div class="sheet-body">
     <ul class="list" id="admin-members"></ul>
     <label for="new-member">Add someone</label>
+    <select id="new-friend" hidden></select>
     <input type="text" id="new-member" maxlength="40" placeholder="Name">
     <input type="text" id="new-member-upi" maxlength="100" placeholder="UPI ID (optional)" class="stack" autocapitalize="off" spellcheck="false">
     <div class="actions"><button type="button" id="add-member" class="primary block">Add person</button></div>

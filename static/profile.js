@@ -6,6 +6,8 @@ function toLogin() {
 
 function fill(me) {
   $("email").textContent = me.email;
+  $("who-name").textContent = me.name;
+  $("big-avatar").textContent = initials(me.name);
   $("name").value = me.name;
   $("upi").value = me.upi_id || "";
 }
