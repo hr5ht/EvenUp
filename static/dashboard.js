@@ -26,8 +26,11 @@ function row({ href, name, kind, tag, people, spent, balance, closed }) {
     icon("chev"));
 }
 
-async function loadGroups(me) {
-  return (await authed("GET", "/api/groups")).map((g) => row({
+// mine: your profile, still on its way; only your name is needed, to say "You".
+async function loadGroups(mine) {
+  const groups = await authed("GET", "/api/groups");
+  const me = await mine;
+  return groups.map((g) => row({
     href: `/g/${g.slug}`, name: g.name, kind: "group", tag: g.ended ? "Group · deleted" : "Group", closed: g.ended,
     people: g.members.map((n) => (n === me.name ? "You" : n)), spent: g.spent, balance: g.balance,
   }));
@@ -35,7 +38,7 @@ async function loadGroups(me) {
 
 // Your tabs live on your account. Ones this browser opened before you signed in are added to it first.
 // ponytail: a tab that can't be added (someone else's account took that name) is retried on every visit
-async function loadTabs(me) {
+async function loadTabs(mine) {
   let tabs = await authed("GET", "/api/tabs");
   const linked = new Set(tabs.map((t) => t.slug));
   const claims = savedSlugs().filter((slug) => !linked.has(slug) && loadIdentity(slug).me != null).map((slug) => {
@@ -46,6 +49,7 @@ async function loadTabs(me) {
     await Promise.allSettled(claims);
     tabs = await authed("GET", "/api/tabs");
   }
+  const me = await mine;
   return tabs.map((t) => {
     // Opened on another device: this one learns who you are in it, so the tab opens as you.
     if (loadIdentity(t.slug).me !== t.me) saveIdentity(t.slug, { me: t.me, token: t.token, adminToken: t.admin_token });
@@ -109,21 +113,20 @@ $("group-form").onsubmit = async (ev) => {
 
 (async () => {
   $("today").textContent = new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
+  $("page").hidden = false; // the page is there at once; the list fills in when it arrives
+  $("list").replaceChildren(el("p", { className: "muted", textContent: "Loading…" }));
   try {
-    const me = await authed("GET", "/api/me");
+    // All at once: your profile, groups and tabs ask together (and share one sign-in token).
+    const mine = authed("GET", "/api/me");
+    const [me, groups, tabs] = await Promise.all([mine, loadGroups(mine), loadTabs(mine)]);
     $("upi-prompt").hidden = !!me.upi_id;
-    const [groups, tabs, { friends }] = await Promise.all([loadGroups(me), loadTabs(me), authed("GET", "/api/friends")]);
-    friendList = friends;
     renderList([...groups, ...tabs]);
-    $("page").hidden = false;
     if (location.hash === "#new-group") {
       history.replaceState(null, "", location.pathname);
       openGroupSheet();
     }
+    friendList = (await authed("GET", "/api/friends")).friends; // only the New group sheet needs them
   } catch (err) {
-    if (!needAccount(err)) {
-      $("page").hidden = false;
-      $("error").textContent = err.message;
-    }
+    if (!needAccount(err)) $("error").textContent = err.message;
   }
 })();

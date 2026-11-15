@@ -10,7 +10,7 @@
 body { background: radial-gradient(60% 420px at 50% 0%, rgb(255 255 255 / 0.05), transparent 70%) no-repeat, var(--bg); }
 body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 100; opacity: 0.05; mix-blend-mode: overlay;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
-@keyframes up { from { opacity: 0; transform: translateY(16px); filter: blur(6px); } }
+@keyframes fade { from { opacity: 0; transform: translateY(6px); } }
 @keyframes print { from { clip-path: inset(0 0 100% 0); transform: translateY(-24px); } to { clip-path: inset(0); transform: none; } }
 
 /* top bar and logo, as on the home page */
@@ -52,9 +52,9 @@ input:focus { border-color: rgb(227 199 155 / 0.6); box-shadow: 0 0 0 4px rgb(22
 .meta { margin-top: 16px; }
 .life { height: 2px; }
 .life span { background: linear-gradient(90deg, var(--brass), rgb(227 199 155 / 0.3)); opacity: 1; }
-.tab-head, .life { animation: up .9s var(--ease) both; }
-.col-a { animation: up .9s var(--ease) .1s both; }
-.col-b { animation: up .9s var(--ease) .2s both; }
+.tab-head, .life { animation: fade .35s var(--ease) both; }
+.col-a { animation: fade .35s var(--ease) .05s both; }
+.col-b { animation: fade .35s var(--ease) .1s both; }
 
 /* actions: one row by the title, Share last and white */
 .tab-head { align-items: flex-end; flex-wrap: wrap; }
@@ -70,7 +70,7 @@ input:focus { border-color: rgb(227 199 155 / 0.6); box-shadow: 0 0 0 4px rgb(22
 
 /* your bill, printed on paper */
 .lift { filter: drop-shadow(0 40px 40px rgb(0 0 0 / 0.55)) drop-shadow(0 4px 6px rgb(0 0 0 / 0.4)); }
-.bill { padding: 28px 28px 0; border-radius: 4px 4px 0 0; color: var(--ink-p); background: linear-gradient(180deg, #f6f3ec, #ebe6db); animation: print 1.3s var(--ease) .15s both; }
+.bill { padding: 28px 28px 0; border-radius: 4px 4px 0 0; color: var(--ink-p); background: linear-gradient(180deg, #f6f3ec, #ebe6db); animation: print .7s var(--ease) .1s both; }
 .bill::before { content: "EVENUP · YOUR SHARE"; display: block; padding-bottom: 16px; margin-bottom: 20px; border-bottom: 1px dashed var(--rule-p);
   text-align: center; font: 600 12px/16px var(--mono); letter-spacing: 0.12em; color: var(--ink-p2); }
 .bill::after { content: ""; display: block; height: 24px; margin-top: 24px; opacity: .8;
@@ -190,13 +190,13 @@ dialog.sheet::backdrop { background: rgb(0 0 0 / 0.6); backdrop-filter: blur(6px
 .side-user .avatar { background: rgb(227 199 155 / 0.12); color: var(--brass); }
 .main { padding: 0 48px 96px; max-width: 1280px; }
 @media (min-width: 641px) { .main { padding-top: 40px; } .main-bar { display: none; } } /* the sidebar has the logo */
-.page-title { padding: 0 0 32px; animation: up .9s var(--ease) both; }
+.page-title { padding: 0 0 32px; animation: fade .3s var(--ease) both; }
 .page-title .eyebrow { display: inline-flex; align-items: center; gap: 10px; margin: 0 0 16px; font-size: 14px; color: var(--brass); }
 .page-title .eyebrow::before { content: ""; width: 16px; height: 1px; background: currentColor; }
 .page-title .eyebrow:empty { display: none; }
 .page-title h1 { font-size: clamp(44px, 5vw, 64px); line-height: 1; letter-spacing: -0.025em; }
 .page-title p:not(.eyebrow) { margin-top: 14px; max-width: 520px; }
-.shell #page { animation: up .9s var(--ease) .1s both; }
+.shell #page { animation: fade .3s var(--ease) both; }
 
 /* home: groups and tabs, with requests above when there are any */
 
