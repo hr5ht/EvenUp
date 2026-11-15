@@ -41,14 +41,20 @@
     </div>
 
     <form id="profile" class="card stack">
-      <h3>Your details</h3>
-      <label class="label" for="name">Your name</label>
-      <input class="field" type="text" id="name" maxlength="40" autocomplete="name" required>
-      <label class="label" for="upi">Your UPI ID · optional</label>
-      <input class="field" type="text" id="upi" maxlength="321" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="name@bank">
-      <p class="muted small-text">So friends can pay you by UPI. It's printed on your bill in every group and tab you're in.</p>
-      <p class="error" id="error" role="alert"></p>
-      <button class="btn ink" type="submit" id="save">Save</button>
+      <div class="row"><h3 class="grow">Your details</h3><button type="button" class="btn tiny" id="edit">Edit</button></div>
+      <div class="stack" id="details-view">
+        <p class="kv"><span>Name</span><span id="view-name"></span></p>
+        <p class="kv"><span>UPI ID</span><span id="view-upi"></span></p>
+      </div>
+      <div class="stack" id="details-edit" hidden>
+        <label class="label" for="name">Your name</label>
+        <input class="field" type="text" id="name" maxlength="40" autocomplete="name" required>
+        <label class="label" for="upi">Your UPI ID · optional</label>
+        <input class="field" type="text" id="upi" maxlength="321" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="name@bank">
+        <p class="muted small-text">So friends can pay you by UPI. It's printed on your bill in every group and tab you're in.</p>
+        <p class="error" id="error" role="alert"></p>
+        <div class="row two"><button type="button" class="btn" id="cancel">Cancel</button><button class="btn ink" type="submit" id="save">Save</button></div>
+      </div>
     </form>
 
     <section class="card stack">
@@ -60,10 +66,7 @@
     <section class="card danger stack">
       <h3>Delete account</h3>
       <p class="muted small-text">This can't be undone. Your profile and friends go. Your groups pass to another member, and your part in their expenses stays so their balances still add up.</p>
-      <label class="label" for="delete-password">Enter your password to confirm</label>
-      <input class="field" type="password" id="delete-password" maxlength="128" autocomplete="current-password" placeholder="Your password">
-      <p class="error" id="delete-error" role="alert"></p>
-      <button type="button" class="btn danger" id="delete">Delete my account</button>
+      <button type="button" class="btn danger" data-open="delete-sheet">Delete my account</button>
     </section>
   </div>
 </main>
@@ -74,5 +77,18 @@
   <span></span>
   <a href="/profile" aria-current="page"><svg class="i"><use href="/static/icons.svg#user"/></svg>Profile</a>
 </nav>
+
+<dialog class="sheet" id="delete-sheet">
+  <form id="delete-form" class="sheet-form">
+    <div class="grip"></div>
+    <div class="sheet-head"><h2>Delete account?</h2><button type="button" class="icon-btn sm" data-close aria-label="Close"><svg class="i"><use href="/static/icons.svg#x"/></svg></button></div>
+    <div class="sheet-body">
+      <p class="muted small-text">This can't be undone. Enter your password to confirm.</p>
+      <input class="field" type="password" id="delete-password" maxlength="128" autocomplete="current-password" placeholder="Your password" required>
+      <p class="error" id="delete-error" role="alert"></p>
+    </div>
+    <div class="sheet-foot"><button type="button" class="btn" data-close>Cancel</button><button class="btn danger" type="submit" id="delete">Delete for good</button></div>
+  </form>
+</dialog>
 </body>
 </html>

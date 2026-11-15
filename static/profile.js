@@ -7,7 +7,23 @@ function fill(me) {
   $("big-avatar").textContent = initials(me.name);
   $("name").value = me.name;
   $("upi").value = me.upi_id || "";
+  $("view-name").textContent = me.name;
+  $("view-upi").textContent = me.upi_id || "Not added";
+  $("view-upi").className = me.upi_id ? "mono" : "dim";
+  editing(false);
 }
+
+// Your details read as text; Edit opens the boxes, Save or Cancel closes them.
+function editing(on) {
+  $("details-view").hidden = on;
+  $("details-edit").hidden = !on;
+  $("edit").hidden = on;
+  $("error").textContent = "";
+  if (on) $("name").focus();
+}
+let me;
+$("edit").onclick = () => editing(true);
+$("cancel").onclick = () => fill(me);
 
 function signedOut() {
   remember(false);
@@ -18,7 +34,7 @@ function signedOut() {
 (async () => {
   if (!signedIn()) return signedOut();
   try {
-    fill(await authed("GET", "/api/me"));
+    fill((me = await authed("GET", "/api/me")));
     $("signed-in").hidden = false;
   } catch (err) {
     if (err.status === 401) signedOut();
@@ -31,9 +47,7 @@ $("profile").onsubmit = async (e) => {
   $("error").textContent = "";
   $("save").disabled = true;
   try {
-    fill(await authed("PATCH", "/api/me", { name: value("name"), upi_id: value("upi") || null }));
-    $("save").textContent = "Saved";
-    setTimeout(() => ($("save").textContent = "Save"), 1500);
+    fill((me = await authed("PATCH", "/api/me", { name: value("name"), upi_id: value("upi") || null })));
   } catch (err) {
     $("error").textContent = err.status === 422 ? "That doesn't look like a UPI ID (name@bank)." : err.message;
   }
@@ -45,15 +59,15 @@ $("sign-out").onclick = async () => {
   signedOut();
 };
 
-$("delete").onclick = async () => {
+$("delete-form").onsubmit = async (e) => {
+  e.preventDefault();
   $("delete-error").textContent = "";
-  if (!$("delete-password").value) return ($("delete-error").textContent = "Enter your password");
-  if (!confirm("Delete your account? This can't be undone.")) return;
   $("delete").disabled = true;
   try {
     await authToken(true); // the session ends with the account, so take the token for our own delete first
     await api("POST", "/auth/delete-user", { password: $("delete-password").value });
     await authed("DELETE", "/api/me");
+    $("delete-sheet").close();
     signedOut();
   } catch (err) {
     $("delete-error").textContent = err.message;

@@ -102,6 +102,9 @@ select.field { appearance: none; }
 /* ---------- surfaces ---------- */
 .card { border-radius: 20px; border: 1px solid var(--line); background: var(--surface); padding: 20px; }
 .card.danger { border-color: var(--owe); }
+.kv { display: flex; justify-content: space-between; gap: 12px; }
+.kv > span:first-child { color: var(--muted); }
+.kv > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .list { border-radius: 20px; border: 1px solid var(--line); background: var(--surface); padding: 6px; list-style: none; }
 .list > * + * { border-top: 1px solid var(--line); }
 .tag { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line-2);
