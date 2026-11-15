@@ -142,6 +142,36 @@ dialog.sheet::backdrop { background: rgb(0 0 0 / 0.6); backdrop-filter: blur(6px
 .segmented span { border-radius: 999px; }
 
 
+/* ---------- the tab page fits the window: only the expense list scrolls ---------- */
+@media (min-width: 641px) and (min-height: 560px) {
+  body.split-page { display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }
+  body.split-page .topbar { flex: none; }
+  .tab-page { flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; padding-top: clamp(12px, 4vh, 56px); padding-bottom: clamp(16px, 3vh, 32px); }
+  .tab-head, .life, #ended-card, #load-error { flex: none; }
+  .tab-head { padding-bottom: clamp(16px, 3.5vh, 32px); }
+  .tab-head h1 { font-size: clamp(36px, min(6vw, 8vh), 72px); }
+  .meta { margin-top: clamp(8px, 1.6vh, 16px); }
+  .life { margin-bottom: clamp(16px, 4vh, 40px); }
+  .tab-grid { flex: 1; min-height: 0; grid-template-rows: minmax(0, 1fr); align-items: stretch; }
+  .col-a { min-height: 0; overflow-y: auto; scrollbar-width: none; padding-bottom: 8px; }
+  .col-a::-webkit-scrollbar { display: none; }
+  .hero-amount { font-size: clamp(44px, 7vh, 64px); }
+  .col-b { display: flex; flex-direction: column; min-height: 0; }
+  .list-head { flex: none; }
+  #expenses { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 0 -12px; padding: 0 12px 40px;
+    scrollbar-width: thin; scrollbar-color: var(--line-2) transparent;
+    -webkit-mask: linear-gradient(#000 calc(100% - 40px), transparent); mask: linear-gradient(#000 calc(100% - 40px), transparent); }
+}
+/* short laptop screens: a tighter bill, so it fits beside the list */
+@media (min-width: 641px) and (max-height: 780px) {
+  .bill { padding-top: 20px; }
+  .bill::before { padding-bottom: 12px; margin-bottom: 14px; }
+  .bill::after { height: 16px; margin-top: 16px; }
+  .pays { margin-top: 12px; }
+  .pay-row { min-height: 52px; }
+  .bill .upi-line, .bill .upi-form { margin-top: 12px; padding-top: 12px; }
+}
+
 /* ---------- signed-in pages: the sidebar shell ---------- */
 .shell .app { grid-template-columns: 264px minmax(0, 1fr); }
 .sidebar { padding: 24px 16px; background: linear-gradient(180deg, rgb(255 255 255 / 0.02), transparent 40%); }
