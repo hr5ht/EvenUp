@@ -1,9 +1,9 @@
 /* A tab or group, the app's way: back, admin shield and your name up top; serif title; pills; the paper bill. */
 
-.end { gap: 8px; min-width: 0; }
+.end { flex: 1; justify-content: flex-end; gap: 8px; min-width: 0; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .shield { color: var(--accent); }
-.you-pill { display: flex; align-items: center; gap: 10px; height: 44px; max-width: 220px; padding: 4px 14px 4px 4px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--surface-2); font-size: 14px; font-weight: 500; }
+.you-pill { min-width: 0; display: flex; align-items: center; gap: 10px; height: 44px; max-width: 220px; padding: 4px 14px 4px 4px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--surface-2); font-size: 14px; font-weight: 500; }
 .you-pill .avatar { width: 36px; height: 36px; background: rgb(227 199 155 / .14); color: var(--accent); }
 .you-pill #you-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
 .you-pill .role { color: var(--muted); font-weight: 400; }
