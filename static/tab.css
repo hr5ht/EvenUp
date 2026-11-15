@@ -74,11 +74,6 @@
 .danger-zone { padding-top: 16px; border-top: 1px dashed var(--line-2); }
 
 /* who are you */
-.pick { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 72px; padding: 12px; text-align: left; border-radius: 14px; }
-.pick:hover { background: var(--surface-2); }
-.pick.current { background: rgb(227 199 155 / .08); }
-.pick .grow > span { display: block; font-size: 13px; color: var(--muted); }
-.pick > .i:last-child { color: var(--dim); }
 
 /* the expense form */
 .amount-input { width: 100%; border: 0; border-bottom: 1px solid var(--line-2); background: transparent; outline: none; padding: 4px 0 10px; font-size: 56px; line-height: 1.1; }

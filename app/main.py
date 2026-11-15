@@ -634,8 +634,9 @@ def add_user_member(con, split_id, user):
 
 
 def add_to_group(con, sid, u, friend_id=None, email=None):
-    """One of your friends, or anyone by email. Someone added by email gets a friend request and a place
-    in the group straight away, so expenses can include them; it becomes their account when they say yes."""
+    """One of your friends, or anyone by email. An email with an account joins straight away; anyone else
+    gets an invite email and a place in the group now, so expenses can include them, which becomes theirs
+    when they sign up and say yes."""
     if len(member_ids(con, sid)) >= MAX_MEMBERS:
         raise HTTPException(400, f"A group holds {MAX_MEMBERS} people at most")
     if email:
@@ -644,16 +645,21 @@ def add_to_group(con, sid, u, friend_id=None, email=None):
                        (sid, email)).fetchone() or con.execute(
                 "SELECT 1 FROM members WHERE split_id = ? AND invite_email = ?", (sid, email)).fetchone():
             raise HTTPException(400, f"{email} is already in this group")
-        add_friend(FriendIn(email=email), u, con)  # your own email, rate limits and the invite email are handled there
-        f = con.execute("SELECT f.id FROM friends f JOIN users x ON x.email = ? WHERE f.status = 'accepted' AND "
-                        "((f.from_user = ? AND f.to_user = x.id) OR (f.from_user = x.id AND f.to_user = ?))",
-                        (email, u["id"], u["id"])).fetchone()
-        if not f:  # not friends yet: a named place, waiting for them
+        other = con.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+        if not other:  # not on EvenUp yet: the invite email goes with the friend request
+            add_friend(FriendIn(email=email), u, con)  # your own email, rate limits and the email are handled there
             name = email.split("@")[0][:40]
             mid = con.execute("INSERT INTO members (split_id, name, invite_email) VALUES (?, ?, ?) RETURNING id",
                               (sid, name, email)).fetchone()["id"]
             return mid, name
-        friend_id = f["id"]
+        if other["id"] == u["id"]:
+            raise HTTPException(400, "That's your own email.")
+        group = con.execute("SELECT name FROM splits WHERE id = ?", (sid,)).fetchone()["name"]
+        mid = add_user_member(con, sid, other)
+        if not limited(con, f"invite:{u['id']}:{email}", *INVITE_LIMIT):
+            send_email(email, f"{u['name']} added you to {group} on EvenUp",
+                       f"{u['name']} ({u['email']}) added you to the group {group} on EvenUp.\n\nOpen it: {SITE}/")
+        return mid, other["name"]
     other = friend_user(con, u, friend_id)
     if con.execute("SELECT id FROM members WHERE split_id = ? AND user_id = ?", (sid, other["id"])).fetchone():
         raise HTTPException(400, f"{other['name']} is already in this group")

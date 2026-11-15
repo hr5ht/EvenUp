@@ -877,38 +877,33 @@ async function groupAct(fn) {
   }
 }
 
-// Groups add people from your friends, not by typing a name.
-let pickerLoaded = false;
-async function loadFriendPicker() {
+// Groups add people through the popup: your friends by name, or anyone by email.
+function loadFriendPicker() {
   for (const id of ["new-member", "new-member-upi"]) $(id).hidden = true;
-  $("new-friend").hidden = $("invite-email").hidden = $("leave-group").hidden = false;
+  $("leave-group").hidden = false;
   $("delete-split").textContent = "Delete this group";
   $("delete-split").hidden = !isAdmin();
   $("rename-form").hidden = !isAdmin();
   if (document.activeElement !== $("group-rename")) $("group-rename").value = data.name;
-  $("add-label").htmlFor = "new-friend";
-  $("add-member").textContent = "Add to group";
-  if (pickerLoaded) return;
-  pickerLoaded = true;
-  const { friends } = await authed("GET", "/api/friends").catch(() => ({ friends: [] }));
-  const inGroup = new Set(data.members.map((m) => m.name));
-  const free = friends.filter((f) => !inGroup.has(f.name));
-  $("new-friend").replaceChildren(...(free.length
-    ? [el("option", { value: "", textContent: "Pick a friend" }), ...free.map((f) => el("option", { value: f.id, textContent: `${f.name} · ${f.email}` }))]
-    : [el("option", { value: "", textContent: "All your friends are in this group" })]));
+  $("add-member").replaceChildren(icon("userplus"), "Add people");
+}
+
+async function addToGroup(list) {
+  const failed = [];
+  for (const p of list) {
+    await call("POST", `/api/groups/${slug}/members`, p.email ? { email: p.email } : { friend_id: p.friend_id })
+      .catch((err) => failed.push(err.message));
+  }
+  await load();
+  $("admin-error").textContent = failed.join(" ");
 }
 
 $("add-member").onclick = async () => {
   $("admin-error").textContent = "";
   try {
     if (data.group) {
-      // Someone not on EvenUp yet gets a friend request by email and a place in the group right away.
-      const email = $("invite-email").value.trim();
-      if (!email && !$("new-friend").value) return ($("admin-error").textContent = "Pick a friend or enter an email.");
-      await call("POST", `/api/groups/${slug}/members`, email ? { email } : { friend_id: Number($("new-friend").value) });
-      $("invite-email").value = "";
-      pickerLoaded = false;
-      return await load();
+      const { friends } = await authed("GET", "/api/friends").catch(() => ({ friends: [] }));
+      return pickPeople({ friends, taken: new Set(data.members.map((m) => m.name)), onDone: addToGroup });
     }
     await adminApi("POST", `${base}/members`, {
       name: $("new-member").value.trim(),

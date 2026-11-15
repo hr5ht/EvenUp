@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="/static/tab.css">
   <script src="/static/common.js" defer></script>
   <script src="/static/auth.js" defer></script>
+  <script src="/static/people.js" defer></script>
   <script src="/static/split.js" defer></script>
 </head>
 <body>
@@ -120,10 +121,8 @@
     <ul class="list rows" id="admin-members"></ul>
     <div class="stack">
       <label class="label" for="new-member" id="add-label">Add someone</label>
-      <select class="field" id="new-friend" hidden></select>
       <input class="field" type="text" id="new-member" maxlength="40" placeholder="Name">
       <input class="field" type="text" id="new-member-upi" maxlength="100" placeholder="UPI ID (optional)" autocapitalize="off" spellcheck="false">
-      <input class="field" type="email" id="invite-email" maxlength="254" placeholder="Or anyone by email" autocomplete="off" hidden>
       <button type="button" id="add-member" class="btn ink">Add person</button>
     </div>
     <p class="error" id="admin-error"></p>

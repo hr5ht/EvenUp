@@ -205,7 +205,7 @@ dialog.confirm::backdrop { background: rgb(0 0 0 / .65); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chips label { cursor: pointer; }
 .chips input { position: absolute; opacity: 0; pointer-events: none; }
-.chips label > span { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px 0 4px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--surface-2); font-size: 14px; color: var(--muted); transition: border-color .2s, color .2s; }
+.chips label > span, .chip { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px 0 4px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--surface-2); font-size: 14px; color: var(--muted); transition: border-color .2s, color .2s; }
 .chips label > span .avatar { width: 30px; height: 30px; font-size: 11px; }
 .chips input:checked + span { border-color: var(--accent); color: var(--text); }
 .chips input:focus-visible + span { outline: 2px solid var(--accent); }
@@ -268,3 +268,15 @@ dialog.confirm::backdrop { background: rgb(0 0 0 / .65); }
 .feed-row .where { font-size: 13px; color: var(--muted); }
 .feed-row > .i:last-child { color: var(--dim); }
 .tabbar .plus { color: var(--ink-text); }
+
+/* rows to pick from: who you are in a tab, people for a group */
+.pick { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 72px; padding: 12px; text-align: left; border-radius: 14px; }
+.pick:hover { background: var(--surface-2); }
+.pick.current { background: rgb(227 199 155 / .08); }
+.pick .grow > span { display: block; font-size: 13px; color: var(--muted); }
+.pick > .i:last-child { color: var(--dim); }
+.pick.current > .i:last-child { color: var(--accent); }
+.pick .avatar .i { width: 16px; height: 16px; }
+.chip { color: var(--text); padding-right: 4px; }
+.chip .icon-btn { width: 30px; height: 30px; border: 0; background: transparent; }
+.pad { padding: 12px; }

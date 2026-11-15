@@ -661,6 +661,24 @@ def test_group_invites_and_leaving(monkeypatch):
         assert "member_left" in [a["action"] for a in c.get(base, headers=n).json()["activity"]]
 
 
+def test_group_adds_accounts_by_email(monkeypatch):
+    use_neon(monkeypatch)
+    sent = []
+    monkeypatch.setattr(main, "send_email", lambda to, subject, text: sent.append((to, subject)))
+    main.HITS.clear()
+    with TestClient(app) as c:
+        o = person(c, "e-o", "o@email.test", "Omar")
+        x = person(c, "e-x", "x@email.test", "Xena")  # has an account, not a friend
+        slug = c.post("/api/groups", json={"name": "Band", "emails": ["X@email.test", "nobody@email.test"]}, headers=o).json()["slug"]
+        base = f"/api/splits/{slug}"
+        _, xena, nobody = c.get(base, headers=o).json()["members"]
+        assert (xena["name"], xena["account"], xena["invited"]) == ("Xena", True, False)  # straight in
+        assert c.get(base, headers=x).status_code == 200
+        assert nobody["invited"] and not nobody["account"]  # waits for a sign-up and a yes
+        assert [s for _, s in sent] == ["Omar added you to Band on EvenUp", "Omar wants to split bills with you on EvenUp"]
+        assert c.post(f"/api/groups/{slug}/members", json={"email": "x@email.test"}, headers=o).status_code == 400
+
+
 def test_tabs_follow_your_account(monkeypatch):
     use_neon(monkeypatch)
     main.HITS.clear()

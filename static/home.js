@@ -89,21 +89,28 @@ async function loadAccount() {
 function openGroupSheet() {
   $("new-sheet").close();
   $("group-error").textContent = "";
-  $("group-friends-box").hidden = !friendList.length;
-  $("group-friends").replaceChildren(...friendList.map((f) =>
-    el("label", {}, el("input", { type: "checkbox", value: f.id }), el("span", {}, avatar(f.name), f.name))));
+  showPeople([]);
   $("group-sheet").showModal();
   $("group-name").focus();
 }
 $("open-group").onclick = openGroupSheet;
+
+// The people picked so far, as chips you can take off again.
+let people = [];
+function showPeople(list) {
+  people = list;
+  $("group-people").replaceChildren(...people.map((p) => el("span", { className: "chip" }, avatar(p.name), p.name,
+    el("button", { type: "button", className: "icon-btn", ariaLabel: `Remove ${p.name}`, onclick: () => showPeople(people.filter((x) => x !== p)) }, icon("x")))));
+}
+$("group-add-people").onclick = () => pickPeople({ friends: friendList, chosen: people, onDone: showPeople });
 
 $("group-form").onsubmit = async (ev) => {
   ev.preventDefault();
   $("group-error").textContent = "";
   $("group-save").disabled = true;
   try {
-    const friend_ids = [...document.querySelectorAll("#group-friends input:checked")].map((i) => Number(i.value));
-    const emails = $("group-emails").value.split(/[\s,;]+/).filter(Boolean);
+    const friend_ids = people.filter((p) => p.friend_id).map((p) => p.friend_id);
+    const emails = people.filter((p) => p.email).map((p) => p.email);
     const { slug } = await authed("POST", "/api/groups", { name: $("group-name").value.trim(), friend_ids, emails });
     location.href = `/g/${slug}`;
   } catch (err) {

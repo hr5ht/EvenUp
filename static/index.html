@@ -12,6 +12,7 @@
   <script src="/static/common.js" defer></script>
   <script src="/static/auth.js" defer></script>
   <script src="/static/shell.js" defer></script>
+  <script src="/static/people.js" defer></script>
   <script src="/static/home.js" defer></script>
 </head>
 <body>
@@ -73,10 +74,10 @@
       <p class="muted small-text">For people you split with again and again: a flat, a team, a family. Groups don't expire.</p>
       <div class="stack"><label class="label" for="group-name">Name</label>
         <input class="field" type="text" id="group-name" maxlength="40" placeholder="Flat 4B, Goa crew, Office lunch" required></div>
-      <div class="stack" id="group-friends-box"><span class="label">From your friends</span><div class="chips" id="group-friends"></div></div>
-      <div class="stack"><label class="label" for="group-emails">Invite by email · not on EvenUp yet</label>
-        <input class="field" type="text" id="group-emails" inputmode="email" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="riya@gmail.com, kabir@outlook.com"></div>
-      <p class="dim small-text">Anyone not on EvenUp yet gets an invite, and joins when they say yes. You can add more people later.</p>
+      <div class="stack"><span class="label">People</span>
+        <div class="chips" id="group-people"></div>
+        <button type="button" class="btn small" id="group-add-people"><svg class="i"><use href="/static/icons.svg#userplus"/></svg>Add people</button></div>
+      <p class="dim small-text">Friends and anyone on EvenUp join straight away. Anyone else gets an invite email and joins when they sign up. You can add more people later.</p>
       <p class="error" id="group-error" role="alert"></p>
     </div>
     <div class="sheet-foot"><button class="btn ink" type="submit" id="group-save">Create group</button></div>
