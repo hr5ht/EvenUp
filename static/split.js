@@ -207,16 +207,33 @@ function renderYou() {
   $("upi-line-id").textContent = saved ? me.upi_id : "";
   $("upi-form").hidden = !me || (saved && !upiEditing);
   $("upi-cancel").hidden = !upiEditing;
-  if (data.group) { // your UPI ID lives in your profile and follows you into every group
+  // Signed in, your UPI ID comes from your profile and is changed there, not here.
+  const fromProfile = data.group || signedIn();
+  $("upi-edit").hidden = fromProfile;
+  if (fromProfile) {
     $("upi-form").hidden = true;
     $("upi-line").hidden = !me;
-    $("upi-line-id").textContent = saved ? me.upi_id : "Not added yet";
-    $("upi-edit").textContent = saved ? "Change in Profile" : "Add in Profile";
+    $("upi-line-id").textContent = saved ? me.upi_id : "Add it in your profile";
+    if (me && !data.group) useProfileUpi(me);
   }
 }
 
+// A quick tab isn't tied to your account, so it takes your profile's UPI ID when it has none.
+// Changing one it already has still needs the admin, as for everyone.
+let upiSynced = false;
+async function useProfileUpi(me) {
+  if (upiSynced) return;
+  upiSynced = true;
+  try {
+    const { upi_id } = await authed("GET", "/api/me");
+    if (upi_id && upi_id !== me.upi_id) {
+      await call("PUT", `${base}/members/${me.id}/upi`, { upi_id });
+      await load();
+    }
+  } catch { /* not allowed or offline: the tab keeps what it has */ }
+}
+
 $("upi-edit").onclick = () => {
-  if (data.group) return (location.href = "/profile");
   upiEditing = true;
   $("my-upi").value = member(identity.me).upi_id;
   $("upi-error").textContent = "";

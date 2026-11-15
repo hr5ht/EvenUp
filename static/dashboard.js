@@ -73,11 +73,8 @@ function openGroupSheet() {
   $("group-name").focus();
 }
 
-// The title's New button and, on phones, the bottom bar's + ask which: a quick tab or a group.
-document.querySelectorAll("[data-open=new-sheet], .tab-plus").forEach((b) => (b.onclick = (ev) => { ev.preventDefault(); $("new-sheet").showModal(); }));
-document.querySelectorAll("[data-open=group-sheet]").forEach((b) => (b.onclick = openGroupSheet));
-document.querySelectorAll("[data-close]").forEach((b) => (b.onclick = () => b.closest("dialog").close()));
-document.querySelectorAll("dialog").forEach((d) => d.addEventListener("click", (ev) => ev.target === d && d.close()));
+// Group, in the New popup: here it opens the form; from other pages it comes here with #new-group.
+document.querySelectorAll("[data-open=group-sheet]").forEach((b) => (b.onclick = (ev) => { ev.preventDefault(); openGroupSheet(); }));
 
 $("group-form").onsubmit = async (ev) => {
   ev.preventDefault();
@@ -102,6 +99,10 @@ $("group-form").onsubmit = async (ev) => {
     friendList = friends;
     renderList([...groups, ...tabs]);
     $("page").hidden = false;
+    if (location.hash === "#new-group") {
+      history.replaceState(null, "", location.pathname);
+      openGroupSheet();
+    }
   } catch (err) {
     if (!needAccount(err)) {
       $("page").hidden = false;

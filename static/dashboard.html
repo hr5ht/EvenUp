@@ -19,13 +19,13 @@
 <div class="app">
   <aside class="sidebar">
     <a href="/" class="logo"><span class="logo-mark"></span>QuickTab</a>
-    <a class="button primary side-cta" href="/new"><svg class="i"><use href="/static/icons.svg#plus"/></svg>Open a tab</a>
+    <button type="button" class="primary side-cta" data-open="new-sheet"><svg class="i"><use href="/static/icons.svg#plus"/></svg>New</button>
     <nav class="side-nav" aria-label="Your account"><a href="/dashboard" aria-current="page"><svg class="i"><use href="/static/icons.svg#home"/></svg>Home</a><a href="/activity"><svg class="i"><use href="/static/icons.svg#history"/></svg>Activity</a><a href="/friends"><svg class="i"><use href="/static/icons.svg#users"/></svg>Friends</a></nav>
     <a class="side-user" href="/profile"><span class="avatar" id="side-avatar"></span><span class="grow"><b id="side-name"></b><span id="side-email"></span></span></a>
   </aside>
   <main class="main">
     <div class="main-bar"><a href="/" class="logo"><span class="logo-mark"></span>QuickTab</a></div>
-    <header class="page-title"><div><p class="eyebrow" id="today"></p><h1>Home</h1></div><button type="button" class="title-act primary" data-open="new-sheet"><svg class="i"><use href="/static/icons.svg#plus"/></svg>New</button></header>
+    <header class="page-title"><p class="eyebrow" id="today"></p><h1>Home</h1></header>
     <div id="page" hidden>
       <a class="prompt" id="upi-prompt" href="/profile" hidden>
         <span class="ic"><svg class="i"><use href="/static/icons.svg#wallet"/></svg></span>
@@ -41,13 +41,13 @@
     </div>
   </main>
 </div>
-<nav class="tabbar" aria-label="Your account"><a href="/dashboard" aria-current="page"><svg class="i"><use href="/static/icons.svg#home"/></svg>Home</a><a href="/activity"><svg class="i"><use href="/static/icons.svg#history"/></svg>Activity</a><a href="/new" class="tab-plus" aria-label="Open a tab"><svg class="i"><use href="/static/icons.svg#plus"/></svg></a><a href="/friends"><svg class="i"><use href="/static/icons.svg#users"/></svg>Friends</a><a href="/profile"><svg class="i"><use href="/static/icons.svg#user"/></svg>Profile</a></nav>
+<nav class="tabbar" aria-label="Your account"><a href="/dashboard" aria-current="page"><svg class="i"><use href="/static/icons.svg#home"/></svg>Home</a><a href="/activity"><svg class="i"><use href="/static/icons.svg#history"/></svg>Activity</a><a href="/new" class="tab-plus" aria-label="New"><svg class="i"><use href="/static/icons.svg#plus"/></svg></a><a href="/friends"><svg class="i"><use href="/static/icons.svg#users"/></svg>Friends</a><a href="/profile"><svg class="i"><use href="/static/icons.svg#user"/></svg>Profile</a></nav>
 <dialog class="sheet" id="new-sheet">
   <div class="sheet-head"><h2>New</h2><button type="button" class="icon-btn" data-close aria-label="Close"><svg class="i"><use href="/static/icons.svg#x"/></svg></button></div>
   <div class="sheet-body">
     <div class="menu">
       <a class="choice" href="/new"><span class="ic"><svg class="i"><use href="/static/icons.svg#receipt"/></svg></span><span class="grow">Quick tab<span>One trip or dinner. Closes on its own</span></span></a>
-      <button type="button" class="choice" data-open="group-sheet"><span class="ic"><svg class="i"><use href="/static/icons.svg#users"/></svg></span><span class="grow">Group<span>People you split with often. Never expires</span></span></button>
+      <a class="choice" href="/dashboard#new-group" data-open="group-sheet"><span class="ic"><svg class="i"><use href="/static/icons.svg#users"/></svg></span><span class="grow">Group<span>People you split with often. Never expires</span></span></a>
     </div>
   </div>
 </dialog>

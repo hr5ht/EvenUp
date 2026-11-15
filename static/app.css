@@ -190,8 +190,7 @@ dialog.sheet::backdrop { background: rgb(0 0 0 / 0.6); backdrop-filter: blur(6px
 .side-user .avatar { background: rgb(227 199 155 / 0.12); color: var(--brass); }
 .main { padding: 0 48px 96px; max-width: 1280px; }
 @media (min-width: 641px) { .main { padding-top: 40px; } .main-bar { display: none; } } /* the sidebar has the logo */
-.page-title { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 0 0 32px; animation: up .9s var(--ease) both; }
-.title-act { flex: none; }
+.page-title { padding: 0 0 32px; animation: up .9s var(--ease) both; }
 .page-title .eyebrow { display: inline-flex; align-items: center; gap: 10px; margin: 0 0 16px; font-size: 14px; color: var(--brass); }
 .page-title .eyebrow::before { content: ""; width: 16px; height: 1px; background: currentColor; }
 .page-title .eyebrow:empty { display: none; }
@@ -316,7 +315,6 @@ select { display: block; width: 100%; height: 48px; padding: 0 14px; border-radi
   .page-title { padding: 8px 0 28px; }
   .page-title h1 { font-size: 44px; }
   .prompt { margin-bottom: 32px; }
-  .title-act { display: none; } /* the bottom bar's + does it */
   .list-row { gap: 12px; padding: 14px 10px; }
   .list-ic { width: 40px; height: 40px; }
   .list-row .name { flex-wrap: wrap; gap: 4px 8px; }
