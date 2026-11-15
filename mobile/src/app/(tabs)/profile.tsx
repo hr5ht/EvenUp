@@ -5,7 +5,7 @@ import { useCallback, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { FadeInDown } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Anim, Avatar, Btn, Err, Field, Icon, Label, Logo, Sheet, T, useConfirm } from "@/components/ui";
+import { Anim, Avatar, Btn, Err, Field, Icon, Label, Logo, MenuRow, Rows, Sheet, T, useConfirm } from "@/components/ui";
 import { ApiError } from "@/lib/api";
 import { authed, deleteAccount, isSignedIn, signOut, type Me } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
@@ -90,6 +90,10 @@ export default function Profile() {
               <T className="text-[30px] font-bold leading-9" numberOfLines={1}>{me.name}</T>
               <T className="text-sm text-muted">{me.email}</T>
             </View>
+            <Rows>
+              <MenuRow icon={Icon.Users} title="Friends" sub="Requests, and people you split with" onPress={() => router.push("/friends")} />
+              <MenuRow icon={Icon.History} title="Activity" sub="Every change in your groups" onPress={() => router.push("/activity")} />
+            </Rows>
             <View className="gap-2.5 rounded-[20px] border border-line bg-surface p-5">
               <View className="mb-1 flex-row items-center justify-between">
                 <T className="text-[22px] font-bold">Your details</T>

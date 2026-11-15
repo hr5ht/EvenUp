@@ -1,5 +1,6 @@
 // The website's design language in React Native: near-black, round pills, hairlines, Instrument Serif titles, one brass accent.
 import { Children, Fragment, isValidElement, type ComponentProps, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { router } from "expo-router";
 import {
   ActivityIndicator, KeyboardAvoidingView, Modal, PanResponder, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
   useWindowDimensions,
@@ -306,6 +307,20 @@ export function MenuRow({ icon, title, sub, onPress, disabled }: {
   );
 }
 
+// A screen's top: a round back button and its title.
+export function BackBar({ title }: { title: string }) {
+  const { colors } = useTheme();
+  return (
+    <View className="flex-row items-center gap-3 px-5 py-2">
+      <Tap accessibilityRole="button" accessibilityLabel="Back" onPress={() => (router.canGoBack() ? router.back() : router.replace("/profile"))}
+        className="h-11 w-11 items-center justify-center rounded-full border border-line-2 bg-surface-2">
+        <Icon.Back color={colors.text} size={18} />
+      </Tap>
+      <T className="text-[28px] font-bold">{title}</T>
+    </View>
+  );
+}
+
 export function Logo() {
   const { colors } = useTheme();
   return (
@@ -350,6 +365,8 @@ export const Icon = {
   File: svg((p) => <Path d="M14 3H6v18h12V7zM14 3v4h4M9 13h6M9 17h6" {...p} />),
   Cash: svg((p) => <><Rect x={2} y={6} width={20} height={12} rx={2} {...p} /><Circle cx={12} cy={12} r={2.5} {...p} /><Path d="M6 10v4M18 10v4" {...p} /></>),
   Phone: svg((p) => <><Rect x={6} y={2} width={12} height={20} rx={3} {...p} /><Path d="M11 18h2" {...p} /></>),
+  Mail: svg((p) => <><Rect x={3} y={5} width={18} height={14} rx={2} {...p} /><Path d="M3 7l9 6 9-6" {...p} /></>),
+  UserPlus: svg((p) => <><Circle cx={9} cy={7} r={4} {...p} /><Path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2M19 8v6M22 11h-6" {...p} /></>),
   Lock: svg((p) => <><Rect x={5} y={11} width={14} height={10} rx={2} {...p} /><Path d="M8 11V8a4 4 0 0 1 8 0v3" {...p} /></>),
 };
 

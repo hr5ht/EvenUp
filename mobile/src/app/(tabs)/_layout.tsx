@@ -1,11 +1,14 @@
 // Home and Profile share a bottom bar, like the website on phones: Home on the left, Profile on the right, and a
-// raised + floating over the middle that opens a new tab.
+// raised + floating over the middle. Signed in it asks what to start (a tab or a group); signed out it opens a new tab.
 import { router } from "expo-router";
+import { useState } from "react";
 import { Tabs } from "expo-router/js-tabs";
 import { Pressable, View } from "react-native";
 import Reanimated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import Svg, { Circle, Defs, LinearGradient, Stop } from "react-native-svg";
+import { NewFlow } from "@/components/people";
 import { Icon, T, Tap } from "@/components/ui";
+import { isSignedIn } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 
 const ITEMS = { index: { title: "Home", icon: Icon.Home }, profile: { title: "Profile", icon: Icon.User } } as const;
@@ -14,7 +17,7 @@ const SIZE = 62;
 
 // The + : a pearl-white disc with a soft light from above, a ring the colour of the bar so it looks set into it,
 // a faint glow under it, and a small spring when pressed.
-function NewButton() {
+function NewButton({ onPress }: { onPress: () => void }) {
   const { colors } = useTheme();
   const scale = useSharedValue(1);
   const press = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
@@ -25,7 +28,7 @@ function NewButton() {
           width: SIZE, height: SIZE, borderRadius: SIZE / 2,
           shadowColor: colors.accent, shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 10,
         }, press]}>
-          <Pressable accessibilityRole="button" accessibilityLabel="Open a new tab" onPress={() => router.push("/new")}
+          <Pressable accessibilityRole="button" accessibilityLabel="New" onPress={onPress}
             onPressIn={() => scale.set(withSpring(0.9, { damping: 15, stiffness: 400 }))}
             onPressOut={() => scale.set(withSpring(1, { damping: 12, stiffness: 300 }))}
             className="h-full w-full items-center justify-center">
@@ -49,7 +52,10 @@ function NewButton() {
 
 export default function TabsLayout() {
   const { colors } = useTheme();
+  const [step, setStep] = useState<"new" | "group" | null>(null);
+  const plus = () => isSignedIn().then((yes) => (yes ? setStep("new") : router.push("/new")));
   return (
+    <>
     <Tabs
       screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: colors.bg } }}
       tabBar={({ state, navigateToTab, insets }) => {
@@ -70,7 +76,7 @@ export default function TabsLayout() {
             {item(0)}
             <View style={{ width: SIZE + 24 }} />
             {item(1)}
-            <NewButton />
+            <NewButton onPress={plus} />
           </View>
         );
       }}
@@ -78,5 +84,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="index" />
       <Tabs.Screen name="profile" />
     </Tabs>
+    <NewFlow step={step} setStep={setStep} />
+    </>
   );
 }

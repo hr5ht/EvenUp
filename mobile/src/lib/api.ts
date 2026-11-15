@@ -5,7 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 export const BASE = (process.env.EXPO_PUBLIC_API_URL || "https://getevenup.vercel.app").replace(/\/$/, "");
 export const tabUrl = (slug: string) => `${BASE}/g/${slug}`;
 
-export type Member = { id: number; name: string; upi_id: string | null; has_password: boolean };
+export type Member = { id: number; name: string; upi_id: string | null; has_password: boolean; invited?: boolean; account?: boolean };
 export type Expense = {
   id: number; paid_by: number; amount_paise: number; description: string; kind: "expense" | "payment";
   version: number; created_at: number; deleted: boolean; shares: Record<string, number>;

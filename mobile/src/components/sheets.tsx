@@ -7,12 +7,14 @@ import { useEffect, useRef, useState, type ComponentRef } from "react";
 import { ActivityIndicator, Linking, Platform, Share, View } from "react-native";
 import { SvgXml } from "react-native-svg";
 import { captureRef } from "react-native-view-shot";
-import { Tap, Btn, Err, Field, Icon, Label, MenuRow, Rows, Sheet, T, useConfirm, type ToastMsg } from "@/components/ui";
+import { PeopleSheet, myFriends, type Friend, type Pick } from "@/components/people";
+import { Avatar, Tap, Btn, Err, Field, Icon, Label, MenuRow, Rows, Sheet, T, useConfirm, type ToastMsg } from "@/components/ui";
 import {
   BASE, forgetTab, plainAmount, plural, rupees, tabUrl, toPaise, UPI_HINT,
   type Expense, type Identity, type Member, type Payment, type Tab,
 } from "@/lib/api";
-import { MONO } from "@/lib/theme";
+import { authed } from "@/lib/auth";
+import { MONO, useTheme } from "@/lib/theme";
 
 // What every sheet needs from the tab screen.
 export type Ctx = {
@@ -390,6 +392,51 @@ export function ActivitySheet({ c, open, onClose }: { c: Ctx; open: boolean; onC
 // ---------- admin ----------
 
 export function AdminSheet({ c, open, onClose }: { c: Ctx; open: boolean; onClose: () => void }) {
+  if (c.data.group) return <GroupSheet c={c} open={open} onClose={onClose} />;
+  return <TabAdminSheet c={c} open={open} onClose={onClose} />;
+}
+
+// A group's people, and adding more from your friends or by email, like the website's group sheet.
+function GroupSheet({ c, open, onClose }: { c: Ctx; open: boolean; onClose: () => void }) {
+  const { colors } = useTheme();
+  const { data } = c;
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [picking, setPicking] = useState(0);
+  const [error, setError] = useState("");
+  const add = async (list: Pick[]) => {
+    setError("");
+    const failed: string[] = [];
+    for (const p of list) {
+      await authed("POST", `/api/groups/${c.slug}/members`, p.email ? { email: p.email } : { friend_id: p.friend_id })
+        .catch((e) => failed.push((e as Error).message));
+    }
+    await c.load();
+    setError(failed.join(" "));
+  };
+  return (
+    <Sheet open={open} onClose={onClose} title="Group"
+      overlay={picking ? <PeopleSheet key={picking} open onClose={() => setPicking(0)} friends={friends} taken={data.members.map((m) => m.name)} onDone={add} /> : null}>
+      <Rows>
+        {data.members.map((m) => (
+          <View key={m.id} className="flex-row items-center gap-3 bg-surface px-4 py-3">
+            <Avatar name={m.name} />
+            <View className="flex-1 gap-0.5">
+              <T className="text-[15px] font-medium" numberOfLines={1}>{m.name}</T>
+              <T className="text-xs text-muted" numberOfLines={1}>
+                {m.id === data.admin_id ? "Owner" : m.invited ? "Invited, waiting for them to say yes" : m.account === false ? "Not in the group any more" : m.upi_id || "No UPI ID"}
+              </T>
+            </View>
+          </View>
+        ))}
+      </Rows>
+      <Btn variant="ink" title="Add people" icon={<Icon.UserPlus color={colors["ink-text"]} size={16} />}
+        onPress={() => { myFriends().then(setFriends); setPicking((k) => k + 1); }} />
+      <Err>{error}</Err>
+    </Sheet>
+  );
+}
+
+function TabAdminSheet({ c, open, onClose }: { c: Ctx; open: boolean; onClose: () => void }) {
   const { data } = c;
   const [name, setName] = useState("");
   const [upi, setUpi] = useState("");

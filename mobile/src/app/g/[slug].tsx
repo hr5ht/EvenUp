@@ -9,7 +9,7 @@ import {
   shareCsv, ShareSheet, SummarySheet, type Ctx, type Editing,
 } from "@/components/sheets";
 import Svg, { Path } from "react-native-svg";
-import { Anim, Avatar, Tap, Btn, Err, Field, Icon, initials, Label, T, Tag, Toast, useCountUp, type ToastMsg } from "@/components/ui";
+import { Anim, Avatar, Tap, Btn, Err, Field, Icon, initials, Label, MenuRow, Rows, T, Tag, Toast, useCountUp, type ToastMsg } from "@/components/ui";
 import { Who } from "@/components/who";
 import { accountHeaders, claimTab, isSignedIn } from "@/lib/auth";
 import { api, ApiError, forgetTab, lifeOf, loadIdentity, plural, rupees, saveIdentity, UPI_HINT, type Expense, type Identity, type Payment, type Tab } from "@/lib/api";
@@ -156,8 +156,13 @@ export default function TabScreen() {
   const me = member(identity.me!)!;
   const live = liveExpenses(data);
   const shown = data.expenses.filter((e) => !e.deleted);
+  const dayOf = (t: number) => {
+    const d = new Date(t * 1000), now = new Date();
+    const days = Math.round((new Date(now.toDateString()).getTime() - new Date(d.toDateString()).getTime()) / 86400000);
+    return days === 0 ? "Today" : days === 1 ? "Yesterday" : d.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" });
+  };
   const when = (t: number) => new Date(t * 1000).toLocaleString("en-IN", { weekday: "short", hour: "numeric", minute: "2-digit" });
-  const { hours, pct: life } = lifeOf(data);
+  const { hours } = lifeOf(data);
   const startEdit = (e: Expense) => {
     setEditing({ id: e.id, version: e.version, paidBy: e.paid_by, description: e.description, expense: e });
     setFormKey((k) => k + 1);
@@ -171,10 +176,14 @@ export default function TabScreen() {
           className="h-11 w-11 items-center justify-center rounded-full border border-line-2 bg-surface-2">
           <Icon.Back color={colors.text} size={18} />
         </Tap>
-        <View className="max-w-[78%] flex-row items-center gap-2">
-          {/* The admin's controls, right where the admin's name is. */}
-          {isAdmin && !data.ended && (
-            <Tap accessibilityRole="button" accessibilityLabel="Admin" onPress={() => setSheet("admin")}
+        <View className="flex-1 flex-row items-center justify-end gap-2 pl-2">
+          <Tap accessibilityRole="button" accessibilityLabel="Share" onPress={() => setSheet("share")}
+            className="h-11 w-11 items-center justify-center rounded-full border border-line-2 bg-surface-2">
+            <Icon.Share color={colors.text} size={18} />
+          </Tap>
+          {/* The admin's controls, right where the admin's name is; in a group, everyone's (adding people). */}
+          {(isAdmin || data.group) && !data.ended && (
+            <Tap accessibilityRole="button" accessibilityLabel={data.group ? "Group" : "Admin"} onPress={() => setSheet("admin")}
               className="h-11 w-11 items-center justify-center rounded-full border border-line-2 bg-surface-2">
               <Icon.Shield color={colors.accent} size={18} />
             </Tap>
@@ -212,15 +221,6 @@ export default function TabScreen() {
               {data.group ? `Group · ${(data.members.length === 1 ? "1 person" : `${data.members.length} people`)}` : data.ended ? `Closed · ${(data.members.length === 1 ? "1 person" : `${data.members.length} people`)}` : `Open until ${when(data.expires_at)} · ${hours}h left · ${(data.members.length === 1 ? "1 person" : `${data.members.length} people`)}`}
             </T>
           </View>
-          {!data.ended && !data.group && <View className="mt-1 h-px bg-line-2"><View className="h-px bg-accent" style={{ width: `${life}%` }} /></View>}
-        </Anim>
-
-        <Anim entering={FadeInDown.delay(60).duration(450)}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2">
-            <Pill icon={<Icon.Chart color={colors.accent} size={16} />} title="Balances" onPress={() => setSheet("balances")} />
-            <Pill icon={<Icon.History color={colors.accent} size={16} />} title="Activity" count={data.activity.length} onPress={() => setSheet("activity")} />
-            <Pill primary icon={<Icon.Share color={colors["ink-text"]} size={16} />} title="Share" onPress={() => setSheet("share")} />
-          </ScrollView>
         </Anim>
 
         {data.ended && (
@@ -235,6 +235,11 @@ export default function TabScreen() {
         )}
 
         <Anim entering={FadeInDown.delay(120).duration(500)}><Bill c={c} onSettle={setPaying} /></Anim>
+
+        <Rows>
+          <MenuRow icon={Icon.Chart} title="Balances" sub="Who owes whom" onPress={() => setSheet("balances")} />
+          <MenuRow icon={Icon.History} title="Activity" sub={`Every change in this ${data.group ? "group" : "tab"}${data.activity.length ? ` · ${data.activity.length}` : ""}`} onPress={() => setSheet("activity")} />
+        </Rows>
 
         {/* keyed by person: another person's form starts empty */}
         {!data.ended && <UpiBox key={me.id} c={c} />}
@@ -253,26 +258,36 @@ export default function TabScreen() {
           ) : (
             <View>
               {shown.map((e, i) => {
-                const mine = e.shares[identity.me!];
+                const day = dayOf(e.created_at);
+                const newDay = !i || dayOf(shown[i - 1].created_at) !== day;
+                const mine = e.shares[identity.me!] || 0;
                 const payment = e.kind === "payment";
-                const owes = !payment && mine && e.paid_by !== identity.me;
+                const to = payee(e);
+                const ways = Object.keys(e.shares).length;
+                const lent = e.amount_paise - mine;
+                const [note, tone] = payment
+                  ? [e.paid_by === identity.me ? "You paid" : to === identity.me ? "Paid to you" : `Between ${nameOf(e.paid_by)} and ${nameOf(to)}`, to === identity.me ? "text-owed" : "text-muted"]
+                  : e.paid_by === identity.me ? [lent ? `You lent ${rupees(lent)}` : "Just you", lent ? "text-owed" : "text-muted"]
+                  : [mine ? `You owe ${rupees(mine)}` : "Not in this one", mine ? "text-owe" : "text-muted"];
                 return (
-                  <Tap key={e.id} onPress={() => setDetail(e)} className={`flex-row items-center gap-3.5 py-3.5 ${i ? "border-t border-line" : ""}`}>
-                    {payment
-                      ? <View className="h-10 w-10 items-center justify-center rounded-full border border-line-2 bg-surface-2"><Icon.Cash color={colors.owed} size={18} /></View>
-                      : <Avatar name={nameOf(e.paid_by)} size={40} />}
-                    <View className="flex-1 gap-0.5">
-                      <T className="text-[15px] font-medium" numberOfLines={1}>{payment ? `${label(e.paid_by)} paid ${label(payee(e))}` : e.description}</T>
-                      <T className="text-[13px] text-muted" numberOfLines={1}>
-                        {payment ? `Settled up · ${payMethod(e)}` : `${label(e.paid_by)} paid · split ${Object.keys(e.shares).length} ways`}
-                      </T>
-                    </View>
-                    <View className="items-end gap-0.5">
-                      <T className="text-[15px] font-medium" style={{ fontVariant: ["tabular-nums"] }}>{rupees(e.amount_paise)}</T>
-                      {owes ? <T className="text-xs text-owe">You owe {rupees(mine)}</T>
-                        : !payment && e.paid_by === identity.me ? <T className="text-xs text-owed">You paid</T> : null}
-                    </View>
-                  </Tap>
+                  <View key={e.id}>
+                    {newDay && <T className={`px-3 pb-2 text-[13px] text-muted ${i ? "pt-5" : ""}`}>{day}</T>}
+                    <Tap onPress={() => setDetail(e)} className="flex-row items-center gap-3 rounded-2xl px-3 py-3.5">
+                      {payment
+                        ? <View className="h-9 w-9 items-center justify-center rounded-full" style={{ backgroundColor: "rgba(95,211,155,0.12)" }}><Icon.Check color={colors.owed} size={18} /></View>
+                        : <Avatar name={nameOf(e.paid_by)} />}
+                      <View className="flex-1 gap-0.5">
+                        <T className="text-[15px] font-medium" numberOfLines={1}>{payment ? `${label(e.paid_by)} paid ${label(to)}` : e.description}</T>
+                        <T className="text-[13px] text-muted" numberOfLines={1}>
+                          {payment ? `Settled up · ${payMethod(e)}` : `${label(e.paid_by)} paid${ways > 1 ? ` · split ${ways} ways` : ""}`}
+                        </T>
+                      </View>
+                      <View className="items-end gap-0.5">
+                        <T className="text-[20px] font-bold" style={{ fontVariant: ["tabular-nums"] }}>{rupees(e.amount_paise)}</T>
+                        <T className={`text-xs ${tone}`}>{note}</T>
+                      </View>
+                    </Tap>
+                  </View>
                 );
               })}
             </View>
@@ -304,7 +319,7 @@ export default function TabScreen() {
   );
 }
 
-// Your share on cream paper, like the website's bill: a printed header, your balance counting up from 0 for each
+// Your share on cream paper, like the website's bill: your balance counting up from 0 for each
 // person, the payments that involve you, a barcode and a torn foot.
 const BARS = [3, 1, 2, 1, 1, 3, 1, 2, 2, 1, 3, 1, 1, 2, 1, 3, 2, 1, 1, 2, 3, 1, 2, 1, 1, 3, 1, 2, 1, 2, 3, 1, 1, 2, 1, 3, 2, 1, 2, 1];
 function Bill({ c, onSettle }: { c: Ctx; onSettle: (p: Payment) => void }) {
@@ -320,8 +335,7 @@ function Bill({ c, onSettle }: { c: Ctx; onSettle: (p: Payment) => void }) {
   return (
     <View>
       <View className="rounded-t bg-paper px-6 pt-6">
-        <T mono className="border-b border-dashed border-rule pb-4 text-center text-[11px] tracking-[2px] text-paper-2">EVENUP · YOUR SHARE</T>
-        <View className="mt-5 flex-row items-center gap-2">
+        <View className="flex-row items-center gap-2">
           <View className={`h-1.5 w-1.5 rounded-full ${b > 0 ? "bg-pos-p" : b < 0 ? "bg-neg-p" : "bg-paper-2"}`} />
           <T className="text-sm text-paper-2">{b > 0 ? "You get back" : b < 0 ? "You owe" : "You're all settled"}</T>
         </View>
@@ -361,8 +375,8 @@ function Bill({ c, onSettle }: { c: Ctx; onSettle: (p: Payment) => void }) {
         </View>
       </View>
       {/* torn foot */}
-      <Svg width="100%" height={10} viewBox="0 0 240 10" preserveAspectRatio="none">
-        <Path d={`M0 0H240V2${Array.from({ length: 24 }, (_, i) => `L${240 - i * 10 - 5} 10L${240 - i * 10 - 10} 2`).join("")}Z`} fill={colors.paper} />
+      <Svg width="100%" height={6} viewBox="0 0 360 6" preserveAspectRatio="none" style={{ marginTop: -1 }}>
+        <Path d={`M0 0H360${Array.from({ length: 36 }, (_, i) => `L${360 - i * 10 - 5} 6L${360 - i * 10 - 10} 0`).join("")}Z`} fill={colors.paper} />
       </Svg>
     </View>
   );
@@ -411,17 +425,5 @@ function UpiBox({ c }: { c: Ctx }) {
       </View>
       <Err>{error}</Err>
     </View>
-  );
-}
-
-// The site's .act pills: a faint fill with a brass icon, Share in white.
-function Pill({ icon, title, count, onPress, primary }: { icon: React.ReactNode; title: string; count?: number; onPress: () => void; primary?: boolean }) {
-  return (
-    <Tap accessibilityRole="button" onPress={onPress}
-      className={`h-10 flex-row items-center gap-2 rounded-full border px-4 ${primary ? "border-ink bg-ink" : "border-line-2 bg-surface-2"}`}>
-      {icon}
-      <T className={`text-sm font-medium ${primary ? "text-ink-text" : ""}`}>{title}</T>
-      {!!count && <T mono className="text-xs text-muted">{count}</T>}
-    </Tap>
   );
 }
