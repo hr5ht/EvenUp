@@ -42,7 +42,7 @@
 .upi-line .grow { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; padding-right: 6px; }
 
 /* expenses */
-.exp-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 4px; border-bottom: 1px solid var(--line); text-align: left; }
+.exp-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 12px; border-radius: 14px; text-align: left; }
 .exp-row:hover { background: var(--surface); }
 .exp-row .grow > * { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .exp-row .title { font-weight: 500; }
@@ -100,3 +100,4 @@
 .ended .live-only { display: none !important; }
 .meta .dot { margin-top: 8px; }
 .menu-row .count { font: 13px var(--mono); color: var(--muted); }
+.tab-page .day { padding-inline: 12px; }
