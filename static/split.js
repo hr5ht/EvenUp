@@ -88,7 +88,6 @@ async function load() {
   }
   if (data.group) {
     identity = { me: data.me }; // your account says who you are; nothing kept on this device
-    document.querySelector(".topbar .logo").href = "/dashboard";
   }
   render();
 }

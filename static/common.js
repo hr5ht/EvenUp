@@ -131,3 +131,6 @@ function initials(name) {
 function avatar(name) {
   return el("span", { className: "avatar", textContent: initials(name || "?"), ariaHidden: "true" });
 }
+
+// Signed in, the logo takes you to your dashboard instead of the landing page.
+if (signedIn()) document.querySelectorAll("a.logo").forEach((a) => (a.href = "/dashboard"));
