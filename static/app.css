@@ -191,8 +191,7 @@ dialog.sheet::backdrop { background: rgb(0 0 0 / 0.6); backdrop-filter: blur(6px
 .main { padding: 0 48px 96px; max-width: 1280px; }
 @media (min-width: 641px) { .main { padding-top: 40px; } .main-bar { display: none; } } /* the sidebar has the logo */
 .page-title { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 0 0 32px; animation: up .9s var(--ease) both; }
-.title-act { flex: none; background: rgb(255 255 255 / 0.03); border-color: var(--line-2); }
-.title-act .i { color: var(--brass); }
+.title-act { flex: none; }
 .page-title .eyebrow { display: inline-flex; align-items: center; gap: 10px; margin: 0 0 16px; font-size: 14px; color: var(--brass); }
 .page-title .eyebrow::before { content: ""; width: 16px; height: 1px; background: currentColor; }
 .page-title .eyebrow:empty { display: none; }
@@ -201,10 +200,7 @@ dialog.sheet::backdrop { background: rgb(0 0 0 / 0.6); backdrop-filter: blur(6px
 .shell #page { animation: up .9s var(--ease) .1s both; }
 
 /* home: groups and quick tabs, with requests above when there are any */
-/* the UPI reminder and friend requests share one row, so neither leaves half the width empty */
-.notices { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-bottom: 40px; }
-.notices:not(:has(> :not([hidden]))) { display: none; }
-.notices .prompt { margin: 0; }
+
 .sec-row { gap: 10px; margin-bottom: 20px; }
 .sec-row h2 { font: 400 32px/1 var(--serif); letter-spacing: -0.01em; }
 .sec-row .count { margin: 0; font: 13px/1 var(--mono); }
@@ -234,7 +230,7 @@ dialog.sheet::backdrop { background: rgb(0 0 0 / 0.6); backdrop-filter: blur(6px
 .list-row:hover > .i { transform: translateX(2px); }
 .list-row.closed { opacity: .6; }
 .list-row.closed .tag.quick { color: var(--muted); background: none; box-shadow: inset 0 0 0 1px var(--line-2); }
-.prompt { margin: 0 0 16px; border-radius: 20px; background: linear-gradient(180deg, rgb(227 199 155 / 0.08), rgb(227 199 155 / 0.02)); box-shadow: inset 0 0 0 1px rgb(227 199 155 / 0.25); }
+.prompt { margin: 0 0 40px; border-radius: 20px; background: linear-gradient(180deg, rgb(227 199 155 / 0.08), rgb(227 199 155 / 0.02)); box-shadow: inset 0 0 0 1px rgb(227 199 155 / 0.25); }
 .prompt .ic { border-radius: 50%; background: rgb(227 199 155 / 0.12); }
 .prompt .i { color: var(--brass); }
 
@@ -319,7 +315,8 @@ select { display: block; width: 100%; height: 48px; padding: 0 14px; border-radi
   .main { padding: 0 16px 120px; }
   .page-title { padding: 8px 0 28px; }
   .page-title h1 { font-size: 44px; }
-  .notices { margin-bottom: 32px; }
+  .prompt { margin-bottom: 32px; }
+  .title-act { display: none; } /* the bottom bar's + does it */
   .list-row { gap: 12px; padding: 14px 10px; }
   .list-ic { width: 40px; height: 40px; }
   .list-row .name { flex-wrap: wrap; gap: 4px 8px; }

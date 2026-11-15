@@ -59,41 +59,12 @@ function renderList(rows) {
       el("a", { className: "button primary", href: "/new" }, icon("plus"), "Open a tab")))]));
 }
 
-function person(p, ...acts) {
-  return el("div", { className: "person" }, avatar(p.name || p.email),
-    el("span", { className: "grow" }, el("strong", { textContent: p.name || p.email }), p.name ? el("span", { textContent: p.email }) : null),
-    acts.length ? el("span", { className: "acts" }, ...acts) : null);
-}
-
-function answer(label, url, cls, child) {
-  const b = el("button", { type: "button", className: cls, ariaLabel: label }, child || label);
-  b.onclick = async () => {
-    b.disabled = true;
-    try {
-      await authed("POST", url);
-      await loadPeople();
-    } catch (err) {
-      $("error").textContent = err.message;
-      b.disabled = false;
-    }
-  };
-  return b;
-}
-
 let friendList = []; // for the New group sheet
-async function loadPeople() {
-  const { friends, requests } = await authed("GET", "/api/friends");
-  friendList = friends;
-  $("requests-panel").hidden = !requests.length;
-  $("n-requests").textContent = requests.length || "";
-  $("requests").replaceChildren(...requests.map((p) => person(p,
-    answer(`Decline ${p.name || p.email}`, `/api/friends/${p.id}/decline`, "icon-btn", icon("x")),
-    answer("Accept", `/api/friends/${p.id}/accept`, "small primary"))));
-}
 
 // ---------- new group ----------
 
 function openGroupSheet() {
+  $("new-sheet").close();
   $("group-error").textContent = "";
   $("group-friends").replaceChildren(...friendList.map((f) =>
     el("label", {}, el("input", { type: "checkbox", value: f.id }), el("span", {}, avatar(f.name), f.name))));
@@ -102,9 +73,11 @@ function openGroupSheet() {
   $("group-name").focus();
 }
 
+// The title's New button and, on phones, the bottom bar's + ask which: a quick tab or a group.
+document.querySelectorAll("[data-open=new-sheet], .tab-plus").forEach((b) => (b.onclick = (ev) => { ev.preventDefault(); $("new-sheet").showModal(); }));
 document.querySelectorAll("[data-open=group-sheet]").forEach((b) => (b.onclick = openGroupSheet));
 document.querySelectorAll("[data-close]").forEach((b) => (b.onclick = () => b.closest("dialog").close()));
-$("group-sheet").addEventListener("click", (ev) => ev.target === $("group-sheet") && $("group-sheet").close());
+document.querySelectorAll("dialog").forEach((d) => d.addEventListener("click", (ev) => ev.target === d && d.close()));
 
 $("group-form").onsubmit = async (ev) => {
   ev.preventDefault();
@@ -125,7 +98,8 @@ $("group-form").onsubmit = async (ev) => {
   try {
     const me = await authed("GET", "/api/me");
     $("upi-prompt").hidden = !!me.upi_id;
-    const [groups, tabs] = await Promise.all([loadGroups(me), loadTabs(), loadPeople()]);
+    const [groups, tabs, { friends }] = await Promise.all([loadGroups(me), loadTabs(), authed("GET", "/api/friends")]);
+    friendList = friends;
     renderList([...groups, ...tabs]);
     $("page").hidden = false;
   } catch (err) {
