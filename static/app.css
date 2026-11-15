@@ -179,9 +179,11 @@ dialog.confirm::backdrop { background: rgb(0 0 0 / .65); }
 .toast button { font-weight: 600; text-decoration: underline; }
 
 /* ---------- paper: the bill and the new-tab slip ---------- */
-.paper { color: var(--paper-ink); background: var(--paper); border-radius: 6px 6px 0 0; padding: 24px 22px 8px; font-family: var(--mono); position: relative; }
-.paper::after { content: ""; position: absolute; left: 0; right: 0; bottom: -10px; height: 10px; background: var(--paper);
-  clip-path: polygon(0 0, 100% 0, 100% 0, 95% 100%, 90% 0, 85% 100%, 80% 0, 75% 100%, 70% 0, 65% 100%, 60% 0, 55% 100%, 50% 0, 45% 100%, 40% 0, 35% 100%, 30% 0, 25% 100%, 20% 0, 15% 100%, 10% 0, 5% 100%, 0 0); }
+/* The torn edge is cut into the paper itself with a mask (no strip glued on, so no seam line at any zoom). */
+.paper { --tooth: 10px; color: var(--paper-ink); background: linear-gradient(#f6f2ea, var(--paper) 30%, #ece6da); border-radius: 4px 4px 0 0;
+  padding: 24px 22px 22px; font-family: var(--mono); position: relative;
+  mask: linear-gradient(#000 0 0) top / 100% calc(100% - var(--tooth) / 2 + 1px) no-repeat,
+    conic-gradient(from -45deg at bottom, #000 90deg, #0000 0) bottom / var(--tooth) calc(var(--tooth) / 2) repeat-x; }
 .paper .rcpt-h { text-align: center; font-size: 11px; letter-spacing: 2px; color: var(--paper-2); padding-bottom: 16px; border-bottom: 1px dashed var(--rule); }
 .paper hr { border: 0; border-top: 1px dashed var(--rule); margin: 14px 0; }
 .paper .l { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; padding: 4px 0; }
