@@ -10,56 +10,54 @@ function savedSlugs() {
 }
 
 // Where you stand, as a label, an amount and a colour.
-const stand = (b) => (b > 0 ? ["You get back", rupees(b), "pos"] : b < 0 ? ["You owe", rupees(-b), "neg"] : ["You", "All settled", ""]);
-const listNames = (names) => names.join(", ").replace(/, ([^,]*)$/, " and $1");
+const stand = (b) => (b > 0 ? ["You get back", rupees(b), "pos"] : b < 0 ? ["You owe", rupees(-b), "neg"] : ["", "Settled", "settled"]);
+const listNames = (names) => (names.length > 3 ? `${names.slice(0, 3).join(", ")} +${names.length - 3}` : names.join(", ").replace(/, ([^,]*)$/, " and $1"));
 
-// One tab or group as a receipt card: what it is, who's in it, what was spent and where you stand.
-function slip({ href, name, top, hours, people, spent, balance, closed }) {
-  const [label, amount, cls] = balance === null ? ["People", String(people.length), ""] : stand(balance);
-  const names = people.slice(0, 4);
-  return el("a", { className: "slip-link", href },
-    el("div", { className: `slip torn${closed ? " closed" : ""}` },
-      el("p", { className: "slip-top" }, el("span", { className: `dot${closed ? "" : " pos"}` }), top, el("span", { className: "h", textContent: hours })),
-      el("h3", { textContent: name }),
-      el("p", { className: "faces" }, ...names.map((n) => avatar(n)),
-        el("span", { className: "t", textContent: listNames(names) + (people.length > 4 ? ` +${people.length - 4}` : "") })),
-      el("div", { className: "figs" },
-        el("div", {}, el("span", { textContent: "Spent" }), el("strong", { className: "num", textContent: rupees(spent) })),
-        el("div", {}, el("span", { textContent: label }), el("strong", { className: `num ${cls}`, textContent: amount })))));
-}
-
-function newCard(href, title, sub, open) {
-  const card = el(href ? "a" : "button", { className: "slip-new", ...(href ? { href } : { type: "button" }) }, icon("plus"), title, el("span", { textContent: sub }));
-  if (open) card.onclick = open;
-  return card;
+// One group or quick tab as a list row: what it is, who's in it, what was spent and where you stand.
+function row({ href, name, kind, tag, people, spent, balance, closed }) {
+  const [label, amount, cls] = balance === null ? ["", `${people.length} people`, "settled"] : stand(balance);
+  return el("a", { className: `list-row${closed ? " closed" : ""}`, href },
+    el("span", { className: `list-ic ${kind}` }, icon(kind === "group" ? "users" : "receipt")),
+    el("span", { className: "grow" },
+      el("span", { className: "name" }, el("b", { textContent: name }),
+        el("span", { className: `tag ${kind}` }, kind === "group" ? el("i", { className: "dot pos" }) : icon("clock"), tag)),
+      el("span", { className: "sub", textContent: `${listNames(people)} · ${rupees(spent)} spent` })),
+    el("span", { className: "stand" }, label ? el("span", { textContent: label }) : null, el("b", { className: `num ${cls}`, textContent: amount })),
+    icon("chev"));
 }
 
 async function loadGroups(me) {
-  const groups = await authed("GET", "/api/groups");
-  $("n-groups").textContent = groups.length || "";
-  $("groups").replaceChildren(...groups.map((g) => slip({
-    href: `/g/${g.slug}`, name: g.name, top: "Group", hours: `${g.members.length} people`,
+  return (await authed("GET", "/api/groups")).map((g) => row({
+    href: `/g/${g.slug}`, name: g.name, kind: "group", tag: "Group",
     people: g.members.map((n) => (n === me.name ? "You" : n)), spent: g.spent, balance: g.balance,
-  })), newCard(null, "New group", "For people you split with often", () => openGroupSheet()));
+  }));
 }
 
 async function loadTabs() {
   const tabs = (await Promise.all(savedSlugs().map((slug) =>
     api("GET", `/api/splits/${encodeURIComponent(slug)}`).then((t) => ({ slug, t })).catch(() => null)))).filter(Boolean); // deleted ones are gone
-  $("n-tabs").textContent = tabs.length || "";
-  $("tabs").replaceChildren(...tabs.map(({ slug, t }) => {
+  return tabs.map(({ slug, t }) => {
     const me = loadIdentity(slug).me;
-    const mine = t.members.some((m) => m.id === me);
-    const balance = mine ? t.balances[me] || 0 : null;
-    return slip({
-      href: `/g/${slug}`, name: t.name, top: t.ended ? "Closed, read-only" : "Quick tab", closed: t.ended,
-      hours: t.ended ? "" : `${Math.max(0, Math.round((t.expires_at - Date.now() / 1000) / 3600))}h left`,
+    const hours = Math.max(0, Math.round((t.expires_at - Date.now() / 1000) / 3600));
+    return row({
+      href: `/g/${slug}`, name: t.name, kind: "quick", closed: t.ended,
+      tag: t.ended ? "Quick tab · closed" : `Quick tab · ${hours}h left`,
       people: t.members.map((m) => (m.id === me ? "You" : m.name)),
-      spent: t.expenses.filter((e) => !e.deleted && e.kind === "expense").reduce((a, e) => a + e.amount_paise, 0), balance,
+      spent: t.expenses.filter((e) => !e.deleted && e.kind === "expense").reduce((a, e) => a + e.amount_paise, 0),
+      balance: t.members.some((m) => m.id === me) ? t.balances[me] || 0 : null,
     });
-  }), newCard("/new", "Open a tab", "Share one link, everyone joins"));
+  });
 }
 
+function renderList(rows) {
+  $("n-list").textContent = rows.length || "";
+  $("list").replaceChildren(...(rows.length ? rows : [el("div", { className: "empty" },
+    el("span", { className: "ic" }, icon("receipt")), el("h3", { textContent: "Nothing to split yet" }),
+    el("p", { textContent: "Start a group for people you split with often, or open a quick tab for one trip or dinner." }),
+    el("span", { className: "row" },
+      el("button", { type: "button", onclick: () => openGroupSheet() }, icon("users"), "New group"),
+      el("a", { className: "button primary", href: "/new" }, icon("plus"), "Open a tab")))]));
+}
 
 function person(p, ...acts) {
   return el("div", { className: "person" }, avatar(p.name || p.email),
@@ -127,7 +125,8 @@ $("group-form").onsubmit = async (ev) => {
   try {
     const me = await authed("GET", "/api/me");
     $("upi-prompt").hidden = !!me.upi_id;
-    await Promise.all([loadGroups(me), loadTabs(), loadPeople()]);
+    const [groups, tabs] = await Promise.all([loadGroups(me), loadTabs(), loadPeople()]);
+    renderList([...groups, ...tabs]);
     $("page").hidden = false;
   } catch (err) {
     if (!needAccount(err)) {
