@@ -32,6 +32,15 @@ button:focus-visible, .button:focus-visible { outline: 2px solid var(--brass); o
 [tabindex="-1"]:focus { outline: none; }
 #fab kbd { border-color: rgb(0 0 0 / 0.3); }
 
+/* one button shape across the app: a 40px pill, 32px when small, round when it's only an icon.
+   Full-width buttons that end a form or sheet are 48px. Rows that are buttons (expenses, choices) keep their own shape. */
+button, .button { height: 40px; padding: 0 18px; border-radius: 999px; font-size: 14px; }
+.small, button.small { height: 32px; padding: 0 14px; font-size: 13px; }
+.icon-btn { width: 36px; height: 36px; padding: 0; border-radius: 50%; }
+.person .acts .icon-btn { width: 32px; height: 32px; }
+.block, .sheet-foot > * { height: 48px; }
+.content-narrow .card .save, .you-chip { height: 40px; }
+
 /* inputs: soft, with a champagne focus ring */
 input[type="text"], input[type="email"], input[type="password"] { border-radius: 14px; background: var(--card); }
 input:focus { border-color: rgb(227 199 155 / 0.6); box-shadow: 0 0 0 4px rgb(227 199 155 / 0.1); }
@@ -137,7 +146,7 @@ dialog.sheet::backdrop { background: rgb(0 0 0 / 0.6); backdrop-filter: blur(6px
 .shell .app { grid-template-columns: 264px minmax(0, 1fr); }
 .sidebar { padding: 24px 16px; background: linear-gradient(180deg, rgb(255 255 255 / 0.02), transparent 40%); }
 .sidebar .logo { height: 36px; padding: 0 8px; }
-.side-cta { margin: 24px 4px 0; height: 44px; justify-content: center; }
+.side-cta { margin: 24px 4px 0; justify-content: center; }
 .side-nav { margin-top: 24px; gap: 4px; }
 .side-nav a { position: relative; height: 40px; padding: 0 12px; border-radius: 12px; transition: background .2s, color .2s; }
 .side-nav a .i { color: var(--muted); }
@@ -161,22 +170,12 @@ dialog.sheet::backdrop { background: rgb(0 0 0 / 0.6); backdrop-filter: blur(6px
 .page-title p:not(.eyebrow) { margin-top: 14px; max-width: 520px; }
 .shell #page { animation: up .9s var(--ease) .1s both; }
 
-/* home */
-.dash-grid { grid-template-columns: minmax(0, 1fr) 340px; gap: 48px; }
-.statement::before { content: "QUICKTAB · STATEMENT"; }
-.lines { margin: 20px 0 0; padding: 0; list-style: none; }
-.lines:empty { display: none; }
-.lines li { display: flex; align-items: baseline; gap: 10px; padding: 10px 0; border-top: 1px dashed var(--rule-p); font: 13px/20px var(--mono); }
-.lines a { max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-p); }
-.lines a:hover { text-decoration: underline; text-underline-offset: 3px; }
-.lines i { flex: 1; border-bottom: 1.5px dotted #bdb3a0; transform: translateY(-4px); }
-.lines span { font-weight: 600; }
-.dash-sec { margin-top: 56px; }
+/* home: groups and quick tabs, with requests above when there are any */
+.dash-sec { margin-top: 48px; }
+.dash-sec:first-of-type { margin-top: 8px; }
 .sec-row { gap: 10px; margin-bottom: 20px; }
 .sec-row h2 { font: 400 32px/1 var(--serif); letter-spacing: -0.01em; }
 .sec-row .count { margin: 0; font: 13px/1 var(--mono); }
-.sec-row button { margin-left: auto; height: 36px; padding: 0 14px; border-radius: 999px; background: rgb(255 255 255 / 0.03); border-color: var(--line-2); font-size: 14px; }
-.sec-row button .i { color: var(--brass); }
 .slips { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
 .slip-link { display: block; transition: transform .5s var(--ease); }
 .slip-link:hover { transform: translateY(-4px); }
@@ -196,13 +195,6 @@ dialog.sheet::backdrop { background: rgb(0 0 0 / 0.6); backdrop-filter: blur(6px
 .prompt .ic { border-radius: 50%; background: rgb(227 199 155 / 0.12); }
 .prompt .i { color: var(--brass); }
 
-/* one column: the statement first, then requests and friends, then the cards */
-@media (max-width: 1100px) {
-  .dash-grid { display: flex; flex-direction: column; align-items: stretch; gap: 0; }
-  .dash-main { display: contents; }
-  .dash-side { order: 2; margin-top: 32px; }
-  .dash-sec { order: 3; }
-}
 .sheet-body .hint { margin-top: 12px; font-size: 13px; color: var(--muted); }
 .you-chip:disabled { opacity: 1; cursor: default; }
 .you-chip:disabled > .i { display: none; }
@@ -224,7 +216,7 @@ dialog.sheet::backdrop { background: rgb(0 0 0 / 0.6); backdrop-filter: blur(6px
 .card .hint { margin-top: 8px; font-size: 14px; color: var(--muted); }
 .card .save, .card > button { margin-top: 24px; }
 .add-row { gap: 8px; }
-.add-row button { height: 48px; border-radius: 999px; }
+.add-row button { height: 48px; }  /* as tall as the input beside it */
 .who-card { display: flex; align-items: center; gap: 20px; }
 .who-card .grow { display: grid; gap: 4px; min-width: 0; }
 .who-card b { font: 400 32px/1.1 var(--serif); }
@@ -285,6 +277,7 @@ select { display: block; width: 100%; height: 48px; padding: 0 14px; border-radi
   .page-title { padding: 8px 0 28px; }
   .page-title h1 { font-size: 44px; }
   .dash-sec { margin-top: 40px; }
+  .slip-new, button.slip-new { min-height: 140px; }
   .sec-row h2 { font-size: 28px; }
   .who-card b { font-size: 26px; }
   .tabbar { grid-template-columns: repeat(5, 1fr); background: rgb(13 13 15 / 0.85); backdrop-filter: blur(16px) saturate(1.4); border-top: 1px solid var(--line); }
