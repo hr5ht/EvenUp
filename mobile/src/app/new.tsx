@@ -245,7 +245,7 @@ function Slip({ name, people, protect, opened }: { name: string; people: number;
         </View>
         {opened && (
           <Reanimated.View entering={stampIn} style={{ position: "absolute", right: 20, top: 210, borderRadius: 6, borderWidth: 2, borderColor: colors["neg-p"],
-            paddingHorizontal: 12, paddingVertical: 4, transform: [{ rotate: "-14deg" }] }}>
+            paddingHorizontal: 12, paddingVertical: 4 }}>
             <T mono className="text-[22px] tracking-[4px]" style={{ color: colors["neg-p"] }}>OPEN</T>
           </Reanimated.View>
         )}
