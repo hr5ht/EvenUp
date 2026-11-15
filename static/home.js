@@ -84,15 +84,6 @@ async function loadAccount() {
   friendList = (await authed("GET", "/api/friends")).friends;
 }
 
-// ---------- paste a link ----------
-
-$("link-open").onsubmit = (ev) => {
-  ev.preventDefault();
-  const slug = $("link").value.trim().split("/g/").pop().split(/[?#/\s]/)[0];
-  $("link-error").textContent = slug ? "" : "Paste the link someone sent you.";
-  if (slug) location.href = `/g/${encodeURIComponent(slug)}`;
-};
-
 // ---------- new group ----------
 
 function openGroupSheet() {
@@ -126,7 +117,8 @@ $("group-form").onsubmit = async (ev) => {
 (async () => {
   $("today").textContent = new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
   if (signedIn()) {
-    $("head").hidden = false;
+    $("head").hidden = $("bar").hidden = false;
+    document.querySelector("main").classList.add("with-bar");
     try {
       await loadAccount();
       if (location.hash === "#new-group") {
@@ -137,10 +129,11 @@ $("group-form").onsubmit = async (ev) => {
     } catch (err) {
       if (err.status !== 401) return ($("error").textContent = err.message);
       remember(false); // the session lapsed: this browser's own list, until you sign in again
-      $("head").hidden = true;
+      $("head").hidden = $("bar").hidden = true;
+      document.querySelector("main").classList.remove("with-bar");
     }
   }
-  // Signed out, Home is the landing page, with the tabs this browser opened under it.
+  // Signed out, Home is a plain landing page (no bottom bar), with the tabs this browser opened under it.
   $("landing").hidden = false;
   $("list-title").textContent = "Your tabs";
   const rows = await localTabs();

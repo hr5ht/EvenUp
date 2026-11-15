@@ -93,10 +93,6 @@ h3 { font-family: var(--serif); font-weight: 400; font-size: 22px; line-height: 
 .field:focus { border-color: var(--accent); }
 .field::placeholder { color: var(--dim); }
 select.field { appearance: none; }
-.linkbar { display: flex; align-items: center; height: 56px; padding: 0 6px 0 20px; border-radius: 999px; border: 1px solid var(--line-2); background: var(--surface); }
-.linkbar input { flex: 1; min-width: 0; height: 48px; border: 0; background: transparent; outline: none; font-size: 16px; }
-.linkbar input::placeholder { color: var(--dim); }
-.linkbar .btn { height: 44px; }
 .toggle { appearance: none; width: 44px; height: 26px; flex: none; border-radius: 999px; background: var(--surface-3); position: relative; cursor: pointer; transition: background .2s; }
 .toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--text); transition: transform .2s var(--ease); }
 .toggle:checked { background: var(--accent); }

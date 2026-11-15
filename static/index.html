@@ -17,7 +17,7 @@
 <body>
 <header class="top"><a href="/" class="logo"><span class="logo-mark"></span>EvenUp</a></header>
 
-<main class="page with-bar">
+<main class="page">
   <section class="hero" id="landing" hidden>
     <p class="eyebrow">Split bills · settle with UPI</p>
     <h1>Split the bill. Settle up in one tap.</h1>
@@ -42,15 +42,6 @@
     <svg class="i sm dim"><use href="/static/icons.svg#chev"/></svg>
   </a>
 
-  <form class="stack" id="link-open">
-    <label class="label" for="link">Got a link?</label>
-    <div class="linkbar">
-      <input type="text" id="link" placeholder="Paste a tab link" autocomplete="off" autocapitalize="off" spellcheck="false">
-      <button class="btn ink small" type="submit">Open</button>
-    </div>
-    <p class="error" id="link-error"></p>
-  </form>
-
   <section class="stack-lg" id="list-sec">
     <div class="sec-title"><h2 id="list-title">Saved here</h2><span class="count" id="n-list"></span></div>
     <div id="list"><p class="muted">Loading…</p></div>
@@ -58,7 +49,7 @@
   </section>
 </main>
 
-<nav class="tabbar" aria-label="EvenUp">
+<nav class="tabbar" id="bar" aria-label="EvenUp" hidden>
   <a href="/" aria-current="page"><svg class="i"><use href="/static/icons.svg#home"/></svg>Home</a>
   <span class="plus-ring"><a href="/new" class="plus" id="plus" aria-label="New"><svg class="i"><use href="/static/icons.svg#plus"/></svg></a></span>
   <span></span>
