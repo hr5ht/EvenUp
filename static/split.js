@@ -1105,6 +1105,7 @@ $("download-csv").onclick = () => {
 $("ended-png").onclick = $("download-png").onclick;
 $("ended-csv").onclick = $("download-csv").onclick;
 
-load();
+// Opening a tab signed in ties it to your account: tabs you made, opened from a link, or had from before.
+load().then(() => data && claim());
 // ponytail: 15s polling for "live" updates, switch to SSE if it ever feels laggy
 setInterval(() => { if (!document.hidden && data) load(); }, 15000);

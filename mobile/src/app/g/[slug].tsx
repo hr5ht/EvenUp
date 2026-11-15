@@ -67,8 +67,10 @@ export default function TabScreen() {
       idRef.current = i;
       setIdentityState(i);
       if (d?.group) return;
-      if (d) saveIdentity(slug, i);
-      else forgetTab(slug);
+      if (!d) return forgetTab(slug);
+      saveIdentity(slug, i);
+      // Opening a tab signed in ties it to your account: tabs you made, opened from a link, or had from before.
+      if (i.me != null) isSignedIn().then((yes) => yes && claimTab(slug, i).catch(() => {}));
     });
 
   }, [slug, load]);

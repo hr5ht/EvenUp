@@ -82,6 +82,13 @@ function openGroupSheet() {
   $("group-name").focus();
 }
 
+// A tab that isn't on your account yet: its link opens it, and opening it signed in adds it.
+$("link-open").onsubmit = (ev) => {
+  ev.preventDefault();
+  const slug = $("link").value.trim().split("/g/").pop().split(/[?#/\s]/)[0];
+  if (slug) location.href = `/g/${encodeURIComponent(slug)}`;
+};
+
 // Group, in the New popup: here it opens the form; from other pages it comes here with #new-group.
 document.querySelectorAll("[data-open=group-sheet]").forEach((b) => (b.onclick = (ev) => { ev.preventDefault(); openGroupSheet(); }));
 
